@@ -1,0 +1,147 @@
+@use '@/styles/variables' as *;
+@use '@/styles/mixins' as *;
+
+.header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    width: 100%;
+    transition: all 0.3s ease;
+    background-color: $color-white;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+
+    &.scrolled {
+        background-color: rgba($color-white, 0.95);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid $color-border;
+    }
+}
+
+.container {
+    @include container;
+    height: 4.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.logo {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: $color-black;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.nav {
+    display: none;
+
+    @include desktop {
+        display: flex;
+        align-items: center;
+        gap: 3rem;
+    }
+
+    a {
+        font-size: 0.875rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: $color-black;
+        transition: color 0.2s;
+        position: relative;
+
+        &::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background-color: $color-black;
+            transition: width 0.2s;
+        }
+
+        &:hover {
+            color: $color-accent;
+
+            &::after {
+                width: 100%;
+                background-color: $color-accent;
+            }
+        }
+    }
+}
+
+.cartButton,
+.mobileToggle {
+    position: relative;
+    padding: 0.5rem;
+    transition: color 0.2s;
+    color: $color-black;
+
+    &:hover {
+        color: $color-accent;
+    }
+}
+
+.mobileToggle {
+    margin-left: -0.5rem;
+
+    @include desktop {
+        display: none;
+    }
+}
+
+.cartButton {
+    margin-right: -0.5rem;
+}
+
+.badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 1rem;
+    width: 1rem;
+    background-color: $color-accent;
+    color: $color-white;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.mobileMenu {
+    position: absolute;
+    top: 4.5rem;
+    left: 0;
+    width: 100%;
+    height: calc(100vh - 4.5rem);
+    background-color: $color-white;
+    padding: 2rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+    align-items: center;
+
+    @include desktop {
+        display: none;
+    }
+
+    a {
+        font-size: 1.5rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: $color-black;
+        transition: color 0.2s;
+
+        &:hover {
+            color: $color-accent;
+        }
+    }
+}
