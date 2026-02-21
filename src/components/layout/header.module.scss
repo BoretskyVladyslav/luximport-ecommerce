@@ -6,33 +6,38 @@
     top: 0;
     z-index: 50;
     width: 100%;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     background-color: $color-white;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid #e5e5e5;
 
     &.scrolled {
         background-color: rgba($color-white, 0.95);
         backdrop-filter: blur(8px);
-        border-bottom: 1px solid $color-border;
     }
 }
 
 .container {
     @include container;
-    height: 4.5rem;
-    display: flex;
+    height: 80px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
-    justify-content: space-between;
 }
 
 .logo {
+    justify-self: center;
+    grid-column: 2;
     font-size: 1.25rem;
     font-weight: 800;
     letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: $color-black;
+    color: #111;
     cursor: pointer;
     text-decoration: none;
+
+    @include desktop {
+        grid-column: 2;
+    }
 }
 
 .nav {
@@ -42,15 +47,18 @@
         display: flex;
         align-items: center;
         gap: 3rem;
+        grid-column: 1;
+        justify-self: start;
     }
 
     a {
-        font-size: 0.875rem;
+        font-family: $font-primary;
+        font-size: 0.75rem;
         font-weight: 500;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: $color-black;
-        transition: color 0.2s;
+        letter-spacing: 2px;
+        color: #111;
+        transition: color 0.3s ease;
         position: relative;
 
         &::after {
@@ -60,34 +68,44 @@
             left: 0;
             width: 0;
             height: 1px;
-            background-color: $color-black;
-            transition: width 0.2s;
+            background-color: #111;
+            transition: width 0.3s ease, background-color 0.3s ease;
         }
 
         &:hover {
-            color: $color-accent;
+            color: #888;
 
             &::after {
                 width: 100%;
-                background-color: $color-accent;
+                background-color: #888;
             }
         }
     }
+}
+
+.iconGroup {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    grid-column: 3;
+    justify-self: end;
 }
 
 .cartButton,
 .mobileToggle {
     position: relative;
     padding: 0.5rem;
-    transition: color 0.2s;
-    color: $color-black;
+    transition: color 0.3s ease;
+    color: #111;
 
     &:hover {
-        color: $color-accent;
+        color: #888;
     }
 }
 
 .mobileToggle {
+    grid-column: 1;
+    justify-self: start;
     margin-left: -0.5rem;
 
     @include desktop {
@@ -117,10 +135,10 @@
 
 .mobileMenu {
     position: absolute;
-    top: 4.5rem;
+    top: 80px;
     left: 0;
     width: 100%;
-    height: calc(100vh - 4.5rem);
+    height: calc(100vh - 80px);
     background-color: $color-white;
     padding: 2rem 1rem;
     display: flex;
@@ -133,15 +151,16 @@
     }
 
     a {
+        font-family: $font-primary;
         font-size: 1.5rem;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: $color-black;
-        transition: color 0.2s;
+        letter-spacing: 2px;
+        color: #111;
+        transition: color 0.3s ease;
 
         &:hover {
-            color: $color-accent;
+            color: #888;
         }
     }
 }

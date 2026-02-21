@@ -6,9 +6,15 @@
     flex-direction: column;
     height: 100%;
     transition: background 0.3s;
+    margin-top: -1px;
+    margin-left: -1px;
 
     &:hover {
         background: #fafafa;
+
+        .imagePlaceholder {
+            transform: scale(1.02);
+        }
     }
 }
 
@@ -30,6 +36,7 @@
     font-size: 0.7rem;
     letter-spacing: 2px;
     text-transform: uppercase;
+    transition: transform 0.4s ease;
 }
 
 .likeBtn {
@@ -40,7 +47,7 @@
     border: none;
     cursor: pointer;
     color: #ccc;
-    transition: all 0.3s;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     z-index: 10;
     display: flex;
     align-items: center;
@@ -95,7 +102,15 @@
 .price {
     font-family: var(--font-heading);
     font-size: 1.2rem;
+    font-weight: 600;
     color: #111;
+}
+
+.currency {
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    color: #555;
+    margin-left: 0.25rem;
 }
 
 .addButton {
@@ -107,7 +122,7 @@
     border: 1px solid #111;
     padding: 0.5rem 1rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     color: #111;
 
     &:hover {

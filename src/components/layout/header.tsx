@@ -43,17 +43,18 @@ export function Header() {
           {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
 
-        <Link href="/" className={styles.logo}>
-          LUXIMPORT
-        </Link>
-
         <nav className={styles.nav}>
+          <Link href="/">Головна</Link>
           <Link href="/catalog">Каталог</Link>
           <Link href="/about">Про нас</Link>
           <Link href="/contacts">Контакти</Link>
         </nav>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <Link href="/" className={styles.logo}>
+          LUXIMPORT
+        </Link>
+
+        <div className={styles.iconGroup}>
           <button className={styles.cartButton} style={{ position: 'relative' }} onClick={openWishlist}>
             <Heart size={20} />
             {isHydrated && wishlistCount > 0 && (
@@ -80,6 +81,12 @@ export function Header() {
 
       {isMobileMenuOpen && (
         <div className={styles.mobileMenu}>
+          <Link
+            href="/"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            Головна
+          </Link>
           <Link
             href="/catalog"
             onClick={() => setIsMobileMenuOpen(false)}

@@ -2,23 +2,119 @@
 @use '@/styles/mixins' as *;
 
 .footer {
-    background-color: $color-black;
-    color: $color-white;
-    padding: 2rem 0;
+    background-color: #111;
+    color: #fff;
+    border-top: 1px solid #333;
     margin-top: auto;
 }
 
-.container {
+.grid {
     @include container;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    gap: 1rem;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
 }
 
-.copyright {
-    font-size: 0.875rem;
-    color: rgba($color-white, 0.6);
+.column {
+    display: flex;
+    flex-direction: column;
+    padding: 6rem 3rem;
+    border-right: 1px solid #333;
+    gap: 1rem;
+
+    &:last-child {
+        border-right: none;
+    }
+
+    @media (max-width: 768px) {
+        border-right: none;
+        border-bottom: 1px solid #333;
+        padding: 4rem 1.5rem;
+
+        &:last-child {
+            border-bottom: none;
+        }
+    }
+}
+
+.logo {
+    font-size: 1.25rem;
+    font-weight: 800;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: #fff;
+    text-decoration: none;
+    margin-bottom: 1rem;
+}
+
+.aboutText {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: #ccc;
+}
+
+.columnTitle {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+    color: #888;
+}
+
+.text {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    line-height: 1.6;
+    color: #ccc;
+}
+
+.link {
+    font-family: var(--font-body);
+    font-size: 0.8rem;
+    color: #fff;
+    text-decoration: none;
+    transition: color 0.3s ease;
+
+    &:hover {
+        color: #888;
+    }
+}
+
+.social {
+    display: flex;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+.bottomBarWrapper {
+    border-top: 1px solid #333;
+}
+
+.bottomBar {
+    @include container;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem;
+
+    @media (max-width: 768px) {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+        padding: 2rem 1.5rem;
+    }
+}
+
+.copyright,
+.designer {
+    font-family: var(--font-body);
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #666;
 }

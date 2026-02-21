@@ -2,14 +2,11 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { useAuthStore } from '@/store/authStore'
+import { useOrderStore } from '@/store/orderStore'
+import { useHydration } from '@/hooks/useHydration'
 import styles from './page.module.scss'
-
-const mockOrders = [
-    { id: '#0015', date: '19.02.2026', status: 'processing', statusText: 'В ОБРОБЦІ', total: '3 200 UAH' },
-    { id: '#0014', date: '12.02.2026', status: 'delivered', statusText: 'ДОСТАВЛЕНО', total: '1 450 UAH' },
-    { id: '#0012', date: '05.02.2026', status: 'cancelled', statusText: 'СКАСОВАНО', total: '850 UAH' },
-]
 
 const statusClass: Record<string, string> = {
     processing: styles.statusProcessing,
@@ -25,65 +22,90 @@ const orderTabs = [
 ]
 
 export default function ProfilePage() {
-    const { user, isAuthenticated, logout } = useAuthStore()
+    const { user, isAuthenticated, logout, login } = useAuthStore()
+    const { orders } = useOrderStore()
+    const isHydrated = useHydration()
     const router = useRouter()
-    const [activeTab, setActiveTab] = useState('dashboard')
+
+    // Tab State
+    const [activeTab, setActiveTab] = useState('orders')
     const [orderFilter, setOrderFilter] = useState('all')
+
+    // Form State
+    const [name, setName] = useState('')
+    const [phone, setPhone] = useState('')
+    const [email, setEmail] = useState('')
+    const [showSuccess, setShowSuccess] = useState(false)
 
     useEffect(() => {
         if (!isAuthenticated) {
             router.push('/account/login')
+        } else if (user) {
+            setName(user.name || '')
+            setEmail(user.email || '')
         }
-    }, [isAuthenticated, router])
+    }, [isAuthenticated, user, router])
 
-    if (!user) return null
+    if (!isHydrated || !user) return null
 
     const filteredOrders =
         orderFilter === 'all'
-            ? mockOrders
-            : mockOrders.filter((o) => o.status === orderFilter)
+            ? orders
+            : orders.filter((o) => o.status === orderFilter)
 
     const handleLogout = () => {
         logout()
         router.push('/')
     }
 
+    const handleSaveSettings = (e: React.FormEvent) => {
+        e.preventDefault()
+        login({ id: user.id, name, email })
+        // phone not persisted centrally yet, handled locally for UI completeness
+
+        setShowSuccess(true)
+        setTimeout(() => setShowSuccess(false), 3000)
+    }
+
     return (
         <div className={styles.container}>
-            <aside className={styles.sidebar}>
-                {[
-                    { key: 'dashboard', label: 'ГОЛОВНА' },
-                    { key: 'orders', label: 'МОЇ ЗАМОВЛЕННЯ' },
-                    { key: 'settings', label: 'НАЛАШТУВАННЯ' },
-                ].map(({ key, label }) => (
-                    <button
-                        key={key}
-                        className={`${styles.menuItem} ${activeTab === key ? styles.menuItemActive : ''}`}
-                        onClick={() => setActiveTab(key)}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </aside>
+            <div className={styles.dashboardHero}>
+                <h1 className={styles.welcomeTitle}>Привіт, {user.name || 'Vladyslav'}</h1>
+                <div className={styles.statsGrid}>
+                    <div className={styles.statCard}>
+                        <span className={styles.statValue}>{orders.length}</span>
+                        <span className={styles.statLabel}>ЗАМОВЛЕННЯ</span>
+                    </div>
+                    <div className={styles.statCard}>
+                        <span className={styles.statValue}>4</span>
+                        <span className={styles.statLabel}>ОБРАНЕ</span>
+                    </div>
+                    <div className={styles.statCard}>
+                        <span className={styles.statValue}>PREMIUM</span>
+                        <span className={styles.statLabel}>СТАТУС КЛІЄНТА</span>
+                    </div>
+                </div>
+            </div>
 
             <div className={styles.content}>
-                {activeTab === 'dashboard' && (
-                    <>
-                        <h1 className={styles.sectionTitle}>ОСОБИСТИЙ КАБІНЕТ</h1>
-                        <div className={styles.dashboardCard}>
-                            <div className={styles.greeting}>Привіт, {user.name}</div>
-                            <div className={styles.infoText}>{user.email}</div>
-                            <button className={styles.logoutBtn} onClick={handleLogout}>
-                                ВИЙТИ З АКАУНТА
-                            </button>
-                        </div>
-                    </>
-                )}
+                <div className={styles.tabNavigation}>
+                    {[
+                        { key: 'orders', label: 'МОЇ ЗАМОВЛЕННЯ' },
+                        { key: 'settings', label: 'ОСОБИСТІ ДАНІ' },
+                    ].map(({ key, label }) => (
+                        <button
+                            key={key}
+                            className={`${styles.tabBtn} ${activeTab === key ? styles.tabBtnActive : ''}`}
+                            onClick={() => setActiveTab(key)}
+                        >
+                            {label}
+                        </button>
+                    ))}
+                    <button className={styles.tabBtn} onClick={handleLogout}>ВИЙТИ З АКАУНТА</button>
+                </div>
 
                 {activeTab === 'orders' && (
                     <>
-                        <h1 className={styles.sectionTitle}>ІСТОРІЯ ЗАМОВЛЕНЬ</h1>
-
                         <div className={styles.orderTabs}>
                             {orderTabs.map(({ key, label }) => (
                                 <button
@@ -97,19 +119,39 @@ export default function ProfilePage() {
                         </div>
 
                         <div className={styles.orderList}>
-                            {filteredOrders.length === 0 ? (
+                            {orders.length === 0 ? (
+                                <div style={{ padding: '2rem 0', fontFamily: 'var(--font-body)' }}>
+                                    <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: '#111' }}>ІСТОРІЯ ЗАМОВЛЕНЬ ПОРОЖНЯ</h3>
+                                    <p style={{ color: '#888', fontSize: '0.9rem', marginBottom: '2rem' }}>
+                                        Ви ще не здійснили жодного замовлення.
+                                    </p>
+                                    <Link
+                                        href="/catalog"
+                                        style={{ display: 'inline-block', padding: '1rem 3rem', background: '#111', color: '#fff', textDecoration: 'none', textTransform: 'uppercase', fontSize: '0.75rem', letterSpacing: '2px' }}
+                                    >
+                                        ПЕРЕЙТИ ДО КАТАЛОГУ
+                                    </Link>
+                                </div>
+                            ) : filteredOrders.length === 0 ? (
                                 <p style={{ fontFamily: 'var(--font-body)', color: '#888', fontSize: '0.9rem' }}>
                                     Немає замовлень у цій категорії.
                                 </p>
                             ) : (
                                 filteredOrders.map((order) => (
                                     <div key={order.id} className={styles.orderItem}>
-                                        <span className={styles.orderId}>{order.id}</span>
-                                        <span className={styles.orderDate}>{order.date}</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                            <span className={styles.orderId}>{order.id}</span>
+                                            <span className={styles.orderDate}>{order.date}</span>
+                                        </div>
                                         <span className={`${styles.orderStatus} ${statusClass[order.status]}`}>
                                             {order.statusText}
                                         </span>
-                                        <span className={styles.orderTotal}>{order.total}</span>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end', minWidth: '150px' }}>
+                                            <span className={styles.orderTotal}>{order.total}</span>
+                                            <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.65rem', color: '#888', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                                {order.items?.length || 0} Товарів
+                                            </span>
+                                        </div>
                                     </div>
                                 ))
                             )}
@@ -118,26 +160,49 @@ export default function ProfilePage() {
                 )}
 
                 {activeTab === 'settings' && (
-                    <>
-                        <h1 className={styles.sectionTitle}>ОСОБИСТІ ДАНІ</h1>
-                        <form onSubmit={(e) => e.preventDefault()}>
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Ім&#39;я</label>
-                                <input type='text' className={styles.input} defaultValue={user.name} />
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Телефон</label>
-                                <input type='tel' className={styles.input} placeholder='+38 (___) ___-__-__' />
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Email</label>
-                                <input type='email' className={styles.input} defaultValue={user.email} />
-                            </div>
+                    <form onSubmit={handleSaveSettings}>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Ім&#39;я</label>
+                            <input
+                                type='text'
+                                className={styles.input}
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Телефон</label>
+                            <input
+                                type='tel'
+                                className={styles.input}
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                placeholder='+38 (___) ___-__-__'
+                            />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label className={styles.label}>Email</label>
+                            <input
+                                type='email'
+                                className={styles.input}
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div>
                             <button type='submit' className={styles.saveBtn}>ЗБЕРЕГТИ ЗМІНИ</button>
-                        </form>
-                    </>
+                        </div>
+                    </form>
                 )}
             </div>
+
+            {showSuccess && (
+                <div className={styles.toastNotification}>
+                    ДАНІ УСПІШНО ОНОВЛЕНО
+                </div>
+            )}
         </div>
     )
 }

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Truck, Star, Headphones } from 'lucide-react'
+import { Marquee } from '@/components/ui/marquee'
 import styles from './page.module.scss'
 
 const categories = [
@@ -27,59 +27,52 @@ export default function Home() {
         <div className={styles.heroVisual}>MAIN VISUAL</div>
       </section>
 
-      <section className={styles.categoriesSection}>
-        <div className={styles.sectionHeader}>
-          <h2 className={styles.sectionTitle}>СЕЛЕКЦІЯ</h2>
-          <span className={styles.sectionMeta}>04 КАТЕГОРІЇ</span>
-        </div>
-        <div className={styles.categoriesGrid}>
-          {categories.map(({ name, count }) => (
-            <div key={name} className={styles.categoryCard}>
-              <div className={styles.imagePlaceholder}>IMG</div>
-              <div className={styles.categoryInfo}>
-                <span className={styles.categoryName}>{name}</span>
-                <span className={styles.categoryCount}>{count}</span>
-              </div>
+      <Marquee />
+
+      <section className={styles.advantagesSection}>
+        <div className={styles.advantagesGrid}>
+          <div className={styles.advantageEditorial}>
+            <span className={styles.advantageNumber}>01</span>
+            <div className={styles.advantageContent}>
+              <h3 className={styles.advantageTitle}>ШВИДКА ДОСТАВКА</h3>
+              <p className={styles.advantageText}>
+                Ми дбаємо про те, щоб ваше замовлення прибуло вчасно та в ідеальному стані.
+              </p>
             </div>
-          ))}
-        </div>
-      </section>
-
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>НАШІ ПЕРЕВАГИ</h2>
-        <div className={styles.grid}>
-          <div className={styles.card}>
-            <Truck size={48} strokeWidth={1} className={styles.advantageIcon} />
-            <h3 className={styles.advantageTitle}>Швидка доставка</h3>
-            <p className={styles.advantageText}>
-              Ми дбаємо про те, щоб ваше замовлення прибуло вчасно та в ідеальному стані.
-            </p>
           </div>
-          <div className={styles.card}>
-            <Star size={48} strokeWidth={1} className={styles.advantageIcon} />
-            <h3 className={styles.advantageTitle}>Преміальна якість</h3>
-            <p className={styles.advantageText}>
-              Тільки перевірені постачальники та сертифіковані продукти з Європи.
-            </p>
+          <div className={styles.advantageEditorial}>
+            <span className={styles.advantageNumber}>02</span>
+            <div className={styles.advantageContent}>
+              <h3 className={styles.advantageTitle}>ПРЕМІАЛЬНА ЯКІСТЬ</h3>
+              <p className={styles.advantageText}>
+                Тільки перевірені постачальники та сертифіковані продукти з Європи.
+              </p>
+            </div>
           </div>
-          <div className={styles.card}>
-            <Headphones size={48} strokeWidth={1} className={styles.advantageIcon} />
-            <h3 className={styles.advantageTitle}>Підтримка клієнтів</h3>
-            <p className={styles.advantageText}>
-              Наші менеджери завжди готові допомогти вам з вибором та оформленням замовлення.
-            </p>
+          <div className={styles.advantageEditorial}>
+            <span className={styles.advantageNumber}>03</span>
+            <div className={styles.advantageContent}>
+              <h3 className={styles.advantageTitle}>ПІДТРИМКА КЛІЄНТІВ</h3>
+              <p className={styles.advantageText}>
+                Наші менеджери завжди готові допомогти вам з вибором та оформленням замовлення.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>ХІТИ ПРОДАЖУ</h2>
-        <div className={styles.grid}>
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className={styles.card}>
-              <div className={styles.productImage}>Фото товару</div>
-              <h3 className={styles.productTitle}>Товар {i}</h3>
-              <p className={styles.productPrice}>1 200 ₴</p>
+      <section className={styles.bestSellersSection}>
+        <div className={styles.bestSellersHeader}>
+          <p className={styles.bestSellersMeta}>SEASONAL SELECTION</p>
+          <h2 className={styles.bestSellersTitle}>ХІТИ ПРОДАЖУ</h2>
+        </div>
+        <div className={styles.bestSellersGrid}>
+          {[1, 2, 3].map((i) => (
+            <div key={i} className={styles.bestSellerCard}>
+              <div className={styles.bestSellerBadge}>BEST SELLER</div>
+              <div className={styles.bestSellerImage}>IMG</div>
+              <h3 className={styles.bestSellerName}>ЕКСКЛЮЗИВНИЙ ТОВАР {i}</h3>
+              <p className={styles.bestSellerPrice}>1 200 ₴</p>
             </div>
           ))}
         </div>

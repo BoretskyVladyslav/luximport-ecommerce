@@ -1,88 +1,117 @@
 .container {
     min-height: 100vh;
-    display: grid;
-    grid-template-columns: 250px 1fr;
     background: #fff;
     border-top: 1px solid #e5e5e5;
+}
+
+.dashboardHero {
+    padding: 4rem;
+    border-bottom: 1px solid #e5e5e5;
+    margin-bottom: 3rem;
+
+    @media (max-width: 768px) {
+        padding: 2rem 1.5rem;
+    }
+}
+
+.welcomeTitle {
+    font-family: var(--font-heading);
+    font-size: 4rem;
+    line-height: 1.1;
+    margin-bottom: 3rem;
+    color: #111;
+
+    @media (max-width: 768px) {
+        font-size: 2.5rem;
+    }
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: #e5e5e5;
+    border: 1px solid #e5e5e5;
 
     @media (max-width: 768px) {
         grid-template-columns: 1fr;
     }
 }
 
-.sidebar {
-    border-right: 1px solid #e5e5e5;
-    padding: 4rem 2rem;
+.statCard {
+    background: #fff;
+    padding: 2rem;
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
-
-    @media (max-width: 768px) {
-        border-right: none;
-        border-bottom: 1px solid #e5e5e5;
-        flex-direction: row;
-        overflow-x: auto;
-        padding: 2rem;
-    }
+    gap: 0.5rem;
 }
 
-.menuItem {
+.statValue {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    color: #111;
+}
+
+.statLabel {
     font-family: var(--font-body);
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     text-transform: uppercase;
     letter-spacing: 2px;
     color: #888;
+}
+
+.content {
+    padding: 0 4rem 4rem;
+
+    @media (max-width: 768px) {
+        padding: 0 1.5rem 2rem;
+    }
+}
+
+.tabNavigation {
+    border-bottom: 1px solid #e5e5e5;
+    margin-bottom: 3rem;
+    display: flex;
+    gap: 3rem;
+
+    @media (max-width: 768px) {
+        gap: 1.5rem;
+        overflow-x: auto;
+        white-space: nowrap;
+        padding-bottom: 0.5rem;
+    }
+}
+
+.tabBtn {
+    padding-bottom: 1.5rem;
+    position: relative;
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     cursor: pointer;
-    transition: color 0.3s;
-    background: transparent;
     border: none;
-    text-align: left;
-    white-space: nowrap;
+    background: none;
+    color: #888;
+    transition: color 0.3s;
 
     &:hover {
         color: #111;
     }
 }
 
-.menuItemActive {
+.tabBtnActive {
     color: #111;
-    font-weight: 600;
-}
 
-.content {
-    padding: 4rem;
-
-    @media (max-width: 768px) {
-        padding: 2rem;
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: #111;
     }
-}
-
-.sectionTitle {
-    font-family: var(--font-heading);
-    font-size: 2.5rem;
-    color: #111;
-    margin-bottom: 3rem;
-    text-transform: uppercase;
-}
-
-.dashboardCard {
-    border: 1px solid #e5e5e5;
-    padding: 3rem;
-    margin-bottom: 2rem;
-}
-
-.greeting {
-    font-family: var(--font-heading);
-    font-size: 2rem;
-    margin-bottom: 1rem;
-    color: #111;
-}
-
-.infoText {
-    font-family: var(--font-body);
-    font-size: 0.9rem;
-    color: #555;
-    margin-bottom: 2rem;
 }
 
 .logoutBtn {
@@ -203,29 +232,32 @@
 }
 
 .formGroup {
-    margin-bottom: 2rem;
-    max-width: 400px;
+    margin-bottom: 3rem;
+    max-width: 500px;
 }
 
 .label {
     display: block;
     font-family: var(--font-body);
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
-    letter-spacing: 1px;
-    color: #888;
-    margin-bottom: 0.5rem;
+    letter-spacing: 2px;
+    color: #555;
+    margin-bottom: 1rem;
 }
 
 .input {
     width: 100%;
-    padding: 1rem;
+    padding: 1rem 0;
     font-family: var(--font-body);
-    border: 1px solid #e5e5e5;
+    border: none;
+    border-bottom: 1px solid #e5e5e5;
     outline: none;
-    font-size: 0.9rem;
+    font-size: 1rem;
     box-sizing: border-box;
     background: transparent;
+    transition: border-color 0.3s;
+    color: #111;
 
     &:focus {
         border-color: #111;
@@ -247,5 +279,33 @@
     &:hover {
         background: #111;
         color: #fff;
+    }
+}
+
+.toastNotification {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: #111;
+    color: #fff;
+    padding: 1.2rem 2.5rem;
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    z-index: 100;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
     }
 }

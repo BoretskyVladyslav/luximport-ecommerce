@@ -1,16 +1,21 @@
 'use client'
 
 import { useEffect } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { X } from 'lucide-react'
 import { useCartStore } from '@/store/cart'
+import { useAuthStore } from '@/store/authStore'
+import { useOrderStore } from '@/store/orderStore'
 import { useHydration } from '@/hooks/useHydration'
 import styles from './cart-sidebar.module.scss'
 
 export function CartSidebar() {
-    const { items, isOpen, toggleCart, removeItem, updateQuantity } = useCartStore()
+    const { items, isOpen, toggleCart, removeItem, updateQuantity, clearCart } = useCartStore()
+    const { isAuthenticated } = useAuthStore()
+    const { addOrder } = useOrderStore()
     const isHydrated = useHydration()
     const pathname = usePathname()
+    const router = useRouter()
 
     useEffect(() => {
         if (isOpen) {
@@ -22,6 +27,11 @@ export function CartSidebar() {
     const FREE_SHIPPING_THRESHOLD = 2000
     const amountToFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - total)
     const progressPercentage = Math.min(100, (total / FREE_SHIPPING_THRESHOLD) * 100)
+
+    const handleCheckout = () => {
+        toggleCart()
+        router.push('/checkout')
+    }
 
     return (
         <>
@@ -102,7 +112,7 @@ export function CartSidebar() {
                                 {total.toLocaleString('uk-UA')} ₴
                             </span>
                         </div>
-                        <button className={styles.checkoutBtn}>ОФОРМИТИ ЗАМОВЛЕННЯ</button>
+                        <button className={styles.checkoutBtn} onClick={handleCheckout}>ОФОРМИТИ ЗАМОВЛЕННЯ</button>
 
                         <div className={styles.upsellContainer}>
                             <h4 className={styles.upsellTitle}>ІДЕАЛЬНО ПАСУЄ</h4>
