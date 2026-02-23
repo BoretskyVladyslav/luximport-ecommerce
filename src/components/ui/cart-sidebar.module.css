@@ -109,6 +109,45 @@
   color: #111;
 }
 
+.oldPrice {
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  color: #888;
+  text-decoration: line-through;
+  margin-bottom: 0.2rem;
+}
+
+.wholesalePrice {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  color: #111;
+}
+
+.wholesaleTag {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #C5A059;
+  margin-bottom: 0.3rem;
+}
+
+.upsellPrompt {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  color: #888;
+  margin-top: 0.5rem;
+}
+
+.successPrompt {
+  font-family: var(--font-body);
+  font-size: 0.65rem;
+  color: #9da993;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 0.5rem;
+}
+
 .controls {
   display: flex;
   justify-content: space-between;

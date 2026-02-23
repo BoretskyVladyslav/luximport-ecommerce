@@ -48,7 +48,15 @@ export const useCartStore = create<CartState>()(
             toggleCart: () => set({ isOpen: !get().isOpen }),
             clearCart: () => set({ items: [] }),
             totalPrice: () => {
-                return get().items.reduce((total, item) => total + item.price * item.quantity, 0)
+                return get().items.reduce((total, item) => {
+                    const priceToUse =
+                        item.wholesaleMinQuantity &&
+                            item.wholesalePrice &&
+                            item.quantity >= item.wholesaleMinQuantity
+                            ? item.wholesalePrice
+                            : item.price
+                    return total + priceToUse * item.quantity
+                }, 0)
             },
         }),
         {

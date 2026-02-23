@@ -1,0 +1,153 @@
+'use client'
+
+import Link from 'next/link'
+import { motion } from 'framer-motion'
+import { Marquee } from '@/components/ui/marquee'
+import { ProductCard } from '@/components/ui/product-card'
+import styles from './page.module.scss'
+
+const premiumEase = [0.25, 0.1, 0.25, 1];
+
+export function HomeClient({ products }: { products: any[] }) {
+    return (
+        <main>
+            <section className={styles.hero}>
+                <div className={styles.heroText}>
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, ease: premiumEase, delay: 0 }}
+                    >
+                        <p className={styles.metaLabel}>EST. 2026 / PREMIUM SELECTION</p>
+                    </motion.div>
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, ease: premiumEase, delay: 0.2 }}
+                    >
+                        <h1 className={styles.heroTitle}>LUXIMPORT</h1>
+                    </motion.div>
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, ease: premiumEase, delay: 0.4 }}
+                    >
+                        <p className={styles.heroSubtitle}>
+                            Ексклюзивні продукти з Європи для вашого столу
+                        </p>
+                    </motion.div>
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.8, ease: premiumEase, delay: 0.6 }}
+                    >
+                        <Link href="/catalog" className={styles.ctaButton}>
+                            ПЕРЕГЛЯНУТИ КАТАЛОГ
+                        </Link>
+                    </motion.div>
+                </div>
+                <motion.div
+                    className={styles.heroVisual}
+                    initial={{ scale: 1 }}
+                    animate={{ scale: 1.05 }}
+                    transition={{ duration: 10, ease: premiumEase }}
+                >
+                    MAIN VISUAL
+                </motion.div>
+            </section>
+
+            <Marquee />
+
+            <section className={styles.advantagesSection}>
+                <div className={styles.advantagesGrid}>
+                    <motion.div
+                        className={styles.advantageEditorial}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        transition={{ duration: 0.8, ease: premiumEase, delay: 0 }}
+                    >
+                        <span className={styles.advantageNumber}>01</span>
+                        <div className={styles.advantageContent}>
+                            <h3 className={styles.advantageTitle}>ШВИДКА ДОСТАВКА</h3>
+                            <p className={styles.advantageText}>
+                                Ми дбаємо про те, щоб ваше замовлення прибуло вчасно та в ідеальному стані.
+                            </p>
+                        </div>
+                    </motion.div>
+
+                    <motion.div
+                        className={styles.advantageEditorial}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        transition={{ duration: 0.8, ease: premiumEase, delay: 0.2 }}
+                    >
+                        <span className={styles.advantageNumber}>02</span>
+                        <div className={styles.advantageContent}>
+                            <h3 className={styles.advantageTitle}>ПРЕМІАЛЬНА ЯКІСТЬ</h3>
+                            <p className={styles.advantageText}>
+                                Тільки перевірені постачальники та сертифіковані продукти з Європи.
+                            </p>
+                        </div>
+                    </motion.div>
+
+                    <motion.div
+                        className={styles.advantageEditorial}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true, margin: "-50px" }}
+                        transition={{ duration: 0.8, ease: premiumEase, delay: 0.4 }}
+                    >
+                        <span className={styles.advantageNumber}>03</span>
+                        <div className={styles.advantageContent}>
+                            <h3 className={styles.advantageTitle}>ПІДТРИМКА КЛІЄНТІВ</h3>
+                            <p className={styles.advantageText}>
+                                Наші менеджери завжди готові допомогти вам з вибором та оформленням замовлення.
+                            </p>
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
+
+            <section className={styles.bestSellersSection}>
+                <motion.div
+                    className={styles.bestSellersHeader}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true, margin: "-50px" }}
+                    transition={{ duration: 0.8, ease: premiumEase }}
+                >
+                    <p className={styles.bestSellersMeta}>SEASONAL SELECTION</p>
+                    <h2 className={styles.bestSellersTitle}>ХІТИ ПРОДАЖУ</h2>
+                </motion.div>
+                <motion.div
+                    className={styles.bestSellersGrid}
+                    variants={{
+                        hidden: { opacity: 0 },
+                        show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+                    }}
+                    initial="hidden"
+                    whileInView="show"
+                    viewport={{ once: true, margin: "-50px" }}
+                >
+                    {products.map((product: any, index: number) => (
+                        <ProductCard
+                            key={product._id}
+                            index={index}
+                            title={product.title}
+                            slug={product.slug}
+                            price={`${product.price} ₴`}
+                            wholesalePrice={product.wholesalePrice}
+                            wholesaleMinQuantity={product.wholesaleMinQuantity}
+                            category={product.category}
+                            image={product.image}
+                            stock={product.stock}
+                        />
+                    ))}
+                </motion.div>
+            </section>
+
+        </main>
+    )
+}

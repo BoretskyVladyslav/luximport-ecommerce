@@ -3,12 +3,15 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ShoppingBag, Menu, X, Heart, User } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useCartStore } from '@/store/cart'
 import { useWishlistStore } from '@/store/wishlistStore'
 import { useAuthStore } from '@/store/authStore'
 import { useHydration } from '@/hooks/useHydration'
 import styles from './header.module.scss'
 import { cn } from '@/lib/utils'
+
+const premiumEase = [0.25, 0.1, 0.25, 1];
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
@@ -32,8 +35,11 @@ export function Header() {
   }, [])
 
   return (
-    <header
+    <motion.header
       className={cn(styles.header, (isScrolled || isMobileMenuOpen) && styles.scrolled)}
+      initial={{ y: '-100%', opacity: 1 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.6, ease: premiumEase }}
     >
       <div className={styles.container}>
         <button
@@ -79,34 +85,41 @@ export function Header() {
         </div>
       </div>
 
-      {isMobileMenuOpen && (
-        <div className={styles.mobileMenu}>
-          <Link
-            href="/"
-            onClick={() => setIsMobileMenuOpen(false)}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            className={styles.mobileMenu}
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ duration: 0.5, ease: premiumEase }}
           >
-            Головна
-          </Link>
-          <Link
-            href="/catalog"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Каталог
-          </Link>
-          <Link
-            href="/about"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Про нас
-          </Link>
-          <Link
-            href="/contacts"
-            onClick={() => setIsMobileMenuOpen(false)}
-          >
-            Контакти
-          </Link>
-        </div>
-      )}
-    </header>
+            <motion.div
+              variants={{
+                hidden: { opacity: 0 },
+                show: { opacity: 1, transition: { staggerChildren: 0.1, delayChildren: 0.2 } }
+              }}
+              initial="hidden"
+              animate="show"
+              exit="hidden"
+              style={{ display: 'flex', flexDirection: 'column', gap: '2rem', alignItems: 'center' }}
+            >
+              <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}>
+                <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>Головна</Link>
+              </motion.div>
+              <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}>
+                <Link href="/catalog" onClick={() => setIsMobileMenuOpen(false)}>Каталог</Link>
+              </motion.div>
+              <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}>
+                <Link href="/about" onClick={() => setIsMobileMenuOpen(false)}>Про нас</Link>
+              </motion.div>
+              <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}>
+                <Link href="/contacts" onClick={() => setIsMobileMenuOpen(false)}>Контакти</Link>
+              </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.header>
   )
 }

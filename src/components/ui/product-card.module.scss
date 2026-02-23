@@ -12,8 +12,8 @@
     &:hover {
         background: #fafafa;
 
-        .imagePlaceholder {
-            transform: scale(1.02);
+        &::after {
+            opacity: 1;
         }
     }
 }
@@ -58,7 +58,7 @@
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
 
     &:hover {
-        transform: scale(1.1);
+        background-color: #333;
         color: #111;
     }
 }
@@ -158,4 +158,21 @@
     font-style: italic;
     color: #888;
     margin-top: 0.5rem;
+}
+
+.wholesaleBadge {
+    font-family: var(--font-body);
+    font-size: 0.65rem;
+    color: #888;
+    margin-top: 0.25rem;
+    letter-spacing: 1px;
+}
+
+.savingsBadge {
+    font-family: var(--font-body);
+    font-size: 0.6rem;
+    color: #9da993; // Muted sage green
+    margin-top: 0.2rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
 }

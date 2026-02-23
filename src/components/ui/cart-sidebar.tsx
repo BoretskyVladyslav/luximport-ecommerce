@@ -10,7 +10,7 @@ import { useHydration } from '@/hooks/useHydration'
 import styles from './cart-sidebar.module.scss'
 
 export function CartSidebar() {
-    const { items, isOpen, toggleCart, removeItem, updateQuantity, clearCart } = useCartStore()
+    const { items, isOpen, toggleCart, removeItem, updateQuantity, clearCart, totalPrice, addItem } = useCartStore()
     const { isAuthenticated } = useAuthStore()
     const { addOrder } = useOrderStore()
     const isHydrated = useHydration()
@@ -23,7 +23,7 @@ export function CartSidebar() {
         }
     }, [pathname])
 
-    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    const total = totalPrice()
     const FREE_SHIPPING_THRESHOLD = 2000
     const amountToFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - total)
     const progressPercentage = Math.min(100, (total / FREE_SHIPPING_THRESHOLD) * 100)
@@ -31,6 +31,22 @@ export function CartSidebar() {
     const handleCheckout = () => {
         toggleCart()
         router.push('/checkout')
+    }
+
+    const handleAddUpsell = (id: string, name: string, price: number) => {
+        addItem({
+            _id: id,
+            id: id,
+            title: name,
+            slug: { current: id },
+            price: price,
+            description: '',
+            images: [],
+            category: 'other',
+            brand: 'Luximport',
+            country: 'Italy',
+            isBestseller: false,
+        } as any)
     }
 
     return (
@@ -72,9 +88,21 @@ export function CartSidebar() {
                                 <div className={styles.itemImage}>IMG</div>
                                 <div className={styles.itemDetails}>
                                     <span className={styles.itemTitle}>{item.title}</span>
-                                    <span className={styles.itemPrice}>
-                                        {(item.price * item.quantity).toLocaleString('uk-UA')} ₴
-                                    </span>
+                                    {item.wholesalePrice && item.wholesaleMinQuantity && item.quantity >= item.wholesaleMinQuantity ? (
+                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span className={styles.wholesaleTag}>Гуртова ціна</span>
+                                            <span className={styles.oldPrice}>
+                                                {(item.price * item.quantity).toLocaleString('uk-UA')} ₴
+                                            </span>
+                                            <span className={styles.wholesalePrice}>
+                                                {(item.wholesalePrice * item.quantity).toLocaleString('uk-UA')} ₴
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <span className={styles.itemPrice}>
+                                            {(item.price * item.quantity).toLocaleString('uk-UA')} ₴
+                                        </span>
+                                    )}
                                     <div className={styles.controls}>
                                         <div className={styles.qtyContainer}>
                                             <button
@@ -98,6 +126,16 @@ export function CartSidebar() {
                                             Видалити
                                         </button>
                                     </div>
+                                    {/* Gamification logic */}
+                                    {item.wholesalePrice && item.wholesaleMinQuantity && (
+                                        item.quantity >= item.wholesaleMinQuantity ? (
+                                            <div className={styles.successPrompt}>Оптова знижка застосована</div>
+                                        ) : (
+                                            <div className={styles.upsellPrompt}>
+                                                Додайте ще {item.wholesaleMinQuantity - item.quantity} шт. для оптової ціни
+                                            </div>
+                                        )
+                                    )}
                                 </div>
                             </div>
                         ))
@@ -118,11 +156,11 @@ export function CartSidebar() {
                             <h4 className={styles.upsellTitle}>ІДЕАЛЬНО ПАСУЄ</h4>
                             <div className={styles.upsellItem}>
                                 <span className={styles.upsellName}>Оливкова олія Трюфельна</span>
-                                <button className={styles.upsellAddBtn}>ДОДАТИ</button>
+                                <button className={styles.upsellAddBtn} onClick={() => handleAddUpsell('upsell-1', 'Оливкова олія Трюфельна', 350)}>ДОДАТИ</button>
                             </div>
                             <div className={styles.upsellItem}>
                                 <span className={styles.upsellName}>Артишоки на грилі в олії</span>
-                                <button className={styles.upsellAddBtn}>ДОДАТИ</button>
+                                <button className={styles.upsellAddBtn} onClick={() => handleAddUpsell('upsell-2', 'Артишоки на грилі в олії', 280)}>ДОДАТИ</button>
                             </div>
                         </div>
                     </div>

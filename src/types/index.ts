@@ -3,6 +3,8 @@ export interface Product {
   title: string
   slug: string
   price: number
+  wholesalePrice?: number
+  wholesaleMinQuantity?: number
   description: string
   images: string[]
   category: string
