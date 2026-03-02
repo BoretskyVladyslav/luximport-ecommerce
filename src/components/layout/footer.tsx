@@ -23,11 +23,17 @@ export function Footer() {
                     <Link href="/contacts" className={styles.link}>Контакти</Link>
                 </nav>
 
+                <nav className={styles.column}>
+                    <h4 className={styles.columnTitle}>Клієнтам</h4>
+                    <Link href="/terms" className={styles.link}>Договір публічної оферти</Link>
+                    <Link href="/privacy" className={styles.link}>Політика конфіденційності</Link>
+                    <Link href="/returns" className={styles.link}>Умови повернення та обміну</Link>
+                </nav>
+
                 <div className={styles.column}>
                     <h4 className={styles.columnTitle}>Контакти</h4>
-                    <p className={styles.text}>Київ, Україна</p>
-                    <a href="mailto:info@luximport.ua" className={styles.link}>info@luximport.ua</a>
-                    <a href="tel:+380441234567" className={styles.link}>+38 044 123 45 67</a>
+                    <a href="mailto:Oljacenuk88@gmail.com" className={styles.link}>Oljacenuk88@gmail.com</a>
+                    <p className={styles.text}>Пн-Пт, 10:00 - 18:00</p>
                     <div className={styles.social}>
                         <a href="https://www.instagram.com/iryna_luximport?igsh=OXlrZWpmaXVzZG95" target="_blank" rel="noopener noreferrer" className={styles.link} title="Instagram">
                             <InstagramIcon />

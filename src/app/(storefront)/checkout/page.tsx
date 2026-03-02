@@ -60,8 +60,8 @@ const fetchBranches = async (cityRef: string, query: string = '') => {
 
 export default function CheckoutPage() {
     const { user, isAuthenticated } = useAuthStore()
-    const { items, clearCart } = useCartStore()
-    const { addOrder } = useOrderStore()
+    const { items, clearCart, totalPrice } = useCartStore()
+    const { addOrder, setLastOrder } = useOrderStore()
     const isHydrated = useHydration()
     const router = useRouter()
 
@@ -71,6 +71,7 @@ export default function CheckoutPage() {
     const [cityRef, setCityRef] = useState('')
     const [department, setDepartment] = useState('')
     const [departmentRef, setDepartmentRef] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     useEffect(() => {
         if (!isAuthenticated) {
@@ -80,28 +81,58 @@ export default function CheckoutPage() {
         }
     }, [isAuthenticated, user, router])
 
-    const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    const total = totalPrice()
 
-    const handleConfirmOrder = (e: React.FormEvent) => {
+    const handleConfirmOrder = async (e: React.FormEvent) => {
         e.preventDefault()
 
         if (items.length === 0) return
+
+        setIsSubmitting(true)
 
         const dateObj = new Date()
         const formattedDate = `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`
         const randomId = `#${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`
 
-        addOrder({
+        const totalFormatted = `${total.toLocaleString('uk-UA')} ₴`
+
+        try {
+            await fetch('/api/checkout/email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderId: randomId,
+                    customerName: name,
+                    customerPhone: phone,
+                    customerEmail: user?.email || '',
+                    shippingAddress: `${city}, ${department}`,
+                    items: items,
+                    total: totalFormatted,
+                    date: formattedDate
+                }),
+            })
+        } catch (error) {
+            console.error('Failed to send email:', error)
+        }
+
+        const newOrder = {
             id: randomId,
             date: formattedDate,
-            status: 'processing',
+            status: 'processing' as const,
             statusText: 'ОБРОБЛЯЄТЬСЯ',
-            total: `${total.toLocaleString('uk-UA')} ₴`,
+            total: totalFormatted,
+            customerName: name,
+            customerPhone: phone,
+            shippingAddress: `${city}, ${department}`,
             items: [...items]
-        })
+        }
+
+        addOrder(newOrder)
+        setLastOrder(newOrder)
 
         clearCart()
-        router.push('/account/profile')
+        setIsSubmitting(false)
+        router.push('/checkout/success')
     }
 
     if (!isHydrated || !isAuthenticated) return null
@@ -164,15 +195,20 @@ export default function CheckoutPage() {
                 <h2 className={styles.sectionTitle} style={{ fontSize: '1.5rem', marginBottom: '2rem' }}>ВАШЕ ЗАМОВЛЕННЯ</h2>
 
                 <div className={styles.orderItems}>
-                    {items.map((item) => (
-                        <div key={item.id} className={styles.summaryItem}>
-                            <div className={styles.itemInfo}>
-                                <span className={styles.itemTitle}>{item.title}</span>
-                                <span className={styles.itemQty}>{item.quantity} шт.</span>
+                    {items.map((item) => {
+                        const isWholesale = item.wholesaleMinQuantity && item.quantity >= item.wholesaleMinQuantity
+                        const applyPrice = isWholesale ? item.wholesalePrice : item.price
+
+                        return (
+                            <div key={item.id} className={styles.summaryItem}>
+                                <div className={styles.itemInfo}>
+                                    <span className={styles.itemTitle}>{item.title}</span>
+                                    <span className={styles.itemQty}>{item.quantity} шт.</span>
+                                </div>
+                                <span className={styles.itemPrice}>{((applyPrice || 0) * item.quantity).toLocaleString('uk-UA')} ₴</span>
                             </div>
-                            <span className={styles.itemPrice}>{(item.price * item.quantity).toLocaleString('uk-UA')} ₴</span>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </div>
 
                 <div className={styles.totalRow}>
@@ -184,9 +220,9 @@ export default function CheckoutPage() {
                     type="submit"
                     form="checkout-form"
                     className={styles.confirmBtn}
-                    disabled={items.length === 0}
+                    disabled={items.length === 0 || isSubmitting}
                 >
-                    ПІДТВЕРДИТИ ЗАМОВЛЕННЯ
+                    {isSubmitting ? 'ОБРОБКА...' : 'ПІДТВЕРДИТИ ЗАМОВЛЕННЯ'}
                 </button>
             </div>
         </div>

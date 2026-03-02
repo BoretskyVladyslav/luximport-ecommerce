@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
+    "@next/third-parties": "^16.1.6",
+    "@react-email/components": "^1.0.8",
     "@sanity/image-url": "^1.2.0",
     "@sanity/vision": "^3.70.0",
     "clsx": "^2.1.0",
@@ -21,6 +23,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.50.1",
+    "resend": "^6.9.2",
     "sanity": "^3.70.0",
     "sass": "^1.97.3",
     "styled-components": "^6.1.8",

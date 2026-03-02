@@ -57,5 +57,42 @@ export const product = defineType({
       type: 'number',
       title: 'Залишок',
     }),
+    defineField({
+      name: 'sku',
+      type: 'string',
+      title: 'Артикул',
+      validation: (Rule) => Rule.required(),
+      initialValue: () => `LUX-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+    }),
+    defineField({
+      name: 'barcode',
+      type: 'string',
+      title: 'Штрихкод',
+    }),
+    defineField({
+      name: 'brand',
+      type: 'string',
+      title: 'Бренд/Виробник',
+    }),
+    defineField({
+      name: 'msrp',
+      type: 'number',
+      title: 'Рекомендована роздрібна ціна (MSRP)',
+    }),
+    defineField({
+      name: 'weight',
+      type: 'number',
+      title: 'Вага (кг)',
+    }),
+    defineField({
+      name: 'dimensions',
+      type: 'object',
+      title: 'Габарити (ДхШхВ)',
+      fields: [
+        defineField({ name: 'length', type: 'number', title: 'Довжина (см)' }),
+        defineField({ name: 'width', type: 'number', title: 'Ширина (см)' }),
+        defineField({ name: 'height', type: 'number', title: 'Висота (см)' }),
+      ],
+    }),
   ],
 })

@@ -1,4 +1,4 @@
-@use '@/styles/variables' as *;
+@use '../../styles/variables' as *;
 
 .card {
     background: #fff;
@@ -10,7 +10,7 @@
     margin-left: -1px;
 
     &:hover {
-        background: #fafafa;
+        background: #fafafa; 
 
         &::after {
             opacity: 1;
