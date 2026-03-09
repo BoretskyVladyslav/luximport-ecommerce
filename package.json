@@ -6,11 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "import-data": "node scripts/importProducts.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
     "@next/third-parties": "^16.1.6",
+    "@portabletext/react": "^6.0.3",
     "@react-email/components": "^1.0.8",
     "@sanity/image-url": "^1.2.0",
     "@sanity/vision": "^3.70.0",
@@ -28,6 +30,7 @@
     "sass": "^1.97.3",
     "styled-components": "^6.1.8",
     "tailwind-merge": "^2.2.1",
+    "xlsx": "^0.18.5",
     "zod": "^3.22.4",
     "zustand": "^4.5.0"
   },

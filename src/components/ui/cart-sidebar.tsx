@@ -21,6 +21,7 @@ export function CartSidebar() {
         if (isOpen) {
             toggleCart()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pathname])
 
     const total = totalPrice()
@@ -80,66 +81,67 @@ export function CartSidebar() {
                         </div>
                     )}
 
-                    {!isHydrated ? null : items.length === 0 ? (
-                        <p className={styles.emptyState}>Кошик порожній</p>
-                    ) : (
-                        items.map((item) => (
-                            <div key={item.id} className={styles.item}>
-                                <div className={styles.itemImage}>IMG</div>
-                                <div className={styles.itemDetails}>
-                                    <span className={styles.itemTitle}>{item.title}</span>
-                                    {item.wholesalePrice && item.wholesaleMinQuantity && item.quantity >= item.wholesaleMinQuantity ? (
-                                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                            <span className={styles.wholesaleTag}>Гуртова ціна</span>
-                                            <span className={styles.oldPrice}>
+                    <div style={{ display: isHydrated ? 'contents' : 'none' }}>
+                        {items.length === 0 ? (
+                            <p className={styles.emptyState}>Кошик порожній</p>
+                        ) : (
+                            items.map((item) => (
+                                <div key={item.id} className={styles.item}>
+                                    <div className={styles.itemImage}>IMG</div>
+                                    <div className={styles.itemDetails}>
+                                        <span className={styles.itemTitle}>{item.title}</span>
+                                        {item.wholesalePrice && item.wholesaleMinQuantity && item.quantity >= item.wholesaleMinQuantity ? (
+                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                <span className={styles.wholesaleTag}>Гуртова ціна</span>
+                                                <span className={styles.oldPrice}>
+                                                    {(item.price * item.quantity).toLocaleString('uk-UA')} ₴
+                                                </span>
+                                                <span className={styles.wholesalePrice}>
+                                                    {(item.wholesalePrice * item.quantity).toLocaleString('uk-UA')} ₴
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <span className={styles.itemPrice}>
                                                 {(item.price * item.quantity).toLocaleString('uk-UA')} ₴
                                             </span>
-                                            <span className={styles.wholesalePrice}>
-                                                {(item.wholesalePrice * item.quantity).toLocaleString('uk-UA')} ₴
-                                            </span>
-                                        </div>
-                                    ) : (
-                                        <span className={styles.itemPrice}>
-                                            {(item.price * item.quantity).toLocaleString('uk-UA')} ₴
-                                        </span>
-                                    )}
-                                    <div className={styles.controls}>
-                                        <div className={styles.qtyContainer}>
-                                            <button
-                                                className={styles.qtyBtn}
-                                                onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                                            >
-                                                −
-                                            </button>
-                                            <span className={styles.qtyValue}>{item.quantity}</span>
-                                            <button
-                                                className={styles.qtyBtn}
-                                                onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                                            >
-                                                +
-                                            </button>
-                                        </div>
-                                        <button
-                                            className={styles.removeBtn}
-                                            onClick={() => removeItem(item.id)}
-                                        >
-                                            Видалити
-                                        </button>
-                                    </div>
-                                    {/* Gamification logic */}
-                                    {item.wholesalePrice && item.wholesaleMinQuantity && (
-                                        item.quantity >= item.wholesaleMinQuantity ? (
-                                            <div className={styles.successPrompt}>Оптова знижка застосована</div>
-                                        ) : (
-                                            <div className={styles.upsellPrompt}>
-                                                Додайте ще {item.wholesaleMinQuantity - item.quantity} шт. для оптової ціни
+                                        )}
+                                        <div className={styles.controls}>
+                                            <div className={styles.qtyContainer}>
+                                                <button
+                                                    className={styles.qtyBtn}
+                                                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                                                >
+                                                    −
+                                                </button>
+                                                <span className={styles.qtyValue}>{item.quantity}</span>
+                                                <button
+                                                    className={styles.qtyBtn}
+                                                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                                                >
+                                                    +
+                                                </button>
                                             </div>
-                                        )
-                                    )}
+                                            <button
+                                                className={styles.removeBtn}
+                                                onClick={() => removeItem(item.id)}
+                                            >
+                                                Видалити
+                                            </button>
+                                        </div>
+                                        {item.wholesalePrice && item.wholesaleMinQuantity && (
+                                            item.quantity >= item.wholesaleMinQuantity ? (
+                                                <div className={styles.successPrompt}>Оптова знижка застосована</div>
+                                            ) : (
+                                                <div className={styles.upsellPrompt}>
+                                                    Додайте ще {item.wholesaleMinQuantity - item.quantity} шт. для оптової ціни
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
-                        ))
-                    )}
+                            ))
+                        )}
+                    </div>
                 </div>
 
                 {items.length > 0 && (

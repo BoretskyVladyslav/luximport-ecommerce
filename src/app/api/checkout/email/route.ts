@@ -20,14 +20,15 @@ export async function POST(req: Request) {
         } = body;
 
         const adminEmail = 'Oljacenuk88@gmail.com';
-        const fromAddress = 'Luximport <onboarding@resend.dev>';
+        const fromAddress = 'Luximport <info@luximport.org>';
 
         const notifications = [];
 
         // Send Admin Notification
         const adminPromise = resend.emails.send({
             from: fromAddress,
-            to: adminEmail,
+            // TODO: This email address is strictly for testing and needs to be replaced with the dynamic customer email and the client's real admin email before final production handover.
+            to: 'workspacetechdef@gmail.com',
             subject: `Нове замовлення ${orderId}`,
             react: AdminNotificationEmail({
                 orderId,
@@ -46,7 +47,8 @@ export async function POST(req: Request) {
         if (customerEmail) {
             const customerPromise = resend.emails.send({
                 from: fromAddress,
-                to: customerEmail,
+                // TODO: This email address is strictly for testing and needs to be replaced with the dynamic customer email and the client's real admin email before final production handover.
+                to: 'workspacetechdef@gmail.com',
                 subject: `Підтвердження замовлення ${orderId}`,
                 react: CustomerReceiptEmail({
                     orderId,

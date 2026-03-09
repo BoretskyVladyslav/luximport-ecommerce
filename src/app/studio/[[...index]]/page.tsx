@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next'
-import { Studio } from './Studio'
+import dynamic from 'next/dynamic'
 
 export const metadata: Metadata = {
     title: 'Sanity Studio',
@@ -12,6 +12,8 @@ export const viewport: Viewport = {
     maximumScale: 1,
     userScalable: false,
 }
+
+const Studio = dynamic(() => import('./Studio'), { ssr: false })
 
 export default function StudioPage() {
     return <Studio />

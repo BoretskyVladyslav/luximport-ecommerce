@@ -5,6 +5,7 @@ import { Header } from '@/components/layout/header'
 import { Footer } from '@/components/layout/footer'
 import { CartSidebar } from '@/components/ui/cart-sidebar'
 import { WishlistSidebar } from '@/components/ui/wishlist-sidebar'
+import { CategoryNav } from '@/components/layout/CategoryNav'
 import { cn } from '@/lib/utils'
 
 const playfair = Playfair_Display({ subsets: ['latin', 'cyrillic'], variable: '--font-heading' })
@@ -23,6 +24,7 @@ export default function StorefrontLayout({
   return (
     <div className={cn(playfair.variable, inter.variable, "flex min-h-full flex-col antialiased font-body flex-1")} suppressHydrationWarning>
       <Header />
+      <CategoryNav />
       <CartSidebar />
       <WishlistSidebar />
       <main className='flex-1 flex flex-col'>

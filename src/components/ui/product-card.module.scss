@@ -3,20 +3,20 @@
 .card {
     background: #fff;
     display: flex;
-    flex-direction: column;
-    height: 100%;
+    flex-direction: column; 
+    height: 100%; 
     transition: background 0.3s;
     margin-top: -1px;
-    margin-left: -1px;
+    margin-left: -1px; 
 
-    &:hover {
+    &:hover { 
         background: #fafafa; 
-
+ 
         &::after {
             opacity: 1;
         }
     }
-}
+} 
 
 .imageWrapper {
     position: relative;

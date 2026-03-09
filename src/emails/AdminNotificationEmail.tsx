@@ -51,7 +51,7 @@ export const AdminNotificationEmail = ({
 
                     <Section style={section}>
                         <Heading as="h2" style={h2}>Контактні дані</Heading>
-                        <Text style={text}><strong>Ім'я:</strong> {customerName}</Text>
+                        <Text style={text}><strong>Ім&apos;я:</strong> {customerName}</Text>
                         <Text style={text}><strong>Телефон:</strong> {customerPhone}</Text>
                         {customerEmail && <Text style={text}><strong>Email:</strong> {customerEmail}</Text>}
                         <Text style={text}><strong>Дата:</strong> {date}</Text>

@@ -94,5 +94,11 @@ export const product = defineType({
         defineField({ name: 'height', type: 'number', title: 'Висота (см)' }),
       ],
     }),
+    defineField({
+      name: 'categories',
+      type: 'array',
+      title: 'Категорії',
+      of: [{ type: 'reference', to: [{ type: 'category' }] }],
+    }),
   ],
 })

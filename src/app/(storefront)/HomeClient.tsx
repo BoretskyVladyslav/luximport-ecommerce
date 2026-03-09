@@ -1,7 +1,7 @@
 'use client'
 
-import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { HeroSlider } from '@/components/ui/hero-slider'
 import { Marquee } from '@/components/ui/marquee'
 import { ProductCard } from '@/components/ui/product-card'
 import styles from './page.module.scss'
@@ -11,50 +11,7 @@ const premiumEase = [0.25, 0.1, 0.25, 1];
 export function HomeClient({ products }: { products: any[] }) {
     return (
         <main>
-            <section className={styles.hero}>
-                <div className={styles.heroText}>
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, ease: premiumEase, delay: 0 }}
-                    >
-                        <p className={styles.metaLabel}>EST. 2026 / PREMIUM SELECTION</p>
-                    </motion.div>
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, ease: premiumEase, delay: 0.2 }}
-                    >
-                        <h1 className={styles.heroTitle}>LUXIMPORT</h1>
-                    </motion.div>
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, ease: premiumEase, delay: 0.4 }}
-                    >
-                        <p className={styles.heroSubtitle}>
-                            Ексклюзивні продукти з Європи для вашого столу
-                        </p>
-                    </motion.div>
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, ease: premiumEase, delay: 0.6 }}
-                    >
-                        <Link href="/catalog" className={styles.ctaButton}>
-                            ПЕРЕГЛЯНУТИ КАТАЛОГ
-                        </Link>
-                    </motion.div>
-                </div>
-                <motion.div
-                    className={styles.heroVisual}
-                    initial={{ scale: 1 }}
-                    animate={{ scale: 1.05 }}
-                    transition={{ duration: 10, ease: premiumEase }}
-                >
-                    MAIN VISUAL
-                </motion.div>
-            </section>
+            <HeroSlider />
 
             <Marquee />
 

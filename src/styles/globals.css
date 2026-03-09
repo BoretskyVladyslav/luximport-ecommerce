@@ -26,11 +26,16 @@ a {
   color: inherit;
 }
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 :root {
   --font-heading: 'Montserrat', sans-serif;
   --font-body: 'Open Sans', sans-serif;
   --color-accent: #C5A059;
   --color-dark: #111111;
+  --color-emerald: #1B5E3B;
+  --color-gold: #C5A059;
 }
 
 body {
@@ -44,12 +49,12 @@ body {
 }
 
 ::-moz-selection {
-  background: #111;
+  background: var(--color-emerald);
   color: #fff;
 }
 
 ::selection {
-  background: #111;
+  background: var(--color-emerald);
   color: #fff;
 }
 

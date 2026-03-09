@@ -1,7 +1,7 @@
 'use client'
 
 import { Heart } from 'lucide-react'
-import Image from 'next/image'
+
 import { motion } from 'framer-motion'
 import { useCartStore } from '@/store/cart'
 import { useWishlistStore } from '@/store/wishlistStore'
@@ -87,12 +87,7 @@ export function ProductCard({ index, title, slug, price, wholesalePrice, wholesa
                         style={{ position: 'relative', width: '100%', height: '100%' }}
                         variants={imageVariants}
                     >
-                        <Image
-                            src={urlFor(image).width(300).height(300).url()}
-                            alt={productTitle}
-                            fill
-                            style={{ objectFit: 'cover' }}
-                        />
+                        <div className="w-full h-full bg-stone-200" />
                     </motion.div>
                 ) : (
                     <div className={styles.imagePlaceholder}>IMG</div>

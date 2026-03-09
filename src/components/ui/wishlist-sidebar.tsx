@@ -18,6 +18,7 @@ export function WishlistSidebar() {
         if (isOpen) {
             closeWishlist()
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pathname])
 
     const handleAddToCart = (item: { id: string; title: string; price: number; category: string }) => {
@@ -25,11 +26,11 @@ export function WishlistSidebar() {
             id: item.id,
             title: item.title,
             price: item.price,
-            slug: item.id,
+            slug: { current: item.id },
             description: '',
             images: [],
             category: item.category,
-        })
+        } as any)
         toggleItem(item)
     }
 
@@ -48,35 +49,37 @@ export function WishlistSidebar() {
                 </div>
 
                 <div className={styles.itemsContainer}>
-                    {!isHydrated ? null : items.length === 0 ? (
-                        <p className={styles.emptyState}>Список обраного порожній</p>
-                    ) : (
-                        items.map((item) => (
-                            <div key={item.id} className={styles.item}>
-                                <div className={styles.itemImage}>IMG</div>
-                                <div className={styles.itemDetails}>
-                                    <span className={styles.itemTitle}>{item.title}</span>
-                                    <span className={styles.itemPrice}>
-                                        {item.price.toLocaleString('uk-UA')} ₴
-                                    </span>
-                                    <div className={styles.controls}>
-                                        <button
-                                            className={styles.addToCartBtn}
-                                            onClick={() => handleAddToCart(item)}
-                                        >
-                                            В КОШИК
-                                        </button>
-                                        <button
-                                            className={styles.removeBtn}
-                                            onClick={() => toggleItem(item)}
-                                        >
-                                            Видалити
-                                        </button>
+                    <div style={{ display: isHydrated ? 'contents' : 'none' }}>
+                        {items.length === 0 ? (
+                            <p className={styles.emptyState}>Список обраного порожній</p>
+                        ) : (
+                            items.map((item) => (
+                                <div key={item.id} className={styles.item}>
+                                    <div className={styles.itemImage}>IMG</div>
+                                    <div className={styles.itemDetails}>
+                                        <span className={styles.itemTitle}>{item.title}</span>
+                                        <span className={styles.itemPrice}>
+                                            {item.price.toLocaleString('uk-UA')} ₴
+                                        </span>
+                                        <div className={styles.controls}>
+                                            <button
+                                                className={styles.addToCartBtn}
+                                                onClick={() => handleAddToCart(item)}
+                                            >
+                                                В КОШИК
+                                            </button>
+                                            <button
+                                                className={styles.removeBtn}
+                                                onClick={() => toggleItem(item)}
+                                            >
+                                                Видалити
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
-                    )}
+                            ))
+                        )}
+                    </div>
                 </div>
             </div>
         </>

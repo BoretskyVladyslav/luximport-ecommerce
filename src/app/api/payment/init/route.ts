@@ -54,7 +54,7 @@ export async function POST(req: Request) {
             productCount: Array.isArray(productCount) ? productCount : [productCount],
             productPrice: Array.isArray(productPrice) ? productPrice : [productPrice],
             merchantSignature,
-            returnUrl: `${domain}/checkout/success`,
+            returnUrl: `${domain}/api/wayforpay/return`,
             serviceUrl: `${domain}/api/payment/webhook`
         })
     } catch (error) {

@@ -24,10 +24,10 @@ export function Footer() {
                 </nav>
 
                 <nav className={styles.column}>
-                    <h4 className={styles.columnTitle}>Клієнтам</h4>
-                    <Link href="/terms" className={styles.link}>Договір публічної оферти</Link>
+                    <h4 className={styles.columnTitle}>Інформація</h4>
+                    <Link href="/terms" className={styles.link}>Публічна оферта</Link>
                     <Link href="/privacy" className={styles.link}>Політика конфіденційності</Link>
-                    <Link href="/returns" className={styles.link}>Умови повернення та обміну</Link>
+                    <Link href="/returns" className={styles.link}>Повернення та обмін</Link>
                 </nav>
 
                 <div className={styles.column}>

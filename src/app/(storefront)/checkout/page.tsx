@@ -2,11 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuthStore } from '@/store/authStore'
 import { useCartStore } from '@/store/cart'
 import { useOrderStore } from '@/store/orderStore'
 import { useHydration } from '@/hooks/useHydration'
 import { NpSelect } from '@/components/ui/np-select'
+import { checkoutSchema, CheckoutFormData } from '@/lib/validations/checkout'
 import styles from './page.module.scss'
 
 const fetchCities = async (query: string) => {
@@ -65,35 +68,39 @@ export default function CheckoutPage() {
     const isHydrated = useHydration()
     const router = useRouter()
 
-    const [name, setName] = useState('')
-    const [phone, setPhone] = useState('')
-    const [city, setCity] = useState('')
     const [cityRef, setCityRef] = useState('')
-    const [department, setDepartment] = useState('')
-    const [departmentRef, setDepartmentRef] = useState('')
-    const [isSubmitting, setIsSubmitting] = useState(false)
+
+    const {
+        register,
+        handleSubmit,
+        setValue,
+        formState: { errors, isSubmitting },
+    } = useForm<CheckoutFormData>({
+        resolver: zodResolver(checkoutSchema),
+        defaultValues: {
+            name: '',
+            phone: '',
+            city: '',
+            postOffice: '',
+        },
+    })
 
     useEffect(() => {
         if (!isAuthenticated) {
             router.push('/account/login')
         } else if (user) {
-            setName(user.name || '')
+            setValue('name', user.name || '')
         }
-    }, [isAuthenticated, user, router])
+    }, [isAuthenticated, user, router, setValue])
 
     const total = totalPrice()
 
-    const handleConfirmOrder = async (e: React.FormEvent) => {
-        e.preventDefault()
-
+    const onSubmit = async (data: CheckoutFormData) => {
         if (items.length === 0) return
-
-        setIsSubmitting(true)
 
         const dateObj = new Date()
         const formattedDate = `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`
         const randomId = `#${Math.floor(Math.random() * 10000).toString().padStart(4, '0')}`
-
         const totalFormatted = `${total.toLocaleString('uk-UA')} ₴`
 
         try {
@@ -102,18 +109,16 @@ export default function CheckoutPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     orderId: randomId,
-                    customerName: name,
-                    customerPhone: phone,
+                    customerName: data.name,
+                    customerPhone: data.phone,
                     customerEmail: user?.email || '',
-                    shippingAddress: `${city}, ${department}`,
-                    items: items,
+                    shippingAddress: `${data.city}, ${data.postOffice}`,
+                    items,
                     total: totalFormatted,
-                    date: formattedDate
+                    date: formattedDate,
                 }),
             })
-        } catch (error) {
-            console.error('Failed to send email:', error)
-        }
+        } catch { }
 
         const newOrder = {
             id: randomId,
@@ -121,17 +126,15 @@ export default function CheckoutPage() {
             status: 'processing' as const,
             statusText: 'ОБРОБЛЯЄТЬСЯ',
             total: totalFormatted,
-            customerName: name,
-            customerPhone: phone,
-            shippingAddress: `${city}, ${department}`,
-            items: [...items]
+            customerName: data.name,
+            customerPhone: data.phone,
+            shippingAddress: `${data.city}, ${data.postOffice}`,
+            items: [...items],
         }
 
         addOrder(newOrder)
         setLastOrder(newOrder)
-
         clearCart()
-        setIsSubmitting(false)
         router.push('/checkout/success')
     }
 
@@ -142,51 +145,64 @@ export default function CheckoutPage() {
             <div className={styles.formSection}>
                 <h1 className={styles.sectionTitle}>ОФОРМЛЕННЯ ЗАМОВЛЕННЯ</h1>
 
-                <form id="checkout-form" onSubmit={handleConfirmOrder}>
+                <form id="checkout-form" onSubmit={handleSubmit(onSubmit)}>
                     <div className={styles.formGrid}>
                         <div className={`${styles.inputGroup} ${styles.fullWidth}`}>
                             <label className={styles.label}>Прізвище та Ім&#39;я</label>
                             <input
                                 type="text"
                                 className={styles.input}
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                required
+                                {...register('name')}
                             />
+                            {errors.name && (
+                                <p className={styles.fieldError}>{errors.name.message}</p>
+                            )}
                         </div>
+
                         <div className={`${styles.inputGroup} ${styles.fullWidth}`}>
                             <label className={styles.label}>Телефон</label>
                             <input
                                 type="tel"
                                 className={styles.input}
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
-                                placeholder="+38 (___) ___-__-__"
-                                required
+                                placeholder="+380XXXXXXXXX"
+                                {...register('phone')}
                             />
+                            {errors.phone && (
+                                <p className={styles.fieldError}>{errors.phone.message}</p>
+                            )}
                         </div>
-                        <NpSelect
-                            label="Місто"
-                            placeholder="Введіть назву міста..."
-                            value={city}
-                            onChange={(val, ref) => {
-                                setCity(val)
-                                setCityRef(ref)
-                                setDepartment('')
-                                setDepartmentRef('')
-                            }}
-                            onSearch={fetchCities}
-                        />
-                        <NpSelect
-                            label="Відділення (Нова Пошта/Кур&#39;єр)"
-                            placeholder="Оберіть відділення..."
-                            value={department}
-                            onChange={(val, ref) => {
-                                setDepartment(val)
-                                setDepartmentRef(ref)
-                            }}
-                            onSearch={(query) => fetchBranches(cityRef, query)}
-                        />
+
+                        <div className={styles.fullWidth}>
+                            <NpSelect
+                                label="Місто"
+                                placeholder="Введіть назву міста..."
+                                value=""
+                                onChange={(val, ref) => {
+                                    setValue('city', val, { shouldValidate: true })
+                                    setCityRef(ref)
+                                    setValue('postOffice', '', { shouldValidate: false })
+                                }}
+                                onSearch={fetchCities}
+                            />
+                            {errors.city && (
+                                <p className={styles.fieldError}>{errors.city.message}</p>
+                            )}
+                        </div>
+
+                        <div className={styles.fullWidth}>
+                            <NpSelect
+                                label="Відділення (Нова Пошта/Кур&#39;єр)"
+                                placeholder="Оберіть відділення..."
+                                value=""
+                                onChange={(val) => {
+                                    setValue('postOffice', val, { shouldValidate: true })
+                                }}
+                                onSearch={(query) => fetchBranches(cityRef, query)}
+                            />
+                            {errors.postOffice && (
+                                <p className={styles.fieldError}>{errors.postOffice.message}</p>
+                            )}
+                        </div>
                     </div>
                 </form>
             </div>

@@ -161,4 +161,16 @@
 }
 .confirmBtn:hover {
   background: #333;
+}
+.confirmBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.fieldError {
+  margin-top: 0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  color: #c0392b;
+  letter-spacing: 0.3px;
 }/*# sourceMappingURL=page.module.css.map */
