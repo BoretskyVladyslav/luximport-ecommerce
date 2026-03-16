@@ -1,8 +1,8 @@
 import { product } from './product'
-import { infoPage } from './infoPage'
-import { category } from './category'
-import { order } from './order'
+// import { infoPage } from './infoPage'    // re-enable when needed
+// import { category } from './category'   // re-enable when needed
+// import { order } from './order'         // re-enable when needed
 
 export const schema = {
-  types: [product, infoPage, category, order],
+  types: [product],
 }
