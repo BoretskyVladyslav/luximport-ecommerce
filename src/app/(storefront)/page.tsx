@@ -1,7 +1,8 @@
 import { client } from '@/lib/sanity'
 import { HomeClient } from './HomeClient'
 
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 const categories = [
   { name: 'КАВА ТА ЧАЙ', count: '24 ITEMS' },
@@ -17,11 +18,13 @@ export default async function Home() {
     price,
     wholesalePrice,
     wholesaleMinQuantity,
+    piecesPerBox,
+    weight,
     category,
     "slug": slug.current,
     image,
     stock
-  }`)
+  }`, {}, { cache: 'no-store' })
 
   return (
     <HomeClient products={products} />

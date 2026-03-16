@@ -1,6 +1,9 @@
 import { client } from '@/lib/sanity'
 import { ClientCatalog } from './ClientCatalog'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default async function CatalogPage() {
     const products = await client.fetch(
         `*[_type == "product"]{
@@ -9,6 +12,8 @@ export default async function CatalogPage() {
             price,
             wholesalePrice,
             wholesaleMinQuantity,
+            piecesPerBox,
+            weight,
             category,
             origin,
             stock,
@@ -16,7 +21,7 @@ export default async function CatalogPage() {
             image
         }`,
         {},
-        { next: { tags: ['product'] } }
+        { cache: 'no-store' }
     )
 
     return <ClientCatalog products={products} />

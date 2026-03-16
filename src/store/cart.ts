@@ -49,10 +49,11 @@ export const useCartStore = create<CartState>()(
             clearCart: () => set({ items: [] }),
             totalPrice: () => {
                 return get().items.reduce((total, item) => {
+                    const threshold = item.piecesPerBox ?? item.wholesaleMinQuantity
                     const priceToUse =
-                        item.wholesaleMinQuantity &&
+                        threshold &&
                             item.wholesalePrice &&
-                            item.quantity >= item.wholesaleMinQuantity
+                            item.quantity >= threshold
                             ? item.wholesalePrice
                             : item.price
                     return total + priceToUse * item.quantity

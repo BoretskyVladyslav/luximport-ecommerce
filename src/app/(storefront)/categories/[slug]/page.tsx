@@ -3,6 +3,9 @@ import type { Metadata } from 'next'
 import { client } from '@/lib/sanity'
 import { ProductCard } from '@/components/ui/product-card'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface Product {
     _id: string
     title: string
@@ -10,6 +13,8 @@ interface Product {
     price: number
     wholesalePrice?: number
     wholesaleMinQuantity?: number
+    piecesPerBox?: number
+    weight?: string
     category?: string
     origin?: string
     stock?: number
@@ -34,6 +39,8 @@ const CATEGORY_QUERY = `{
     price,
     wholesalePrice,
     wholesaleMinQuantity,
+    piecesPerBox,
+    weight,
     category,
     origin,
     stock,
@@ -42,7 +49,7 @@ const CATEGORY_QUERY = `{
 }`
 
 async function getCategoryData(slug: string): Promise<CategoryData | null> {
-    const data = await client.fetch(CATEGORY_QUERY, { slug }, { next: { tags: ['product', 'category'] } })
+    const data = await client.fetch(CATEGORY_QUERY, { slug }, { cache: 'no-store' })
     if (!data.category) return null
     return { ...data.category, products: data.products ?? [] }
 }
@@ -100,6 +107,8 @@ export default async function CategoryPage({
                             price={`${product.price} ₴`}
                             wholesalePrice={product.wholesalePrice}
                             wholesaleMinQuantity={product.wholesaleMinQuantity}
+                            piecesPerBox={product.piecesPerBox}
+                            weight={product.weight}
                             category={product.category}
                             origin={product.origin}
                             stock={product.stock}

@@ -5,7 +5,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const baseUrl = process.env.NEXT_PUBLIC_DOMAIN || 'https://luximport.org'
 
     const products = await client.fetch<{ slug: string }[]>(
-        '*[_type == "product"]{ "slug": slug.current }'
+        '*[_type == "product"]{ "slug": slug.current }',
+        {},
+        { cache: 'no-store' }
     )
 
     const staticRoutes: MetadataRoute.Sitemap = [

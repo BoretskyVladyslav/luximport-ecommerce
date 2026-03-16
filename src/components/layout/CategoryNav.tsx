@@ -13,7 +13,7 @@ const CATEGORIES_QUERY = `*[_type == "category"] | order(title asc) {
 
 export async function CategoryNav() {
     const raw: SanityCategory[] = await client.fetch(CATEGORIES_QUERY, {}, {
-        next: { tags: ['categories'] },
+        cache: 'no-store',
     })
 
     const categories = raw.map((c) => ({

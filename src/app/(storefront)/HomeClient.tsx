@@ -97,6 +97,8 @@ export function HomeClient({ products }: { products: any[] }) {
                             price={`${product.price} ₴`}
                             wholesalePrice={product.wholesalePrice}
                             wholesaleMinQuantity={product.wholesaleMinQuantity}
+                            piecesPerBox={product.piecesPerBox}
+                            weight={product.weight}
                             category={product.category}
                             image={product.image}
                             stock={product.stock}

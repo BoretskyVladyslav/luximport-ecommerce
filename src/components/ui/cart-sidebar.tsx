@@ -7,6 +7,7 @@ import { useCartStore } from '@/store/cart'
 import { useAuthStore } from '@/store/authStore'
 import { useOrderStore } from '@/store/orderStore'
 import { useHydration } from '@/hooks/useHydration'
+import Image from 'next/image'
 import styles from './cart-sidebar.module.scss'
 
 export function CartSidebar() {
@@ -26,7 +27,7 @@ export function CartSidebar() {
 
     const total = totalPrice()
     const FREE_SHIPPING_THRESHOLD = 2000
-    const amountToFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - total)
+    const amountToFreeShipping = Math.max(0, Math.round((FREE_SHIPPING_THRESHOLD - total) * 100) / 100)
     const progressPercentage = Math.min(100, (total / FREE_SHIPPING_THRESHOLD) * 100)
 
     const handleCheckout = () => {
@@ -87,24 +88,42 @@ export function CartSidebar() {
                         ) : (
                             items.map((item) => (
                                 <div key={item.id} className={styles.item}>
-                                    <div className={styles.itemImage}>IMG</div>
-                                    <div className={styles.itemDetails}>
-                                        <span className={styles.itemTitle}>{item.title}</span>
-                                        {item.wholesalePrice && item.wholesaleMinQuantity && item.quantity >= item.wholesaleMinQuantity ? (
-                                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                                <span className={styles.wholesaleTag}>Гуртова ціна</span>
-                                                <span className={styles.oldPrice}>
-                                                    {(item.price * item.quantity).toLocaleString('uk-UA')} ₴
-                                                </span>
-                                                <span className={styles.wholesalePrice}>
-                                                    {(item.wholesalePrice * item.quantity).toLocaleString('uk-UA')} ₴
-                                                </span>
+                                    <div className={styles.itemImage}>
+                                        {item.images && item.images.length > 0 ? (
+                                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                                                <Image
+                                                    src={item.images[0]}
+                                                    alt={item.title}
+                                                    fill
+                                                    style={{ objectFit: 'cover' }}
+                                                    sizes="80px"
+                                                />
                                             </div>
                                         ) : (
-                                            <span className={styles.itemPrice}>
-                                                {(item.price * item.quantity).toLocaleString('uk-UA')} ₴
-                                            </span>
+                                            'IMG'
                                         )}
+                                    </div>
+                                    <div className={styles.itemDetails}>
+                                        <span className={styles.itemTitle}>{item.title}</span>
+                                        {(() => {
+                                            const threshold = item.piecesPerBox ?? item.wholesaleMinQuantity
+                                            const isWholesale = item.wholesalePrice && threshold && item.quantity >= threshold
+                                            return isWholesale ? (
+                                                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                                    <span className={styles.wholesaleTag}>Гуртова ціна</span>
+                                                    <span className={styles.oldPrice}>
+                                                        {(item.price * item.quantity).toLocaleString('uk-UA')} ₴
+                                                    </span>
+                                                    <span className={styles.wholesalePrice}>
+                                                        {(item.wholesalePrice! * item.quantity).toLocaleString('uk-UA')} ₴
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <span className={styles.itemPrice}>
+                                                    {(item.price * item.quantity).toLocaleString('uk-UA')} ₴
+                                                </span>
+                                            )
+                                        })()}
                                         <div className={styles.controls}>
                                             <div className={styles.qtyContainer}>
                                                 <button
@@ -128,15 +147,17 @@ export function CartSidebar() {
                                                 Видалити
                                             </button>
                                         </div>
-                                        {item.wholesalePrice && item.wholesaleMinQuantity && (
-                                            item.quantity >= item.wholesaleMinQuantity ? (
-                                                <div className={styles.successPrompt}>Оптова знижка застосована</div>
+                                        {item.wholesalePrice && (() => {
+                                            const threshold = item.piecesPerBox ?? item.wholesaleMinQuantity
+                                            if (!threshold) return null
+                                            return item.quantity >= threshold ? (
+                                                <div className={styles.successPrompt}>Оптова знижка застосована ✓</div>
                                             ) : (
                                                 <div className={styles.upsellPrompt}>
-                                                    Додайте ще {item.wholesaleMinQuantity - item.quantity} шт. для оптової ціни
+                                                    Додайте ще {threshold - item.quantity} шт. для оптової ціни
                                                 </div>
                                             )
-                                        )}
+                                        })()}
                                     </div>
                                 </div>
                             ))

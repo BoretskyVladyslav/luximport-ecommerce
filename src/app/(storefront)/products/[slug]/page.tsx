@@ -1,8 +1,12 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 
+import Image from 'next/image'
 import { client, urlFor } from '@/lib/sanity'
 import { AddToCartButton } from '@/components/ui/AddToCartButton'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 interface ProductData {
     _id: string
@@ -11,6 +15,7 @@ interface ProductData {
     price: number
     wholesalePrice?: number
     wholesaleMinQuantity?: number
+    piecesPerBox?: number
     category?: string
     origin?: string
     stock?: number
@@ -18,7 +23,8 @@ interface ProductData {
     image?: any
     sku?: string
     brand?: string
-    weight?: number
+    /** Stored as a string like "165г", "1.5кг" — unit already included */
+    weight?: string
 }
 
 const PRODUCT_QUERY = `*[_type == "product" && slug.current == $slug][0]{
@@ -28,6 +34,7 @@ const PRODUCT_QUERY = `*[_type == "product" && slug.current == $slug][0]{
   price,
   wholesalePrice,
   wholesaleMinQuantity,
+  piecesPerBox,
   category,
   origin,
   stock,
@@ -39,7 +46,7 @@ const PRODUCT_QUERY = `*[_type == "product" && slug.current == $slug][0]{
 }`
 
 async function getProduct(slug: string): Promise<ProductData | null> {
-    return client.fetch(PRODUCT_QUERY, { slug }, { next: { tags: ['product'] } })
+    return client.fetch(PRODUCT_QUERY, { slug }, { cache: 'no-store' })
 }
 
 export async function generateMetadata({
@@ -66,14 +73,20 @@ export default async function ProductPage({
         notFound()
     }
 
-    const imageUrl = product.image ? urlFor(product.image).width(600).height(600).url() : null
+    const imageUrl = product.image ? urlFor(product.image).width(1200).height(1200).fit('crop').crop('center').format('webp').quality(90).url() : null
 
     return (
         <main className="mx-auto max-w-7xl px-6 py-20">
             <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
-                <div className="aspect-square relative overflow-hidden bg-stone-50">
+                <div className="relative w-full aspect-square overflow-hidden bg-stone-100 rounded-lg">
                     {imageUrl ? (
-                        <div className="w-full h-full bg-stone-200" />
+                        <Image
+                            src={imageUrl}
+                            alt={product.title}
+                            fill
+                            className="object-cover object-center w-full h-full"
+                            sizes="(max-width: 1024px) 100vw, 50vw"
+                        />
                     ) : (
                         <div className="flex h-full items-center justify-center text-xs uppercase tracking-widest text-stone-300">
                             No image
@@ -123,13 +136,15 @@ export default async function ProductPage({
                         price={product.price}
                         wholesalePrice={product.wholesalePrice}
                         wholesaleMinQuantity={product.wholesaleMinQuantity}
+                        piecesPerBox={product.piecesPerBox}
                         category={product.category}
                         image={product.image}
                     />
 
                     <div className="border-t border-stone-100 pt-4 text-xs text-stone-400 space-y-1">
                         {product.sku && <p>Артикул: {product.sku}</p>}
-                        {product.weight && <p>Вага: {product.weight} кг</p>}
+                        {product.weight && <p>Вага/Об'єм: {product.weight}</p>}
+                        {product.piecesPerBox && <p>В ящику: {product.piecesPerBox} шт.</p>}
                     </div>
                 </div>
             </div>

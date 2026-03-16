@@ -10,11 +10,12 @@ interface Props {
     price: number
     wholesalePrice?: number
     wholesaleMinQuantity?: number
+    piecesPerBox?: number
     category?: string
     image?: any
 }
 
-export function AddToCartButton({ id, title, slug, price, wholesalePrice, wholesaleMinQuantity, category, image }: Props) {
+export function AddToCartButton({ id, title, slug, price, wholesalePrice, wholesaleMinQuantity, piecesPerBox, category, image }: Props) {
     const addItem = useCartStore((state) => state.addItem)
 
     const handleAdd = () => {
@@ -25,6 +26,7 @@ export function AddToCartButton({ id, title, slug, price, wholesalePrice, wholes
             price,
             wholesalePrice,
             wholesaleMinQuantity,
+            piecesPerBox,
             description: '',
             images: image ? [urlFor(image).url()] : [],
             category: category ?? '',

@@ -6,6 +6,7 @@ import { X } from 'lucide-react'
 import { useWishlistStore } from '@/store/wishlistStore'
 import { useCartStore } from '@/store/cart'
 import { useHydration } from '@/hooks/useHydration'
+import Image from 'next/image'
 import styles from './wishlist-sidebar.module.scss'
 
 export function WishlistSidebar() {
@@ -55,7 +56,21 @@ export function WishlistSidebar() {
                         ) : (
                             items.map((item) => (
                                 <div key={item.id} className={styles.item}>
-                                    <div className={styles.itemImage}>IMG</div>
+                                    <div className={styles.itemImage}>
+                                        {item.images && item.images.length > 0 ? (
+                                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                                                <Image
+                                                    src={item.images[0]}
+                                                    alt={item.title}
+                                                    fill
+                                                    style={{ objectFit: 'cover' }}
+                                                    sizes="80px"
+                                                />
+                                            </div>
+                                        ) : (
+                                            'IMG'
+                                        )}
+                                    </div>
                                     <div className={styles.itemDetails}>
                                         <span className={styles.itemTitle}>{item.title}</span>
                                         <span className={styles.itemPrice}>

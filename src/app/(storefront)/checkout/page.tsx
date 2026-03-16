@@ -79,6 +79,7 @@ export default function CheckoutPage() {
         resolver: zodResolver(checkoutSchema),
         defaultValues: {
             name: '',
+            email: '',
             phone: '',
             city: '',
             postOffice: '',
@@ -90,6 +91,7 @@ export default function CheckoutPage() {
             router.push('/account/login')
         } else if (user) {
             setValue('name', user.name || '')
+            setValue('email', user.email || '')
         }
     }, [isAuthenticated, user, router, setValue])
 
@@ -104,38 +106,109 @@ export default function CheckoutPage() {
         const totalFormatted = `${total.toLocaleString('uk-UA')} ₴`
 
         try {
-            await fetch('/api/checkout/email', {
+            // Step 1: Create Draft Sanity Order
+            const createOrderRes = await fetch('/api/checkout/create-order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     orderId: randomId,
                     customerName: data.name,
+                    customerEmail: data.email,
                     customerPhone: data.phone,
-                    customerEmail: user?.email || '',
                     shippingAddress: `${data.city}, ${data.postOffice}`,
                     items,
-                    total: totalFormatted,
-                    date: formattedDate,
+                    totalAmount: total,
                 }),
             })
-        } catch { }
 
-        const newOrder = {
-            id: randomId,
-            date: formattedDate,
-            status: 'processing' as const,
-            statusText: 'ОБРОБЛЯЄТЬСЯ',
-            total: totalFormatted,
-            customerName: data.name,
-            customerPhone: data.phone,
-            shippingAddress: `${data.city}, ${data.postOffice}`,
-            items: [...items],
+            const createdOrder = await createOrderRes.json()
+
+            if (!createOrderRes.ok) {
+                console.error('Failed to create order', createdOrder)
+                return
+            }
+
+            const sanityOrderId = createdOrder.sanityDocumentId
+
+            // Step 2: Initialize WayForPay Payment Payload
+            const productNames = items.map(item => item.title)
+            const productCounts = items.map(item => item.quantity)
+            const productPrices = items.map(item => {
+                const threshold = item.piecesPerBox ?? item.wholesaleMinQuantity
+                const isWholesale = threshold && item.quantity >= threshold
+                const applyPrice = isWholesale ? item.wholesalePrice : item.price
+                return applyPrice || 0
+            })
+
+            const paymentRes = await fetch('/api/payment/init', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    orderReference: sanityOrderId, // Wayforpay will return this ID in the webhook
+                    amount: total,
+                    productName: productNames,
+                    productCount: productCounts,
+                    productPrice: productPrices,
+                }),
+            })
+
+            const paymentData = await paymentRes.json()
+
+            if (!paymentRes.ok) {
+                console.error('Payment Init Error:', paymentData)
+                return
+            }
+
+            // Save order info locally for the success page (if they return without webhook)
+            const newOrder = {
+                id: randomId,
+                date: formattedDate,
+                status: 'processing' as const,
+                statusText: 'ОБРОБЛЯЄТЬСЯ',
+                total: totalFormatted,
+                customerName: data.name,
+                customerEmail: data.email,
+                customerPhone: data.phone,
+                shippingAddress: `${data.city}, ${data.postOffice}`,
+                items: [...items],
+            }
+
+            addOrder(newOrder)
+            setLastOrder(newOrder)
+            clearCart()
+
+            // Step 3: Programmatically POST to WayForPay gateway
+            const form = document.createElement('form')
+            form.method = 'POST'
+            form.action = 'https://secure.wayforpay.com/pay'
+            form.style.display = 'none'
+
+            Object.keys(paymentData).forEach(key => {
+                const value = paymentData[key]
+                if (Array.isArray(value)) {
+                    value.forEach(val => {
+                        const input = document.createElement('input')
+                        input.type = 'hidden'
+                        input.name = `${key}[]`
+                        input.value = val.toString()
+                        form.appendChild(input)
+                    })
+                } else {
+                    const input = document.createElement('input')
+                    input.type = 'hidden'
+                    input.name = key
+                    input.value = value.toString()
+                    form.appendChild(input)
+                }
+            })
+
+            document.body.appendChild(form)
+            form.submit()
+            // We no longer route right to /checkout/success here. Let WayForPay redirect the user.
+
+        } catch (error) {
+            console.error('Checkout error:', error)
         }
-
-        addOrder(newOrder)
-        setLastOrder(newOrder)
-        clearCart()
-        router.push('/checkout/success')
     }
 
     if (!isHydrated || !isAuthenticated) return null
@@ -156,6 +229,19 @@ export default function CheckoutPage() {
                             />
                             {errors.name && (
                                 <p className={styles.fieldError}>{errors.name.message}</p>
+                            )}
+                        </div>
+
+                        <div className={`${styles.inputGroup} ${styles.fullWidth}`}>
+                            <label className={styles.label}>Email (Електронна пошта)</label>
+                            <input
+                                type="email"
+                                className={styles.input}
+                                placeholder="example@gmail.com"
+                                {...register('email')}
+                            />
+                            {errors.email && (
+                                <p className={styles.fieldError}>{errors.email.message}</p>
                             )}
                         </div>
 
@@ -212,7 +298,8 @@ export default function CheckoutPage() {
 
                 <div className={styles.orderItems}>
                     {items.map((item) => {
-                        const isWholesale = item.wholesaleMinQuantity && item.quantity >= item.wholesaleMinQuantity
+                        const threshold = item.piecesPerBox ?? item.wholesaleMinQuantity
+                        const isWholesale = threshold && item.quantity >= threshold
                         const applyPrice = isWholesale ? item.wholesalePrice : item.price
 
                         return (

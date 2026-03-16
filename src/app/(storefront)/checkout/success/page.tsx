@@ -9,6 +9,7 @@ import { useOrderStore } from '@/store/orderStore'
 import { useCartStore } from '@/store/cart'
 import { useHydration } from '@/hooks/useHydration'
 import { SuccessSlider } from './success-slider'
+import Image from 'next/image'
 import styles from './page.module.scss'
 
 export default function CheckoutSuccessPage() {
@@ -72,7 +73,8 @@ export default function CheckoutSuccessPage() {
                             </thead>
                             <tbody>
                                 {lastOrder.items.map((item: any) => {
-                                    const isWholesale = item.wholesaleMinQuantity && item.quantity >= item.wholesaleMinQuantity
+                                    const threshold = item.piecesPerBox ?? item.wholesaleMinQuantity
+                                    const isWholesale = threshold && item.quantity >= threshold
                                     const applyPrice = isWholesale ? item.wholesalePrice : item.price
                                     const itemTotal = (applyPrice || 0) * item.quantity
                                     const imageSrc = item.images && item.images.length > 0 ? item.images[0] : '/placeholder.jpg'
@@ -82,7 +84,19 @@ export default function CheckoutSuccessPage() {
                                             <td>
                                                 <div className={styles.itemMeta}>
                                                     <div className={styles.itemImage}>
-                                                        <div className="w-full h-full bg-stone-200" />
+                                                        {item.images && item.images.length > 0 ? (
+                                                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                                                                <Image
+                                                                    src={item.images[0]}
+                                                                    alt={item.title}
+                                                                    fill
+                                                                    style={{ objectFit: 'cover' }}
+                                                                    sizes="80px"
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="w-full h-full bg-stone-200" />
+                                                        )}
                                                     </div>
                                                     <div>
                                                         <h4 className={styles.itemName}>{item.title}</h4>

@@ -6,6 +6,7 @@ interface WishlistItem {
     title: string
     price: number
     category: string
+    images?: string[]
 }
 
 interface WishlistState {

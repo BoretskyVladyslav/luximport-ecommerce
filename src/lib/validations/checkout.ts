@@ -2,6 +2,7 @@ import { z } from 'zod'
 
 export const checkoutSchema = z.object({
     name: z.string().min(2, { message: "Ім'я має містити щонайменше 2 символи" }),
+    email: z.string().email({ message: 'Введіть коректний email адресу' }),
     phone: z
         .string()
         .regex(/^\+380\d{9}$/, { message: 'Введіть коректний номер телефону (+380XXXXXXXXX)' }),

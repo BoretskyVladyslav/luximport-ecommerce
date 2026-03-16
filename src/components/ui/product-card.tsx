@@ -2,9 +2,11 @@
 
 import { Heart } from 'lucide-react'
 
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { useCartStore } from '@/store/cart'
 import { useWishlistStore } from '@/store/wishlistStore'
+import { useHydration } from '@/hooks/useHydration'
 import { urlFor } from '@/lib/sanity'
 import styles from './product-card.module.scss'
 
@@ -26,13 +28,15 @@ interface ProductCardProps {
     price?: string
     wholesalePrice?: number
     wholesaleMinQuantity?: number
+    piecesPerBox?: number
+    weight?: string
     category?: string
     origin?: string
     stock?: number
     image?: any
 }
 
-export function ProductCard({ index, title, slug, price, wholesalePrice, wholesaleMinQuantity, category, origin, stock, image }: ProductCardProps) {
+export function ProductCard({ index, title, slug, price, wholesalePrice, wholesaleMinQuantity, piecesPerBox, weight, category, origin, stock, image }: ProductCardProps) {
     const addItem = useCartStore((state) => state.addItem)
     const { items: wishlistItems, toggleItem } = useWishlistStore()
 
@@ -43,7 +47,10 @@ export function ProductCard({ index, title, slug, price, wholesalePrice, wholesa
         : 100 * (index + 1)
     const productCategory = category ?? 'КАТЕГОРІЯ'
 
-    const isLiked = wishlistItems.some((item) => item.id === productId)
+    const isHydrated = useHydration()
+
+    // Only read persisted wishlist state after client mount to avoid SSR mismatch
+    const isLiked = isHydrated && wishlistItems.some((item) => item.id === productId)
 
     const handleAddToCart = () => {
         addItem({
@@ -52,6 +59,7 @@ export function ProductCard({ index, title, slug, price, wholesalePrice, wholesa
             price: productPrice,
             wholesalePrice,
             wholesaleMinQuantity,
+            piecesPerBox,
             slug: productId,
             description: '',
             images: image ? [urlFor(image).url()] : [],
@@ -66,6 +74,7 @@ export function ProductCard({ index, title, slug, price, wholesalePrice, wholesa
             title: productTitle,
             price: productPrice,
             category: productCategory,
+            images: image ? [urlFor(image).url()] : [],
         })
     }
 
@@ -83,14 +92,17 @@ export function ProductCard({ index, title, slug, price, wholesalePrice, wholesa
                     </div>
                 )}
                 {image ? (
-                    <motion.div
-                        style={{ position: 'relative', width: '100%', height: '100%' }}
-                        variants={imageVariants}
-                    >
-                        <div className="w-full h-full bg-stone-200" />
-                    </motion.div>
+                    <div className="relative w-full" style={{ aspectRatio: '4/5' }}>
+                        <Image
+                            src={urlFor(image).width(600).height(750).fit('max').format('webp').quality(90).url()}
+                            alt={productTitle}
+                            fill
+                            className="object-contain object-center w-full h-full transition-transform duration-500 hover:scale-105"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        />
+                    </div>
                 ) : (
-                    <div className={styles.imagePlaceholder}>IMG</div>
+                    <div className={styles.imagePlaceholder}>Немає фото</div>
                 )}
                 <button
                     className={`${styles.likeBtn} ${isLiked ? styles.likeBtnActive : ''}`}
@@ -100,15 +112,20 @@ export function ProductCard({ index, title, slug, price, wholesalePrice, wholesa
                 </button>
             </div>
             <div className={styles.content}>
-                <div className={styles.category}>{productCategory}</div>
+                <div className={styles.category}>
+                    {productCategory}{weight && <span className={styles.weight}> • {weight}</span>}
+                </div>
                 <h3 className={styles.title}>{productTitle}</h3>
+                {piecesPerBox !== undefined && (
+                    <div className={styles.boxQty}>В ящику: {piecesPerBox} шт.</div>
+                )}
                 {wholesalePrice !== undefined && wholesaleMinQuantity !== undefined && (
                     <>
                         <div className={styles.wholesaleBadge}>
                             {wholesalePrice} ₴ від {wholesaleMinQuantity} шт.
                         </div>
                         <div className={styles.savingsBadge}>
-                            Економія {productPrice - wholesalePrice} ₴ / шт. при замовленні від {wholesaleMinQuantity} шт.
+                            Економія {(productPrice - wholesalePrice).toFixed(2)} ₴ / шт. при замовленні від {piecesPerBox ?? wholesaleMinQuantity} шт.
                         </div>
                     </>
                 )}
