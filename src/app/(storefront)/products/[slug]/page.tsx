@@ -143,7 +143,7 @@ export default async function ProductPage({
 
                     <div className="border-t border-stone-100 pt-4 text-xs text-stone-400 space-y-1">
                         {product.sku && <p>Артикул: {product.sku}</p>}
-                        {product.weight && <p>Вага/Об'єм: {product.weight}</p>}
+                        {product.weight && <p>Вага/Об&apos;єм: {product.weight}</p>}
                         {product.piecesPerBox && <p>В ящику: {product.piecesPerBox} шт.</p>}
                     </div>
                 </div>
