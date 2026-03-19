@@ -73,7 +73,7 @@ export default async function ProductPage({
         notFound()
     }
 
-    const imageUrl = product.image ? urlFor(product.image).width(1200).height(1200).fit('crop').crop('center').format('webp').quality(90).url() : null
+    const imageUrl = product.image ? urlFor(product.image).width(600).height(600).fit('fillmax').bg('ffffff').format('webp').quality(90).url() : null
 
     return (
         <main className="mx-auto max-w-7xl px-6 py-20">

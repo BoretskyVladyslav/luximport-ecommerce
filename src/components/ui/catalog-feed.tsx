@@ -188,11 +188,14 @@ export function CatalogFeed({ products, categories = [] }: CatalogFeedProps) {
                             <ProductCard
                                 key={product._id}
                                 index={index}
+                                slug={product._id}
                                 title={product.title}
                                 price={`${product.price} ₴`}
+                                wholesalePrice={product.wholesalePrice}
                                 category={product.categories?.[0]?.title || 'Без категорії'}
                                 origin={product.origin}
                                 stock={product.stock}
+                                image={product.image}
                             />
                         ))}
                     </div>

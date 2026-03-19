@@ -94,7 +94,7 @@ export function ProductCard({ index, title, slug, price, wholesalePrice, wholesa
                 {image ? (
                     <div className={styles.imageContainer}>
                         <Image
-                            src={urlFor(image).width(800).height(800).fit('max').format('webp').quality(90).url()}
+                            src={urlFor(image).width(600).height(600).fit('fillmax').bg('ffffff').format('webp').quality(90).url()}
                             alt={productTitle}
                             fill
                             style={{ objectFit: 'contain', objectPosition: 'center' }}
