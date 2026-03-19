@@ -92,12 +92,12 @@ export function ProductCard({ index, title, slug, price, wholesalePrice, wholesa
                     </div>
                 )}
                 {image ? (
-                    <div className="relative w-full" style={{ aspectRatio: '4/5' }}>
+                    <div className={styles.imageContainer}>
                         <Image
-                            src={urlFor(image).width(600).height(750).fit('max').format('webp').quality(90).url()}
+                            src={urlFor(image).width(800).height(800).fit('max').format('webp').quality(90).url()}
                             alt={productTitle}
                             fill
-                            className="object-contain object-center w-full h-full transition-transform duration-500 hover:scale-105"
+                            style={{ objectFit: 'contain', objectPosition: 'center' }}
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         />
                     </div>

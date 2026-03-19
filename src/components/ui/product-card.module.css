@@ -4,21 +4,36 @@
   flex-direction: column;
   height: 100%;
   transition: background 0.3s;
-  margin-top: -1px;
-  margin-left: -1px;
 }
 .card:hover {
   background: #fafafa;
 }
-.card:hover::after {
-  opacity: 1;
-}
 
 .imageWrapper {
   position: relative;
+  width: 100%;
+  aspect-ratio: 1/1;
+  background-color: #f9fafb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: hidden;
-  aspect-ratio: 3/4;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.imageContainer {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+}
+.imageContainer img {
+  width: 100% !important;
+  height: 100% !important;
+  -o-object-fit: contain !important;
+     object-fit: contain !important;
+  -o-object-position: center !important;
+     object-position: center !important;
 }
 
 .imagePlaceholder {
@@ -78,12 +93,28 @@
   margin-bottom: 0.5rem;
 }
 
+.weight {
+  color: #aaa;
+  font-size: 0.6rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+
 .title {
   font-family: var(--font-body);
   font-size: 0.9rem;
   font-weight: 500;
   color: #111;
   line-height: 1.4;
+}
+
+.boxQty {
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #bbb;
+  margin-top: 0.3rem;
 }
 
 .footer {

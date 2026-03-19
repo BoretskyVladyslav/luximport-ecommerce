@@ -14,7 +14,7 @@ export default async function CatalogPage() {
             wholesaleMinQuantity,
             piecesPerBox,
             weight,
-            category,
+            "categories": categories[]->{ _id, title, "slug": slug.current },
             origin,
             stock,
             "slug": slug.current,
@@ -24,5 +24,16 @@ export default async function CatalogPage() {
         { cache: 'no-store' }
     )
 
-    return <ClientCatalog products={products} />
+    const categories = await client.fetch(
+        `*[_type == "category"]{
+            _id,
+            title,
+            "slug": slug.current,
+            "parent": parent->{ _id, title }
+        }`,
+        {},
+        { cache: 'no-store' }
+    )
+
+    return <ClientCatalog products={products} categories={categories} />
 }

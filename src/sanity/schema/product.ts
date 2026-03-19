@@ -59,7 +59,6 @@ export const product = defineType({
       },
     }),
 
-    /*
     defineField({
       name: 'categories',
       type: 'array',
@@ -68,7 +67,6 @@ export const product = defineType({
       group: 'general',
       of: [{ type: 'reference', to: [{ type: 'category' }] }],
     }),
-    */
     defineField({
       name: 'brand',
       type: 'string',

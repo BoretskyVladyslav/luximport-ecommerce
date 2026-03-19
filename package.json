@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "import-data": "node scripts/importProducts.mjs",
-    "sync": "node scripts/delete-products.mjs && npm run import-data"
+    "sync": "node scripts/delete-products.mjs && npm run import-data",
+    "update-catalog": "node scripts/update-from-excel.mjs",
+    "update-catalog:dry": "node scripts/update-from-excel.mjs --dry-run"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

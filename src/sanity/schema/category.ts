@@ -29,5 +29,11 @@ export const category = defineType({
             title: 'Зображення',
             options: { hotspot: true },
         }),
+        defineField({
+            name: 'parent',
+            type: 'reference',
+            to: [{ type: 'category' }],
+            title: 'Батьківська категорія',
+        }),
     ],
 })

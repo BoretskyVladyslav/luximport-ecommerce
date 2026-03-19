@@ -17,7 +17,8 @@ export function CategoryNavClient({ categories }: { categories: Category[] }) {
         setMounted(true)
     }, [])
 
-    if (categories.length === 0) return null
+    // Hide on catalog — the page has its own sidebar + toolbar for navigation
+    if (categories.length === 0 || pathname === '/catalog') return null
 
     return (
         <nav className="hidden border-b border-stone-100 bg-white lg:block">
