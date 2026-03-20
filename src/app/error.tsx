@@ -30,3 +30,4 @@ export default function Error({
         </div>
     )
 }
+// This file is a Client Component as it uses 'use client' directive and contains client-side logic (useEffect, event handlers).
