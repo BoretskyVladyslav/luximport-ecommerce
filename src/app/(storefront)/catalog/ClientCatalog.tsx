@@ -21,21 +21,73 @@ export function ClientCatalog({ products, categories }: { products: any[]; categ
     const [visibleCount, setVisibleCount] = useState(20)
     const [sortOrder, setSortOrder] = useState('default')
 
-    const mainCategories = useMemo(() => {
-        return categories.filter(c => !c.parent)
-    }, [categories])
-
-    const subCategories = useMemo(() => {
-        return categories.filter(c => c.parent)
-    }, [categories])
+    const exactHierarchy = [
+        {
+            title: "Кондитерські вироби",
+            children: [
+                "Печиво Dr. Gerard",
+                "Желейні цукерки",
+                "Драже",
+                "Батончики",
+                "Вафлі та печиво",
+                "Шоколадні цукерки",
+                "Шоколадні пасти (креми)"
+            ]
+        },
+        {
+            title: "Гарячі напої",
+            children: [
+                "Кава",
+                "Капучіно",
+                "Чай"
+            ]
+        },
+        {
+            title: "Бакалія",
+            children: [
+                "Соуси та Кетчупи",
+                "Консерви",
+                "Олія",
+                "Консервація"
+            ]
+        },
+        {
+            title: "Молочна продукція",
+            children: [
+                "Молоко"
+            ]
+        },
+        {
+            title: "Снеки",
+            children: [
+                "Горіхи"
+            ]
+        }
+    ];
 
     const filteredData = useMemo(() => {
         let data = products;
 
         if (activeCategoryId) {
-            data = products.filter(p =>
-                p.categories?.some((cat: any) => cat._id === activeCategoryId)
-            )
+            const activeGroup = exactHierarchy.find(g => g.title === activeCategoryId);
+            const childTitles = activeGroup ? activeGroup.children : [];
+            const activeLower = activeCategoryId.toLowerCase().trim();
+
+            data = products.filter((p) => {
+                return p.categories?.some((c: any) => {
+                    const title = c.title?.toLowerCase().trim() || '';
+                    if (!title) return false;
+                    
+                    const isDirectMatch = title === activeLower || title.includes(activeLower) || activeLower.includes(title);
+                    
+                    const isChildMatch = childTitles.some(ct => {
+                        const ctLower = ct.toLowerCase().trim();
+                        return title === ctLower || title.includes(ctLower) || ctLower.includes(title);
+                    });
+                    
+                    return isDirectMatch || isChildMatch;
+                });
+            });
         }
 
         if (sortOrder === 'price-asc') {
@@ -119,17 +171,17 @@ export function ClientCatalog({ products, categories }: { products: any[]; categ
                         <span>Всі товари</span>
                     </div>
 
-                    {mainCategories.map((main) => {
-                        const subs = subCategories.filter(s => s.parent?._id === main._id)
-                        const isExpanded = expandedMainCats.includes(main._id)
-                        const isActive = activeCategoryId === main._id || subs.some(s => s._id === activeCategoryId)
+                    {exactHierarchy.map((main) => {
+                        const subs = main.children;
+                        const isExpanded = expandedMainCats.includes(main.title)
+                        const isActive = activeCategoryId === main.title || subs.includes(activeCategoryId)
 
                         return (
-                            <div key={main._id} className={styles.categoryGroup}>
+                            <div key={main.title} className={styles.categoryGroup}>
                                 <div className={`${styles.mainCategory} ${isActive ? styles.mainCategoryActive : ''}`}>
                                     <span
                                         onClick={() => {
-                                            setActiveCategoryId(main._id)
+                                            setActiveCategoryId(main.title)
                                             setVisibleCount(20)
                                         }}
                                     >
@@ -140,7 +192,7 @@ export function ClientCatalog({ products, categories }: { products: any[]; categ
                                             className={`${styles.toggleBtn} ${isExpanded ? styles.toggleBtnOpen : ''}`}
                                             onClick={(e) => {
                                                 e.stopPropagation()
-                                                toggleMainCat(main._id)
+                                                toggleMainCat(main.title)
                                             }}
                                             aria-label={isExpanded ? 'Collapse' : 'Expand'}
                                         >
@@ -157,16 +209,16 @@ export function ClientCatalog({ products, categories }: { products: any[]; categ
                                             exit={{ height: 0, opacity: 0 }}
                                             transition={{ duration: 0.25, ease: premiumEase }}
                                         >
-                                            {subs.map(sub => (
+                                            {subs.map(subTitle => (
                                                 <li
-                                                    key={sub._id}
-                                                    className={`${styles.subItem} ${activeCategoryId === sub._id ? styles.subItemActive : ''}`}
+                                                    key={subTitle}
+                                                    className={`${styles.subItem} ${activeCategoryId === subTitle ? styles.subItemActive : ''}`}
                                                     onClick={() => {
-                                                        setActiveCategoryId(sub._id)
+                                                        setActiveCategoryId(subTitle)
                                                         setVisibleCount(20)
                                                     }}
                                                 >
-                                                    {sub.title}
+                                                    {subTitle}
                                                 </li>
                                             ))}
                                         </motion.ul>

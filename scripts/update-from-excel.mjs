@@ -205,13 +205,52 @@ async function getOrCreateCategory(title, parentId = null) {
   return created._id;
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+const CATEGORY_ALIASES = {
+  "кондитерські вироби": "Кондитерські вироби",
+  "кондиторські вироби": "Кондитерські вироби",
+  "гарячі напої": "Гарячі напої",
+  "гарячі нопої": "Гарячі напої",
+  "бакалія": "Бакалія",
+  "бакалійна група товарів": "Бакалія",
+  "бакалійні вироби": "Бакалія",
+  "молочна продукція": "Молочна продукція",
+  "молочна продукці": "Молочна продукція",
+  "снеки": "Снеки",
+  "печиво dr. gerard": "Печиво Dr. Gerard",
+  "печево dr. gerard": "Печиво Dr. Gerard",
+  "желейні цукерки": "Желейні цукерки",
+  "драже": "Драже",
+  "батончики": "Батончики",
+  "вафлі та печиво": "Вафлі та печиво",
+  "шоколадні цукерки": "Шоколадні цукерки",
+  "шоколадні пасти (креми)": "Шоколадні пасти (креми)",
+  "кава": "Кава",
+  "капучіно": "Капучіно",
+  "чай": "Чай",
+  "соуси та кетчупи": "Соуси та Кетчупи",
+  "консерви": "Консерви",
+  "олія": "Олія",
+  "консервація": "Консервація",
+  "молоко": "Молоко",
+  "горіхи": "Горіхи"
+};
+
+function standardizeCategory(rawName) {
+  if (!rawName) return '';
+  const clean = rawName.toString().trim().replace(/\s+/g, ' ').toLowerCase();
+  if (CATEGORY_ALIASES[clean]) return CATEGORY_ALIASES[clean];
+  if (clean.includes('кондитер') || clean.includes('кондитор')) return "Кондитерські вироби";
+  if (clean.includes('гарячі') || clean.includes('напої')) return "Гарячі напої";
+  if (clean.includes('бакалі')) return "Бакалія";
+  if (clean.includes('молочн')) return "Молочна продукція";
+  if (clean.includes('снек')) return "Снеки";
+  return rawName.toString().trim(); 
+}
 
 async function run() {
   console.log(DRY_RUN ? '\n🔍  DRY RUN MODE — no data will be written.\n' : '');
   console.log(`📂  Reading: ${EXCEL_FILE_PATH}`);
 
-  // 1. Load Excel
   let workbook;
   try {
     workbook = XLSX.readFile(EXCEL_FILE_PATH);
@@ -228,7 +267,6 @@ async function run() {
     defval: null,
   });
 
-  // 2. Detect header row
   console.log('\n🔍  Detecting column positions…');
   const detected = detectHeaders(rows);
   if (!detected) {
@@ -242,12 +280,10 @@ async function run() {
     process.exit(1);
   }
 
-  // 3. Parse data rows + resolve categories
   console.log('\n⚙️   Parsing rows and resolving categories…');
   const products = [];
   const dataRows = rows.slice(headerRowIndex + 1);
 
-  // Carry-forward state for category columns that may span multiple rows
   let lastMainGroupId = null;
   let lastSubGroupId  = null;
   let lastMainGroup   = null;
@@ -258,21 +294,33 @@ async function run() {
     const rowNumber = headerRowIndex + 2 + i; // 1-indexed Excel row
     if (!row) continue;
 
-    // — Resolve categories (read from this row; carry forward if blank) —
-    const rawMain = colMap.mainGroup !== undefined ? row[colMap.mainGroup]?.toString().trim() : null;
-    const rawSub  = colMap.subGroup  !== undefined ? row[colMap.subGroup]?.toString().trim()  : null;
+    let rawMain = colMap.mainGroup !== undefined ? standardizeCategory(row[colMap.mainGroup]) : '';
+    let rawSub  = colMap.subGroup  !== undefined ? standardizeCategory(row[colMap.subGroup])  : '';
 
-    if (rawMain && rawMain !== lastMainGroup) {
-      lastMainGroup   = rawMain;
-      lastMainGroupId = await getOrCreateCategory(rawMain, null);
-      // Reset sub-category when main changes
-      lastSubGroup   = null;
-      lastSubGroupId = null;
+    const rowExplicitlyHasMain = !!rawMain;
+    const rowExplicitlyHasSub  = !!rawSub;
+    let mainGroupChanged = false;
+
+    if (rowExplicitlyHasMain) {
+      if (rawMain !== lastMainGroup) {
+        lastMainGroup = rawMain;
+        lastMainGroupId = await getOrCreateCategory(rawMain, null);
+        mainGroupChanged = true;
+      }
+    } else {
+      rawMain = lastMainGroup;
     }
 
-    if (rawSub && rawSub !== lastSubGroup && lastMainGroupId) {
-      lastSubGroup   = rawSub;
-      lastSubGroupId = await getOrCreateCategory(rawSub, lastMainGroupId);
+    if (rowExplicitlyHasSub) {
+      if (rawSub !== lastSubGroup || mainGroupChanged || !lastSubGroupId) {
+        lastSubGroup = rawSub;
+        lastSubGroupId = await getOrCreateCategory(rawSub, lastMainGroupId);
+      }
+    } else {
+      if (rowExplicitlyHasMain) {
+        lastSubGroup = null;
+        lastSubGroupId = null;
+      }
     }
 
     // — Skip non-product rows (no SKU or no title) —
