@@ -19,7 +19,7 @@ export async function POST(req: Request) {
             date
         } = body;
 
-        const adminEmail = 'Oljacenuk88@gmail.com';
+        const adminEmail = 'oljacenuk88@gmail.com';
         const fromAddress = 'Luximport <info@luximport.org>';
 
         const notifications = [];

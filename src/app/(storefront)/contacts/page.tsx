@@ -49,8 +49,8 @@ export default function ContactsPage() {
                     >
                         <div className={styles.label}>Телефон</div>
                         <div className={styles.value}>
-                            <a href='tel:+380970000000' className={styles.valueLink}>
-                                +38 (097) 000-00-00
+                            <a href='tel:+380964652707' className={styles.valueLink}>
+                                +38 (096) 465-27-07
                             </a>
                         </div>
                     </motion.div>
@@ -64,8 +64,8 @@ export default function ContactsPage() {
                     >
                         <div className={styles.label}>Email</div>
                         <div className={styles.value}>
-                            <a href='mailto:info@luximport.com' className={styles.valueLink}>
-                                info@luximport.com
+                            <a href='mailto:oljacenuk88@gmail.com ' className={styles.valueLink}> 
+                                oljacenuk88@gmail.com
                             </a>
                         </div>
                     </motion.div>
@@ -79,7 +79,7 @@ export default function ContactsPage() {
                     >
                         <div className={styles.label}>Адреса</div>
                         <div className={styles.value}>
-                            м. Київ (офіс / склад)
+                            м. Львів (офіс / склад)
                         </div>
                     </motion.div>
 
@@ -92,7 +92,7 @@ export default function ContactsPage() {
                     >
                         <div className={styles.label}>Графік роботи</div>
                         <div className={styles.value}>
-                            Пн–Пт: 10:00 – 19:00<br />
+                            Пн–Пт: 9:00 – 18:00<br />
                             Сб–Нд: Вихідний
                         </div>
                     </motion.div>
@@ -173,7 +173,15 @@ export default function ContactsPage() {
                 transition={{ duration: 1, ease: premiumEase }}
                 viewport={{ once: true }}
             >
-                MAP AREA
+                <iframe
+                    src="https://maps.google.com/maps?q=Львівська+область,+Сокільники+вул.+Львівська+бічна,+6&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                    width="100%"
+                    height="400"
+                    style={{ border: 0, borderRadius: '12px' }}
+                    allowFullScreen={true}
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                ></iframe>
             </motion.div>
 
         </div>

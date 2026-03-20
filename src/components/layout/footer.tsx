@@ -32,8 +32,8 @@ export function Footer() {
 
                 <div className={styles.column}>
                     <h4 className={styles.columnTitle}>Контакти</h4>
-                    <a href="mailto:Oljacenuk88@gmail.com" className={styles.link}>Oljacenuk88@gmail.com</a>
-                    <p className={styles.text}>Пн-Пт, 10:00 - 18:00</p>
+                    <a href="mailto:oljacenuk88@gmail.com" className={styles.link}>oljacenuk88@gmail.com</a>
+                    <p className={styles.text}>Пн-Пт, 9:00 - 18:00</p>
                     <div className={styles.social}>
                         <a href="https://www.instagram.com/iryna_luximport?igsh=OXlrZWpmaXVzZG95" target="_blank" rel="noopener noreferrer" className={styles.link} title="Instagram">
                             <InstagramIcon />
