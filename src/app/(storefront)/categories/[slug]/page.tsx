@@ -1,57 +1,92 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { client } from '@/lib/sanity'
+import { PRODUCTS_BY_CATEGORY_REFS_QUERY, type CategoryGridProduct } from '@/lib/sanity-queries'
 import { ProductCard } from '@/components/ui/product-card'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-interface Product {
+interface CategoryDoc {
     _id: string
+    _type: 'category' | 'subcategory'
     title: string
-    slug: { current: string }
-    price: number
-    wholesalePrice?: number
-    wholesaleMinQuantity?: number
-    piecesPerBox?: number
-    weight?: string
-    category?: string
-    origin?: string
-    stock?: number
-    image?: any
+    description?: string
+}
+
+interface FlatNode {
+    _id: string
+    parentId?: string
+}
+
+function collectDescendantIds(rootId: string, cats: FlatNode[], subs: FlatNode[]): string[] {
+    const out = new Set<string>([rootId])
+    for (const c of cats) {
+        if (c.parentId === rootId) {
+            for (const id of collectDescendantIds(c._id, cats, subs)) {
+                out.add(id)
+            }
+        }
+    }
+    for (const s of subs) {
+        if (s.parentId === rootId) {
+            out.add(s._id)
+        }
+    }
+    return Array.from(out)
 }
 
 interface CategoryData {
     title: string
     description?: string
-    products: Product[]
+    products: CategoryGridProduct[]
 }
 
-const CATEGORY_QUERY = `{
-  "category": *[_type == "category" && slug.current == $slug][0]{
-    title,
-    description
-  },
-  "products": *[_type == "product" && references(*[_type == "category" && slug.current == $slug]._id)]{
-    _id,
-    title,
-    slug,
-    price,
-    wholesalePrice,
-    wholesaleMinQuantity,
-    piecesPerBox,
-    weight,
-    category,
-    origin,
-    stock,
-    image
-  }
-}`
-
 async function getCategoryData(slug: string): Promise<CategoryData | null> {
-    const data = await client.fetch(CATEGORY_QUERY, { slug }, { cache: 'no-store' })
-    if (!data.category) return null
-    return { ...data.category, products: data.products ?? [] }
+    const doc = await client.fetch<CategoryDoc | null>(
+        `*[_type in ["category", "subcategory"] && slug.current == $slug][0]{
+      _id,
+      _type,
+      title,
+      description
+    }`,
+        { slug },
+        { cache: 'no-store' }
+    )
+
+    if (!doc) return null
+
+    const hierarchy = await client.fetch<{
+        cats: FlatNode[]
+        subs: FlatNode[]
+    }>(
+        `{
+      "cats": *[_type == "category"]{ _id, "parentId": parent._ref },
+      "subs": *[_type == "subcategory"]{ _id, "parentId": parent._ref }
+    }`,
+        {},
+        { cache: 'no-store' }
+    )
+
+    const ids =
+        doc._type === 'category'
+            ? collectDescendantIds(doc._id, hierarchy.cats, hierarchy.subs)
+            : [doc._id]
+
+    let products: CategoryGridProduct[] = []
+    try {
+        products =
+            (await client.fetch<CategoryGridProduct[]>(PRODUCTS_BY_CATEGORY_REFS_QUERY, { ids }, { cache: 'no-store' })) ??
+            []
+    } catch (e) {
+        console.error('getCategoryData: products fetch failed', e)
+    }
+
+    return {
+        title: doc.title,
+        description: doc.description,
+        products: products ?? [],
+    }
 }
 
 export async function generateMetadata({
@@ -101,15 +136,20 @@ export default async function CategoryPage({
                     {data.products.map((product, index) => (
                         <ProductCard
                             key={product._id}
+                            id={product._id}
                             index={index}
-                            title={product.title}
-                            slug={product.slug?.current}
-                            price={`${product.price} ₴`}
+                            title={product.title ?? ''}
+                            slug={product.slug ?? undefined}
+                            price={
+                                typeof product.price === 'number' && Number.isFinite(product.price)
+                                    ? `${product.price} ₴`
+                                    : '—'
+                            }
                             wholesalePrice={product.wholesalePrice}
                             wholesaleMinQuantity={product.wholesaleMinQuantity}
                             piecesPerBox={product.piecesPerBox}
                             weight={product.weight}
-                            category={product.category}
+                            category={product.category ?? 'Без категорії'}
                             origin={product.origin}
                             stock={product.stock}
                             image={product.image}

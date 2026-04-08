@@ -39,6 +39,7 @@ export function SuccessSlider() {
                 className={styles.track}
                 animate={{ x: `-${current * 100}%` }}
                 transition={{ duration: 0.6, ease: premiumEase }}
+                style={{ willChange: 'transform' }}
                 drag="x"
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.12}

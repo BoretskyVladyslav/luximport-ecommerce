@@ -1,63 +1,144 @@
 import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 
+function normalizeMerchantDomainName(input: string): string {
+    try {
+        const asUrl = new URL(input)
+        return asUrl.host
+    } catch {
+        return input.replace(/^https?:\/\//i, '').split('/')[0].trim()
+    }
+}
+
+function formatWayforpayAmount(amount: number): string {
+    return amount.toFixed(2)
+}
+
+function toNumberArray(label: string, v: unknown): { ok: true; arr: number[] } | { ok: false; error: string } {
+    if (Array.isArray(v)) {
+        const out: number[] = []
+        for (let i = 0; i < v.length; i++) {
+            const n = v[i]
+            if (typeof n !== 'number' || !Number.isFinite(n)) {
+                return { ok: false, error: `${label}[${i}] must be a finite number` }
+            }
+            out.push(n)
+        }
+        return { ok: true, arr: out }
+    }
+    if (typeof v === 'number' && Number.isFinite(v)) {
+        return { ok: true, arr: [v] }
+    }
+    return { ok: false, error: `${label} must be a number or array of numbers` }
+}
+
+function toStringArray(label: string, v: unknown): { ok: true; arr: string[] } | { ok: false; error: string } {
+    if (Array.isArray(v)) {
+        const out: string[] = []
+        for (let i = 0; i < v.length; i++) {
+            const s = v[i]
+            if (typeof s !== 'string' || !s.trim()) {
+                return { ok: false, error: `${label}[${i}] must be a non-empty string` }
+            }
+            out.push(s.trim())
+        }
+        return { ok: true, arr: out }
+    }
+    if (typeof v === 'string' && v.trim()) {
+        return { ok: true, arr: [v.trim()] }
+    }
+    return { ok: false, error: `${label} must be a string or array of strings` }
+}
+
 export async function POST(req: Request) {
     try {
+        let body: unknown
+        try {
+            body = await req.json()
+        } catch {
+            return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+        }
+
+        if (!body || typeof body !== 'object' || Array.isArray(body)) {
+            return NextResponse.json({ error: 'Body must be a JSON object' }, { status: 400 })
+        }
+
+        const b = body as Record<string, unknown>
         const merchantAccount = process.env.WAYFORPAY_MERCHANT_ACCOUNT
         const secretKey = process.env.WAYFORPAY_SECRET_KEY
         const domain = process.env.NEXT_PUBLIC_DOMAIN
 
         if (!merchantAccount || !secretKey || !domain) {
-            return NextResponse.json(
-                { error: 'Missing payment environment variables' },
-                { status: 500 }
-            )
+            return NextResponse.json({ error: 'Missing payment environment variables' }, { status: 500 })
         }
 
-        const body = await req.json()
-        const { orderReference, amount, currency = 'UAH', productName, productCount, productPrice } = body
+        const { orderReference, amount, currency = 'UAH', productName, productCount, productPrice } = b
 
-        if (!orderReference || !amount || !productName || !productCount || !productPrice) {
+        if (typeof orderReference !== 'string' || !orderReference.trim()) {
+            return NextResponse.json({ error: 'Invalid orderReference' }, { status: 400 })
+        }
+        if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
+            return NextResponse.json({ error: 'amount must be a finite number > 0' }, { status: 400 })
+        }
+        if (typeof currency !== 'string' || !currency.trim()) {
+            return NextResponse.json({ error: 'Invalid currency' }, { status: 400 })
+        }
+
+        const names = toStringArray('productName', productName)
+        if (names.ok === false) {
+            return NextResponse.json({ error: names.error }, { status: 400 })
+        }
+        const counts = toNumberArray('productCount', productCount)
+        if (counts.ok === false) {
+            return NextResponse.json({ error: counts.error }, { status: 400 })
+        }
+        const prices = toNumberArray('productPrice', productPrice)
+        if (prices.ok === false) {
+            return NextResponse.json({ error: prices.error }, { status: 400 })
+        }
+
+        const n = names.arr.length
+        if (counts.arr.length !== n || prices.arr.length !== n) {
             return NextResponse.json(
-                { error: 'Missing required payload fields' },
+                { error: 'productName, productCount, and productPrice must have the same length' },
                 { status: 400 }
             )
         }
 
-        const orderDate = Math.floor(Date.now() / 1000).toString()
+        const merchantDomainName = normalizeMerchantDomainName(domain)
+        const orderDate = Math.floor(Date.now() / 1000)
+        const amountStr = formatWayforpayAmount(amount)
 
         const signatureString = [
             merchantAccount,
-            domain,
-            orderReference,
-            orderDate,
-            amount,
-            currency,
-            Array.isArray(productName) ? productName.join(';') : productName,
-            Array.isArray(productCount) ? productCount.join(';') : productCount,
-            Array.isArray(productPrice) ? productPrice.join(';') : productPrice
+            merchantDomainName,
+            orderReference.trim(),
+            String(orderDate),
+            amountStr,
+            currency.trim(),
+            names.arr.join(';'),
+            counts.arr.map(String).join(';'),
+            prices.arr.map(String).join(';'),
         ].join(';')
 
-        const merchantSignature = crypto
-            .createHmac('md5', secretKey)
-            .update(signatureString)
-            .digest('hex')
+        const merchantSignature = crypto.createHmac('md5', secretKey).update(signatureString).digest('hex')
 
         return NextResponse.json({
             merchantAccount,
-            merchantDomainName: domain,
-            orderReference,
+            merchantDomainName,
+            orderReference: orderReference.trim(),
             orderDate,
-            amount,
-            currency,
-            productName: Array.isArray(productName) ? productName : [productName],
-            productCount: Array.isArray(productCount) ? productCount : [productCount],
-            productPrice: Array.isArray(productPrice) ? productPrice : [productPrice],
+            amount: amountStr,
+            currency: currency.trim(),
+            productName: names.arr,
+            productCount: counts.arr,
+            productPrice: prices.arr,
             merchantSignature,
             returnUrl: `${domain}/api/wayforpay/return`,
-            serviceUrl: `${domain}/api/payment/webhook`
+            serviceUrl: `${domain}/api/payment/webhook`,
         })
     } catch (error) {
+        console.error('payment/init error:', error)
         return NextResponse.json(
             { error: 'Internal server error during payment initialization' },
             { status: 500 }

@@ -1,21 +1,62 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuthStore } from '@/store/authStore'
+import toast from 'react-hot-toast'
+import { loginSchema, type LoginFormData } from '@/lib/validations/auth'
 import styles from '../auth.module.scss'
 
 export default function LoginPage() {
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
     const login = useAuthStore((state) => state.login)
     const router = useRouter()
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        login({ id: '1', name: 'Користувач', email })
-        router.push('/catalog')
+    const {
+        register,
+        handleSubmit,
+        formState: { errors, isSubmitting },
+    } = useForm<LoginFormData>({
+        resolver: zodResolver(loginSchema),
+        defaultValues: { email: '', password: '' },
+        shouldFocusError: true,
+    })
+
+    const onSubmit = async (values: LoginFormData) => {
+        const normalizedEmail = values.email.trim().toLowerCase()
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ email: normalizedEmail, password: values.password }),
+        })
+        const data = await res.json().catch(() => null)
+        if (!res.ok) {
+            const msg =
+                typeof data?.message === 'string'
+                    ? data.message
+                    : typeof data?.error === 'string'
+                        ? data.error
+                        : 'Виникла помилка. Перевірте дані та спробуйте ще раз.'
+            toast.error(msg)
+            return
+        }
+        const u = data?.user
+        if (!u || typeof u !== 'object') {
+            toast.error('Виникла помилка. Перевірте дані та спробуйте ще раз.')
+            return
+        }
+        login({
+            id: String(u.id ?? ''),
+            email: String(u.email ?? normalizedEmail),
+            name: typeof u.name === 'string' ? u.name : '',
+            firstName: typeof u.firstName === 'string' ? u.firstName : '',
+            lastName: typeof u.lastName === 'string' ? u.lastName : '',
+            phone: typeof u.phone === 'string' ? u.phone : '',
+            address: typeof u.address === 'string' ? u.address : '',
+        })
+        toast.success('Вхід успішний')
+        router.push('/account/profile')
     }
 
     return (
@@ -26,17 +67,18 @@ export default function LoginPage() {
                     <p className={styles.subtitle}>LUXIMPORT ACCOUNT</p>
                 </div>
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit(onSubmit)} noValidate>
                     <div className={styles.formGroup}>
                         <label htmlFor='email' className={styles.label}>Email</label>
                         <input
                             id='email'
                             type='email'
                             className={styles.input}
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
+                            {...register('email')}
                         />
+                        {errors.email?.message && (
+                            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+                        )}
                     </div>
 
                     <div className={styles.formGroup}>
@@ -45,13 +87,16 @@ export default function LoginPage() {
                             id='password'
                             type='password'
                             className={styles.input}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
+                            {...register('password')}
                         />
+                        {errors.password?.message && (
+                            <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+                        )}
                     </div>
 
-                    <button type='submit' className={styles.submitBtn}>УВІЙТИ</button>
+                    <button type='submit' className={styles.submitBtn} disabled={isSubmitting}>
+                        {isSubmitting ? 'ОБРОБКА...' : 'УВІЙТИ'}
+                    </button>
                 </form>
 
                 <Link href='/account/register' className={styles.switchLink}>

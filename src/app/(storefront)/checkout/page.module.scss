@@ -46,6 +46,17 @@
     color: #111;
 }
 
+.checkoutError {
+    margin: -1.5rem 0 1.5rem;
+    padding: 1rem 1.25rem;
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: #7f1d1d;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+}
+
 .formGrid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -164,10 +175,32 @@
     }
 }
 
+.confirmBtnInner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border-radius: 999px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    animation: spin 0.85s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 .fieldError {
     margin-top: 0.4rem;
     font-family: var(--font-body);
     font-size: 0.72rem;
-    color: #c0392b;
+    color: #b91c1c;
     letter-spacing: 0.3px;
 }

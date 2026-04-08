@@ -4,11 +4,12 @@ import { motion } from 'framer-motion'
 import { HeroSlider } from '@/components/ui/hero-slider'
 import { Marquee } from '@/components/ui/marquee'
 import { ProductCard } from '@/components/ui/product-card'
+import type { HomeTeaserProduct } from '@/lib/sanity-queries'
 import styles from './page.module.scss'
 
 const premiumEase = [0.25, 0.1, 0.25, 1];
 
-export function HomeClient({ products }: { products: any[] }) {
+export function HomeClient({ products }: { products: HomeTeaserProduct[] }) {
     return (
         <main>
             <HeroSlider />
@@ -88,13 +89,18 @@ export function HomeClient({ products }: { products: any[] }) {
                     whileInView="show"
                     viewport={{ once: true, margin: "-50px" }}
                 >
-                    {products.map((product: any, index: number) => (
+                    {products.map((product, index) => (
                         <ProductCard
                             key={product._id}
+                            id={product._id}
                             index={index}
-                            title={product.title}
-                            slug={product.slug}
-                            price={`${product.price} ₴`}
+                            title={product.title ?? ''}
+                            slug={product.slug ?? undefined}
+                            price={
+                                typeof product.price === 'number' && Number.isFinite(product.price)
+                                    ? `${product.price} ₴`
+                                    : '—'
+                            }
                             wholesalePrice={product.wholesalePrice}
                             wholesaleMinQuantity={product.wholesaleMinQuantity}
                             piecesPerBox={product.piecesPerBox}

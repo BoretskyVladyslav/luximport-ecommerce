@@ -10,55 +10,39 @@ import { useOrderStore } from '@/store/orderStore'
 import { useHydration } from '@/hooks/useHydration'
 import { NpSelect } from '@/components/ui/np-select'
 import { checkoutSchema, CheckoutFormData } from '@/lib/validations/checkout'
+import { LoadingOverlay } from '@/components/ui/loading-overlay'
+import { PhoneInput } from '@/components/ui/phone-input'
+import { Skeleton } from '@/components/ui/skeletons'
+import toast from 'react-hot-toast'
 import styles from './page.module.scss'
+import type { FieldErrors } from 'react-hook-form'
 
-const fetchCities = async (query: string) => {
-    try {
-        const res = await fetch('/api/np', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                modelName: 'Address',
-                calledMethod: 'getCities',
-                methodProperties: { FindByString: query },
-            }),
-        })
-        const data = await res.json()
-        if (data.success) {
-            return data.data.map((city: any) => ({
-                description: city.Description,
-                ref: city.Ref,
-            }))
-        }
-        return []
-    } catch {
-        return []
-    }
+type NpOption = { description: string; ref: string }
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+    return typeof v === 'object' && v !== null && !Array.isArray(v)
 }
 
-const fetchBranches = async (cityRef: string, query: string = '') => {
-    if (!cityRef) return []
-    try {
-        const res = await fetch('/api/np', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                modelName: 'AddressGeneral',
-                calledMethod: 'getWarehouses',
-                methodProperties: { CityRef: cityRef, FindByString: query },
-            }),
-        })
-        const data = await res.json()
-        if (data.success) {
-            return data.data.map((branch: any) => ({
-                description: branch.Description,
-                ref: branch.Ref,
-            }))
+function normalizeEmail(input: string) {
+    return input.trim().toLowerCase()
+}
+
+function isValidEmail(email: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function toNpOptions(input: unknown): NpOption[] {
+    if (!Array.isArray(input)) return []
+    const out: NpOption[] = []
+    for (const row of input) {
+        if (!isRecord(row)) continue
+        const desc = row.Description
+        const ref = row.Ref
+        if (typeof desc === 'string' && desc.trim() && typeof ref === 'string' && ref.trim()) {
+            out.push({ description: desc.trim(), ref: ref.trim() })
         }
-        return []
-    } catch {
-        return []
     }
+    return out
 }
 
 export default function CheckoutPage() {
@@ -69,14 +53,23 @@ export default function CheckoutPage() {
     const router = useRouter()
 
     const [cityRef, setCityRef] = useState('')
+    const [checkoutError, setCheckoutError] = useState<string | null>(null)
+    const [npError, setNpError] = useState<string | null>(null)
+    const [manualDelivery, setManualDelivery] = useState(false)
+
+    const checkoutFailureMessage =
+        'Помилка при створенні замовлення. Спробуйте ще раз.'
 
     const {
         register,
         handleSubmit,
         setValue,
+        setError,
+        watch,
         formState: { errors, isSubmitting },
     } = useForm<CheckoutFormData>({
         resolver: zodResolver(checkoutSchema),
+        shouldFocusError: true,
         defaultValues: {
             name: '',
             email: '',
@@ -87,18 +80,125 @@ export default function CheckoutPage() {
     })
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            router.push('/account/login')
-        } else if (user) {
-            setValue('name', user.name || '')
-            setValue('email', user.email || '')
+        if (!isHydrated) return
+        let cancelled = false
+        async function run() {
+            try {
+                const res = await fetch('/api/user/me', { method: 'GET' })
+                const data = (await res.json().catch(() => null)) as any
+                const u = data?.user
+                if (!u || typeof u !== 'object') {
+                    if (!cancelled) router.push('/account/login')
+                    return
+                }
+                const firstName = typeof u.firstName === 'string' ? u.firstName.trim() : ''
+                const lastName = typeof u.lastName === 'string' ? u.lastName.trim() : ''
+                const name =
+                    firstName || lastName
+                        ? [firstName, lastName].join(' ').replace(/\s+/g, ' ').trim()
+                        : typeof u.name === 'string'
+                            ? u.name
+                            : ''
+                const email = typeof u.email === 'string' ? u.email : ''
+                const phone = typeof u.phone === 'string' ? u.phone : ''
+                if (!cancelled) {
+                    setValue('name', name, { shouldValidate: false })
+                    setValue('email', email, { shouldValidate: false })
+                    setValue('phone', phone, { shouldValidate: false })
+                }
+            } catch {
+                if (!cancelled) router.push('/account/login')
+            }
         }
-    }, [isAuthenticated, user, router, setValue])
+        void run()
+        return () => {
+            cancelled = true
+        }
+    }, [isHydrated, router, setValue])
 
     const total = totalPrice()
+    const cityValue = watch('city')
+    const postOfficeValue = watch('postOffice')
+
+    const fetchCities = async (query: string) => {
+        setNpError(null)
+        try {
+            const res = await fetch('/api/np', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    modelName: 'Address',
+                    calledMethod: 'getCities',
+                    methodProperties: { FindByString: query },
+                }),
+            })
+            const raw: unknown = await res.json().catch(() => null)
+            if (!res.ok) {
+                setNpError('Не вдалося завантажити список міст. Введіть дані вручну.')
+                setManualDelivery(true)
+                return []
+            }
+            if (!isRecord(raw) || raw.success !== true) {
+                setNpError('Не вдалося завантажити список міст. Введіть дані вручну.')
+                setManualDelivery(true)
+                return []
+            }
+            const options = toNpOptions(raw.data)
+            return options
+        } catch {
+            setNpError('Сервіс доставки тимчасово недоступний. Введіть дані вручну.')
+            setManualDelivery(true)
+            return []
+        }
+    }
+
+    const fetchBranches = async (cityRefValue: string, query: string = '') => {
+        if (!cityRefValue) return []
+        setNpError(null)
+        try {
+            const res = await fetch('/api/np', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    modelName: 'AddressGeneral',
+                    calledMethod: 'getWarehouses',
+                    methodProperties: { CityRef: cityRefValue, FindByString: query },
+                }),
+            })
+            const raw: unknown = await res.json().catch(() => null)
+            if (!res.ok) {
+                setNpError('Не вдалося завантажити відділення. Введіть дані вручну.')
+                setManualDelivery(true)
+                return []
+            }
+            if (!isRecord(raw) || raw.success !== true) {
+                setNpError('Не вдалося завантажити відділення. Введіть дані вручну.')
+                setManualDelivery(true)
+                return []
+            }
+            return toNpOptions(raw.data)
+        } catch {
+            setNpError('Сервіс доставки тимчасово недоступний. Введіть дані вручну.')
+            setManualDelivery(true)
+            return []
+        }
+    }
 
     const onSubmit = async (data: CheckoutFormData) => {
-        if (items.length === 0) return
+        if (items.length === 0) {
+            const msg = 'Ваш кошик порожній'
+            setCheckoutError(msg)
+            toast.error(msg)
+            return
+        }
+
+        setCheckoutError(null)
+        const normalizedEmail = normalizeEmail(data.email)
+        if (!isValidEmail(normalizedEmail)) {
+            setError('email', { type: 'validate', message: 'Будь ласка, введіть коректний email' })
+            return
+        }
+        const sanitizedPhone = data.phone
 
         const dateObj = new Date()
         const formattedDate = `${dateObj.getDate().toString().padStart(2, '0')}.${(dateObj.getMonth() + 1).toString().padStart(2, '0')}.${dateObj.getFullYear()}`
@@ -106,15 +206,18 @@ export default function CheckoutPage() {
         const totalFormatted = `${total.toLocaleString('uk-UA')} ₴`
 
         try {
-            // Step 1: Create Draft Sanity Order
+            const slowTimer = setTimeout(() => {
+                toast('З\'єднання повільне, але ми працюємо. Будь ласка, зачекайте.')
+            }, 10000)
+
             const createOrderRes = await fetch('/api/checkout/create-order', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     orderId: randomId,
                     customerName: data.name,
-                    customerEmail: data.email,
-                    customerPhone: data.phone,
+                    customerEmail: normalizedEmail,
+                    customerPhone: sanitizedPhone,
                     shippingAddress: `${data.city}, ${data.postOffice}`,
                     items,
                     totalAmount: total,
@@ -124,13 +227,15 @@ export default function CheckoutPage() {
             const createdOrder = await createOrderRes.json()
 
             if (!createOrderRes.ok) {
-                console.error('Failed to create order', createdOrder)
+                const msg = typeof createdOrder?.message === 'string' ? createdOrder.message : checkoutFailureMessage
+                setCheckoutError(msg)
+                toast.error(msg || 'Невідома помилка')
+                clearTimeout(slowTimer)
                 return
             }
 
             const sanityOrderId = createdOrder.sanityDocumentId
 
-            // Step 2: Initialize WayForPay Payment Payload
             const productNames = items.map(item => item.title)
             const productCounts = items.map(item => item.quantity)
             const productPrices = items.map(item => {
@@ -144,7 +249,7 @@ export default function CheckoutPage() {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    orderReference: sanityOrderId, // Wayforpay will return this ID in the webhook
+                    orderReference: sanityOrderId,
                     amount: total,
                     productName: productNames,
                     productCount: productCounts,
@@ -156,10 +261,13 @@ export default function CheckoutPage() {
 
             if (!paymentRes.ok) {
                 console.error('Payment Init Error:', paymentData)
+                setCheckoutError(checkoutFailureMessage)
+                clearTimeout(slowTimer)
                 return
             }
 
-            // Save order info locally for the success page (if they return without webhook)
+            clearTimeout(slowTimer)
+
             const newOrder = {
                 id: randomId,
                 date: formattedDate,
@@ -167,8 +275,8 @@ export default function CheckoutPage() {
                 statusText: 'ОБРОБЛЯЄТЬСЯ',
                 total: totalFormatted,
                 customerName: data.name,
-                customerEmail: data.email,
-                customerPhone: data.phone,
+                customerEmail: normalizedEmail,
+                customerPhone: sanitizedPhone,
                 shippingAddress: `${data.city}, ${data.postOffice}`,
                 items: [...items],
             }
@@ -177,7 +285,6 @@ export default function CheckoutPage() {
             setLastOrder(newOrder)
             clearCart()
 
-            // Step 3: Programmatically POST to WayForPay gateway
             const form = document.createElement('form')
             form.method = 'POST'
             form.action = 'https://secure.wayforpay.com/pay'
@@ -204,21 +311,76 @@ export default function CheckoutPage() {
 
             document.body.appendChild(form)
             form.submit()
-            // We no longer route right to /checkout/success here. Let WayForPay redirect the user.
-
         } catch (error) {
             console.error('Checkout error:', error)
+            setCheckoutError(checkoutFailureMessage)
         }
     }
 
-    if (!isHydrated || !isAuthenticated) return null
+    const onInvalid = (errs: FieldErrors<CheckoutFormData>) => {
+        setCheckoutError('Перевірте, будь ласка, виділені поля')
+        const keys = Object.keys(errs) as Array<keyof CheckoutFormData>
+        const firstKey = keys[0]
+        if (!firstKey) return
+        const el = document.querySelector(`[name="${String(firstKey)}"]`)
+        if (el && el instanceof HTMLElement) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            el.focus()
+        }
+    }
+
+    if (!isHydrated) {
+        return (
+            <div className={styles.container}>
+                <div className={styles.formSection}>
+                    <Skeleton className="mb-6 h-10 w-64 rounded-md" />
+                    <div className="space-y-4">
+                        <Skeleton className="h-4 w-48 rounded-sm" />
+                        <Skeleton className="h-12 w-full rounded-md" />
+                        <Skeleton className="h-4 w-48 rounded-sm" />
+                        <Skeleton className="h-12 w-full rounded-md" />
+                        <Skeleton className="h-4 w-48 rounded-sm" />
+                        <Skeleton className="h-12 w-full rounded-md" />
+                        <Skeleton className="mt-6 h-12 w-full rounded-md" />
+                    </div>
+                </div>
+                <div className={styles.summarySection}>
+                    <Skeleton className="mb-6 h-8 w-56 rounded-md" />
+                    <div className="space-y-3">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                            <div key={i} className={styles.summaryItem}>
+                                <div className={styles.itemInfo}>
+                                    <Skeleton className="h-4 w-48 rounded-sm" />
+                                    <Skeleton className="mt-2 h-3 w-20 rounded-sm" />
+                                </div>
+                                <Skeleton className="h-4 w-20 rounded-sm" />
+                            </div>
+                        ))}
+                    </div>
+                    <div className={styles.totalRow}>
+                        <Skeleton className="h-4 w-24 rounded-sm" />
+                        <Skeleton className="h-4 w-28 rounded-sm" />
+                    </div>
+                    <Skeleton className="mt-6 h-12 w-full rounded-md" />
+                </div>
+            </div>
+        )
+    }
 
     return (
+        <>
+        <LoadingOverlay show={isSubmitting} />
         <div className={styles.container}>
             <div className={styles.formSection}>
                 <h1 className={styles.sectionTitle}>ОФОРМЛЕННЯ ЗАМОВЛЕННЯ</h1>
 
-                <form id="checkout-form" onSubmit={handleSubmit(onSubmit)}>
+                {checkoutError && (
+                    <p className={styles.checkoutError} role="alert">
+                        {checkoutError}
+                    </p>
+                )}
+
+                <form id="checkout-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
                     <div className={styles.formGrid}>
                         <div className={`${styles.inputGroup} ${styles.fullWidth}`}>
                             <label className={styles.label}>Прізвище та Ім&#39;я</label>
@@ -247,48 +409,99 @@ export default function CheckoutPage() {
 
                         <div className={`${styles.inputGroup} ${styles.fullWidth}`}>
                             <label className={styles.label}>Телефон</label>
-                            <input
-                                type="tel"
-                                className={styles.input}
-                                placeholder="+380XXXXXXXXX"
-                                {...register('phone')}
-                            />
+                            <PhoneInput id="phone" className={styles.input} {...register('phone')} />
                             {errors.phone && (
                                 <p className={styles.fieldError}>{errors.phone.message}</p>
                             )}
                         </div>
 
-                        <div className={styles.fullWidth}>
-                            <NpSelect
-                                label="Місто"
-                                placeholder="Введіть назву міста..."
-                                value=""
-                                onChange={(val, ref) => {
-                                    setValue('city', val, { shouldValidate: true })
-                                    setCityRef(ref)
-                                    setValue('postOffice', '', { shouldValidate: false })
+                        <div className={styles.fullWidth} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '1rem' }}>
+                            <span className={styles.label} style={{ marginBottom: 0 }}>Доставка</span>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    const next = !manualDelivery
+                                    setManualDelivery(next)
+                                    setNpError(null)
+                                    if (next) {
+                                        setCityRef('')
+                                    }
                                 }}
-                                onSearch={fetchCities}
-                            />
-                            {errors.city && (
-                                <p className={styles.fieldError}>{errors.city.message}</p>
-                            )}
+                                className={styles.confirmBtn}
+                                style={{ width: 'auto', padding: '0.75rem 1.25rem', fontSize: '0.7rem' }}
+                            >
+                                {manualDelivery ? 'ВИБРАТИ ЗІ СПИСКУ' : 'ВВЕСТИ ВРУЧНУ'}
+                            </button>
                         </div>
 
-                        <div className={styles.fullWidth}>
-                            <NpSelect
-                                label="Відділення (Нова Пошта/Кур&#39;єр)"
-                                placeholder="Оберіть відділення..."
-                                value=""
-                                onChange={(val) => {
-                                    setValue('postOffice', val, { shouldValidate: true })
-                                }}
-                                onSearch={(query) => fetchBranches(cityRef, query)}
-                            />
-                            {errors.postOffice && (
-                                <p className={styles.fieldError}>{errors.postOffice.message}</p>
-                            )}
-                        </div>
+                        {npError && (
+                            <p className={styles.checkoutError} role="alert">
+                                {npError}
+                            </p>
+                        )}
+
+                        {manualDelivery ? (
+                            <>
+                                <div className={styles.fullWidth}>
+                                    <label className={styles.label}>Місто</label>
+                                    <input
+                                        type="text"
+                                        className={styles.input}
+                                        placeholder="Наприклад: Київ"
+                                        {...register('city')}
+                                    />
+                                    {errors.city && (
+                                        <p className={styles.fieldError}>{errors.city.message}</p>
+                                    )}
+                                </div>
+                                <div className={styles.fullWidth}>
+                                    <label className={styles.label}>Відділення / адреса</label>
+                                    <input
+                                        type="text"
+                                        className={styles.input}
+                                        placeholder="Наприклад: Відділення №1 або вул. ..."
+                                        {...register('postOffice')}
+                                    />
+                                    {errors.postOffice && (
+                                        <p className={styles.fieldError}>{errors.postOffice.message}</p>
+                                    )}
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className={styles.fullWidth}>
+                                    <NpSelect
+                                        label="Місто"
+                                        placeholder="Введіть назву міста..."
+                                        value={cityValue}
+                                        onChange={(val, ref) => {
+                                            setValue('city', val, { shouldValidate: true })
+                                            setCityRef(ref)
+                                            setValue('postOffice', '', { shouldValidate: true })
+                                        }}
+                                        onSearch={fetchCities}
+                                    />
+                                    {errors.city && (
+                                        <p className={styles.fieldError}>{errors.city.message}</p>
+                                    )}
+                                </div>
+
+                                <div className={styles.fullWidth}>
+                                    <NpSelect
+                                        label="Відділення (Нова Пошта/Кур&#39;єр)"
+                                        placeholder={cityRef ? 'Оберіть відділення...' : 'Спочатку оберіть місто'}
+                                        value={postOfficeValue}
+                                        onChange={(val) => {
+                                            setValue('postOffice', val, { shouldValidate: true })
+                                        }}
+                                        onSearch={(query) => fetchBranches(cityRef, query)}
+                                    />
+                                    {errors.postOffice && (
+                                        <p className={styles.fieldError}>{errors.postOffice.message}</p>
+                                    )}
+                                </div>
+                            </>
+                        )}
                     </div>
                 </form>
             </div>
@@ -323,11 +536,15 @@ export default function CheckoutPage() {
                     type="submit"
                     form="checkout-form"
                     className={styles.confirmBtn}
-                    disabled={items.length === 0 || isSubmitting}
+                    disabled={isSubmitting}
                 >
-                    {isSubmitting ? 'ОБРОБКА...' : 'ПІДТВЕРДИТИ ЗАМОВЛЕННЯ'}
+                    <span className={styles.confirmBtnInner}>
+                        {isSubmitting && <span className={styles.spinner} aria-hidden="true" />}
+                        {isSubmitting ? 'Обробка замовлення...' : 'ПІДТВЕРДИТИ ЗАМОВЛЕННЯ'}
+                    </span>
                 </button>
             </div>
         </div>
+        </>
     )
 }

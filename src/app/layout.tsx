@@ -1,6 +1,11 @@
+import '@/styles/globals.scss'
+import type { Metadata } from 'next'
 import { GoogleTagManager } from '@next/third-parties/google'
+import { getMetadataBase } from '@/lib/site-url'
+import { ToastProvider } from '@/components/providers/toast-provider'
 
-export const metadata = {
+export const metadata: Metadata = {
+    metadataBase: getMetadataBase(),
     title: 'LuxImport | Оптовий магазин',
     description: 'Ексклюзивні товари оптом з доставкою по Україні',
     openGraph: {
@@ -18,9 +23,9 @@ export default function RootLayout({
 }) {
     return (
         <html lang="uk" suppressHydrationWarning>
-            <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID || "GTM-KCB7NCH8"} />
             <body suppressHydrationWarning>
-                {children}
+                <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID || 'GTM-KCB7NCH8'} />
+                <ToastProvider>{children}</ToastProvider>
             </body>
         </html>
     )

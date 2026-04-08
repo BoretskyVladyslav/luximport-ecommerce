@@ -159,6 +159,18 @@
         background: #111;
         color: #fff;
     }
+
+    &:disabled {
+        cursor: not-allowed;
+        border-color: #e5e5e5;
+        color: #999;
+        background: #f5f5f5;
+    }
+
+    &:disabled:hover {
+        background: #f5f5f5;
+        color: #999;
+    }
 }
 
 .badgesContainer {
@@ -180,6 +192,12 @@
     color: #111;
     padding: 0.3rem 0.6rem;
     border: 1px solid #111;
+}
+
+.badgeOutOfStock {
+    background: #111;
+    color: #fff;
+    border-color: #111;
 }
 
 .stockWarning {

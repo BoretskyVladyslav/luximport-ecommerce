@@ -1,39 +1,53 @@
 import { client } from '@/lib/sanity'
+import {
+    GROQ_ORDER_MANUAL_SORT_THEN_NEWEST,
+    PRODUCTS_CATALOG_QUERY,
+    type CatalogProduct,
+} from '@/lib/sanity-queries'
 import { ClientCatalog } from './ClientCatalog'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export default async function CatalogPage() {
-    const products = await client.fetch(
-        `*[_type == "product"]{
-            _id,
-            title,
-            price,
-            wholesalePrice,
-            wholesaleMinQuantity,
-            piecesPerBox,
-            weight,
-            "categories": categories[]->{ _id, title, "slug": slug.current },
-            origin,
-            stock,
-            "slug": slug.current,
-            image
-        }`,
-        {},
-        { cache: 'no-store' }
-    )
+    let products: CatalogProduct[] = []
+    try {
+        products = await client.fetch<CatalogProduct[]>(PRODUCTS_CATALOG_QUERY, {}, { cache: 'no-store' })
+    } catch (e) {
+        console.error('CatalogPage: failed to fetch products', e)
+    }
 
     const categories = await client.fetch(
-        `*[_type == "category"]{
+        `*[_type == "category"] | order(${GROQ_ORDER_MANUAL_SORT_THEN_NEWEST}) {
             _id,
             title,
+            sortOrder,
+            _createdAt,
             "slug": slug.current,
-            "parent": parent->{ _id, title }
+            "parent": parent->{ _id }
         }`,
         {},
         { cache: 'no-store' }
     )
 
-    return <ClientCatalog products={products} categories={categories} />
+    const subcategories = await client.fetch(
+        `*[_type == "subcategory"] | order(${GROQ_ORDER_MANUAL_SORT_THEN_NEWEST}) {
+            _id,
+            title,
+            sortOrder,
+            _createdAt,
+            "slug": slug.current,
+            "parent": parent->{ _id }
+        }`,
+        {},
+        { cache: 'no-store' }
+    )
+
+    return (
+        <ClientCatalog
+            products={products}
+            categories={categories}
+            subcategories={subcategories}
+        />
+    )
 }

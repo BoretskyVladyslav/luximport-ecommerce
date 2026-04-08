@@ -1,4 +1,4 @@
-﻿@use '@/styles/variables' as *;
+@use '@/styles/variables' as *;
 @use '@/styles/mixins' as *;
 
 .hero {
@@ -359,4 +359,9 @@
     font-weight: 600;
     font-size: 1.1rem;
     color: #111;
+}
+
+/** Server page wrapper: binds route CSS to the segment (avoids dev 404 on `page.css`). */
+.pageRouteRoot {
+    display: contents;
 }

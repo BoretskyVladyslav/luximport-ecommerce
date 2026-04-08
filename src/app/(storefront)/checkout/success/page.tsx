@@ -1,29 +1,72 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
+import toast from 'react-hot-toast'
 
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
 import { useOrderStore } from '@/store/orderStore'
 import { useCartStore } from '@/store/cart'
 import { useHydration } from '@/hooks/useHydration'
+import { useUser } from '@/hooks/useUser'
 import { SuccessSlider } from './success-slider'
 import Image from 'next/image'
+import { Skeleton } from '@/components/ui/skeletons'
 import styles from './page.module.scss'
 
 export default function CheckoutSuccessPage() {
     const { lastOrder } = useOrderStore()
     const { clearCart } = useCartStore()
     const isHydrated = useHydration()
+    const { refresh } = useUser()
+    const [isCheckingSession, setIsCheckingSession] = useState(true)
+    const [didPostActions, setDidPostActions] = useState(false)
 
     useEffect(() => {
-        if (isHydrated) {
-            clearCart()
+        if (!isHydrated) return
+        let cancelled = false
+        const t = setTimeout(async () => {
+            if (cancelled) return
+            try {
+                await refresh()
+            } finally {
+                if (!cancelled) setIsCheckingSession(false)
+            }
+        }, 2000)
+        return () => {
+            cancelled = true
+            clearTimeout(t)
         }
-    }, [isHydrated, clearCart])
+    }, [isHydrated, refresh])
 
-    if (!isHydrated) return null
+    useEffect(() => {
+        if (!isHydrated) return
+        if (isCheckingSession) return
+        if (didPostActions) return
+        clearCart()
+        toast.success('Замовлення успішно оформлено!')
+        setDidPostActions(true)
+    }, [clearCart, didPostActions, isCheckingSession, isHydrated])
+
+    if (!isHydrated) {
+        return (
+            <div className={styles.fallback}>
+                <Skeleton className="h-10 w-72 rounded-md" />
+                <div className="mt-6 space-y-3">
+                    <Skeleton className="h-4 w-60 rounded-sm" />
+                    <Skeleton className="h-4 w-52 rounded-sm" />
+                </div>
+            </div>
+        )
+    }
+    if (isCheckingSession) {
+        return (
+            <div className={styles.fallback}>
+                <h1>Перевіряємо сесію...</h1>
+            </div>
+        )
+    }
 
     if (!lastOrder) {
         return (
@@ -38,15 +81,13 @@ export default function CheckoutSuccessPage() {
 
     return (
         <div className={styles.pageWrapper}>
-            {/* New Swipeable Main Visual Banner Block */}
             <SuccessSlider />
-
-            {/* Structured Receipt Layout */}
             <div className={styles.receiptContainer}>
                 <motion.div
                     initial={{ opacity: 0, y: 30 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.7, delay: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+                    style={{ willChange: 'transform, opacity' }}
                     className={styles.receiptCard}
                 >
                     <div className={styles.receiptHeader}>

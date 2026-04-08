@@ -1,11 +1,19 @@
 import { MetadataRoute } from 'next'
 import { client } from '@/lib/sanity'
+import { GROQ_ORDER_MANUAL_SORT_THEN_NEWEST } from '@/lib/sanity-queries'
+import { getSiteUrl } from '@/lib/site-url'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const baseUrl = process.env.NEXT_PUBLIC_DOMAIN || 'https://luximport.org'
+    const baseUrl = getSiteUrl()
 
     const products = await client.fetch<{ slug: string }[]>(
-        '*[_type == "product"]{ "slug": slug.current }',
+        `*[_type == "product" && defined(slug.current)] | order(${GROQ_ORDER_MANUAL_SORT_THEN_NEWEST}){ "slug": slug.current }`,
+        {},
+        { cache: 'no-store' }
+    )
+
+    const categorySlugs = await client.fetch<{ slug: string }[]>(
+        `*[_type in ["category", "subcategory"] && defined(slug.current)] | order(${GROQ_ORDER_MANUAL_SORT_THEN_NEWEST}){ "slug": slug.current }`,
         {},
         { cache: 'no-store' }
     )
@@ -47,14 +55,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             changeFrequency: 'monthly',
             priority: 0.8,
         },
+        {
+            url: `${baseUrl}/catalog`,
+            lastModified: new Date(),
+            changeFrequency: 'daily',
+            priority: 0.9,
+        },
     ]
 
-    const dynamicRoutes: MetadataRoute.Sitemap = products.map((product) => ({
-        url: `${baseUrl}/product/${product.slug}`,
+    const productRoutes: MetadataRoute.Sitemap = products.map((product) => ({
+        url: `${baseUrl}/products/${product.slug}`,
         lastModified: new Date(),
         changeFrequency: 'weekly',
         priority: 0.9,
     }))
 
-    return [...staticRoutes, ...dynamicRoutes]
+    const categoryRoutes: MetadataRoute.Sitemap = categorySlugs.map((row) => ({
+        url: `${baseUrl}/categories/${row.slug}`,
+        lastModified: new Date(),
+        changeFrequency: 'weekly',
+        priority: 0.85,
+    }))
+
+    return [...staticRoutes, ...categoryRoutes, ...productRoutes]
 }

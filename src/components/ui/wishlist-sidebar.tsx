@@ -16,11 +16,8 @@ export function WishlistSidebar() {
     const pathname = usePathname()
 
     useEffect(() => {
-        if (isOpen) {
-            closeWishlist()
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [pathname])
+        if (isOpen) closeWishlist()
+    }, [pathname, isOpen, closeWishlist])
 
     const handleAddToCart = (item: { id: string; title: string; price: number; category: string }) => {
         addItem({

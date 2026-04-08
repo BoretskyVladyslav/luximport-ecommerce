@@ -2,109 +2,66 @@
 
 import { useState, useMemo } from 'react'
 import { ProductCard } from '@/components/ui/product-card'
+import {
+    type CatalogCategory,
+    collectDescendantIds,
+    compareSortOrder,
+    listDescendantsPreorder,
+} from '@/lib/catalog-tree'
+import type { CatalogProduct } from '@/lib/sanity-queries'
 import styles from '@/app/(storefront)/catalog/page.module.scss'
 
-interface Category {
-    _id: string
-    title: string
-    slug: string
-    parent?: { _id: string, title: string }
-}
-
-interface Product {
-    _id: string
-    title: string
-    price: number
-    wholesalePrice?: number
-    categories?: { _id: string, title: string, slug: string }[]
-    origin?: string
-    stock?: number
-    image?: any
-}
-
 interface CatalogFeedProps {
-    products: Product[]
-    categories: Category[]
+    products: CatalogProduct[]
+    categories: CatalogCategory[]
+    subcategories?: CatalogCategory[]
 }
 
-export function CatalogFeed({ products, categories = [] }: CatalogFeedProps) {
-    const [activeCategoryId, setActiveCategoryId] = useState('all')
-    const [openGroups, setOpenGroups] = useState<string[]>([])
+export function CatalogFeed({ products, categories = [], subcategories = [] }: CatalogFeedProps) {
+    const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
+    const [expandedMainIds, setExpandedMainIds] = useState<string[]>([])
     const [visibleCount, setVisibleCount] = useState(20)
+    const [catalogSortKey, setCatalogSortKey] = useState('default')
 
-    const exactHierarchy = [
-        {
-            title: "Кондитерські вироби",
-            children: [
-                "Печиво Dr. Gerard",
-                "Желейні цукерки",
-                "Драже",
-                "Батончики",
-                "Вафлі та печиво",
-                "Шоколадні цукерки",
-                "Шоколадні пасти (креми)"
-            ]
-        },
-        {
-            title: "Гарячі напої",
-            children: [
-                "Кава",
-                "Капучіно",
-                "Чай"
-            ]
-        },
-        {
-            title: "Бакалія",
-            children: [
-                "Соуси та Кетчупи",
-                "Консерви",
-                "Олія",
-                "Консервація"
-            ]
-        },
-        {
-            title: "Молочна продукція",
-            children: [
-                "Молоко"
-            ]
-        },
-        {
-            title: "Снеки",
-            children: [
-                "Горіхи"
-            ]
-        }
-    ];
+    const roots = useMemo(
+        () => categories.filter((c) => !c.parent?._id).sort(compareSortOrder),
+        [categories]
+    )
 
-    const toggleGroup = (categoryTitle: string) => {
-        setOpenGroups((prev) =>
-            prev.includes(categoryTitle)
-                ? prev.filter((title) => title !== categoryTitle)
-                : [...prev, categoryTitle]
+    const toggleGroup = (id: string) => {
+        setExpandedMainIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
         )
     }
 
-    const handleSelectCategory = (categoryTitle: string) => {
-        setActiveCategoryId(categoryTitle)
-        setVisibleCount(20)
-    }
-
     const filteredData = useMemo(() => {
-        if (activeCategoryId === 'all') return products
+        let data = !activeCategoryId
+            ? products
+            : (() => {
+                  const idSet = new Set(collectDescendantIds(activeCategoryId, categories, subcategories))
+                  return products.filter((p) => p.categories?.some((c) => idSet.has(c._id)))
+              })()
 
-        const activeGroup = exactHierarchy.find(g => g.title === activeCategoryId);
-        
-        const childTitles = activeGroup ? activeGroup.children : [];
+        if (catalogSortKey === 'price-asc') {
+            data = [...data].sort((a, b) => {
+                const pa =
+                    typeof a.price === 'number' && Number.isFinite(a.price) ? a.price : Number.POSITIVE_INFINITY
+                const pb =
+                    typeof b.price === 'number' && Number.isFinite(b.price) ? b.price : Number.POSITIVE_INFINITY
+                return pa - pb
+            })
+        } else if (catalogSortKey === 'price-desc') {
+            data = [...data].sort((a, b) => {
+                const pa =
+                    typeof a.price === 'number' && Number.isFinite(a.price) ? a.price : Number.NEGATIVE_INFINITY
+                const pb =
+                    typeof b.price === 'number' && Number.isFinite(b.price) ? b.price : Number.NEGATIVE_INFINITY
+                return pb - pa
+            })
+        }
 
-        return products.filter((p) => {
-            return p.categories?.some((c) => {
-                const title = c.title?.trim() || '';
-                const isMatch = (t: string) => t.toLowerCase() === title.toLowerCase() || 
-                                       title.toLowerCase().includes(t.toLowerCase().substring(0, 5));
-                return isMatch(activeCategoryId) || childTitles.some(isMatch);
-            });
-        });
-    }, [products, activeCategoryId])
+        return data
+    }, [products, activeCategoryId, categories, subcategories, catalogSortKey])
 
     const visibleData = filteredData.slice(0, visibleCount)
 
@@ -123,8 +80,12 @@ export function CatalogFeed({ products, categories = [] }: CatalogFeedProps) {
                 </div>
                 <div className={styles.sortWrapper}>
                     <span className={styles.sortLabel}>Сортувати:</span>
-                    <select className={styles.sortSelect}>
-                        <option value="newest">За замовчуванням</option>
+                    <select
+                        className={styles.sortSelect}
+                        value={catalogSortKey}
+                        onChange={(e) => setCatalogSortKey(e.target.value)}
+                    >
+                        <option value="default">За замовчуванням</option>
                         <option value="price-asc">Від дешевих</option>
                         <option value="price-desc">Від дорогих</option>
                     </select>
@@ -134,69 +95,98 @@ export function CatalogFeed({ products, categories = [] }: CatalogFeedProps) {
             <div className={styles.layout}>
                 <aside className={styles.sidebar}>
                     <div className={styles.categoryGroup} style={{ marginBottom: '1rem' }}>
-                        <div 
-                            className={`${styles.mainCategory} ${activeCategoryId === 'all' ? styles.mainCategoryActive : ''}`}
-                            onClick={() => handleSelectCategory('all')}
+                        <div
+                            className={`${styles.mainCategory} ${!activeCategoryId ? styles.mainCategoryActive : ''}`}
+                            onClick={() => {
+                                setActiveCategoryId(null)
+                                setVisibleCount(20)
+                            }}
                         >
                             <span>Всі товари</span>
                         </div>
                     </div>
 
-                    {exactHierarchy.map((group) => (
-                        <div key={group.title} className={styles.categoryGroup} style={{ marginBottom: '1rem' }}>
-                            <div 
-                                className={`${styles.mainCategory} ${activeCategoryId === group.title ? styles.mainCategoryActive : ''}`}
-                            >
-                                <span onClick={() => handleSelectCategory(group.title)} style={{ flexGrow: 1 }}>
-                                    {group.title}
-                                </span>
-                                {group.children.length > 0 && (
-                                    <span 
-                                        onClick={() => toggleGroup(group.title)} 
-                                        style={{ padding: '0.5rem', display: 'flex', alignItems: 'center' }}
-                                    >
-                                        <svg
-                                            width="20"
-                                            height="20"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="1.5"
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            style={{
-                                                transform: openGroups.includes(group.title) ? 'rotate(90deg)' : 'rotate(0deg)',
-                                                transition: 'transform 0.3s ease'
-                                            }}
-                                        >
-                                            <polyline points="9 18 15 12 9 6"></polyline>
-                                        </svg>
-                                    </span>
-                                )}
-                            </div>
+                    {roots.map((main) => {
+                        const nested = listDescendantsPreorder(
+                            main._id,
+                            categories,
+                            subcategories,
+                            0
+                        )
+                        const isExpanded = expandedMainIds.includes(main._id)
+                        const desc = new Set(
+                            collectDescendantIds(main._id, categories, subcategories)
+                        )
+                        const isActive =
+                            !!activeCategoryId &&
+                            (activeCategoryId === main._id || desc.has(activeCategoryId))
 
-                            <div 
-                                style={{
-                                    maxHeight: openGroups.includes(group.title) ? '500px' : '0',
-                                    overflow: 'hidden',
-                                    transition: 'max-height 0.3s ease-in-out, opacity 0.3s ease-in-out',
-                                    opacity: openGroups.includes(group.title) ? 1 : 0
-                                }}
-                            >
-                                <ul className={styles.subList}>
-                                    {group.children.map((subTitle) => (
-                                        <li 
-                                            key={subTitle}
-                                            className={`${styles.subItem} ${activeCategoryId === subTitle ? styles.subItemActive : ''}`}
-                                            onClick={() => handleSelectCategory(subTitle)}
+                        return (
+                            <div key={main._id} className={styles.categoryGroup} style={{ marginBottom: '1rem' }}>
+                                <div
+                                    className={`${styles.mainCategory} ${isActive ? styles.mainCategoryActive : ''}`}
+                                >
+                                    <span
+                                        onClick={() => {
+                                            setActiveCategoryId(main._id)
+                                            setVisibleCount(20)
+                                        }}
+                                        style={{ flexGrow: 1 }}
+                                    >
+                                        {main.title}
+                                    </span>
+                                    {nested.length > 0 && (
+                                        <span
+                                            onClick={() => toggleGroup(main._id)}
+                                            style={{ padding: '0.5rem', display: 'flex', alignItems: 'center' }}
                                         >
-                                            {subTitle}
-                                        </li>
-                                    ))}
-                                </ul>
+                                            <svg
+                                                width="20"
+                                                height="20"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="1.5"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                style={{
+                                                    transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                                                    transition: 'transform 0.3s ease',
+                                                }}
+                                            >
+                                                <polyline points="9 18 15 12 9 6"></polyline>
+                                            </svg>
+                                        </span>
+                                    )}
+                                </div>
+
+                                <div
+                                    style={{
+                                        maxHeight: isExpanded ? '500px' : '0',
+                                        overflow: 'hidden',
+                                        transition: 'max-height 0.3s ease-in-out, opacity 0.3s ease-in-out',
+                                        opacity: isExpanded ? 1 : 0,
+                                    }}
+                                >
+                                    <ul className={styles.subList}>
+                                        {nested.map(({ node: child, depth }) => (
+                                            <li
+                                                key={child._id}
+                                                className={`${styles.subItem} ${activeCategoryId === child._id ? styles.subItemActive : ''}`}
+                                                style={{ paddingLeft: `${0.5 + depth * 0.65}rem` }}
+                                                onClick={() => {
+                                                    setActiveCategoryId(child._id)
+                                                    setVisibleCount(20)
+                                                }}
+                                            >
+                                                {child.title}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        )
+                    })}
                 </aside>
 
                 <main>
@@ -204,11 +194,19 @@ export function CatalogFeed({ products, categories = [] }: CatalogFeedProps) {
                         {visibleData.map((product, index) => (
                             <ProductCard
                                 key={product._id}
+                                id={product._id}
                                 index={index}
-                                slug={product._id}
-                                title={product.title}
-                                price={`${product.price} ₴`}
+                                slug={(product.slug ?? undefined) || product._id}
+                                title={product.title ?? ''}
+                                price={
+                                    typeof product.price === 'number' && Number.isFinite(product.price)
+                                        ? `${product.price} ₴`
+                                        : '—'
+                                }
                                 wholesalePrice={product.wholesalePrice}
+                                wholesaleMinQuantity={product.wholesaleMinQuantity}
+                                piecesPerBox={product.piecesPerBox}
+                                weight={product.weight}
                                 category={product.categories?.[0]?.title || 'Без категорії'}
                                 origin={product.origin}
                                 stock={product.stock}
@@ -227,9 +225,8 @@ export function CatalogFeed({ products, categories = [] }: CatalogFeedProps) {
                             </button>
                         </div>
                     )}
-                </main>  
+                </main>
             </div>
         </div>
     )
 }
- 

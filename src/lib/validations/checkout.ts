@@ -1,16 +1,39 @@
 import { z } from 'zod'
+import { normalizeUaPhone, isValidUaPhoneE164 } from '@/lib/phone'
+
+const REQUIRED = "Це поле є обов'язковим"
 
 export const checkoutSchema = z.object({
-    name: z.string().min(2, { message: "Ім'я має містити щонайменше 2 символи" }),
-    email: z.string().email({ message: 'Введіть коректний email адресу' }),
-    phone: z
-        .string()
-        .regex(/^\+380\d{9}$/, { message: 'Введіть коректний номер телефону (+380XXXXXXXXX)' }),
-    city: z.string().min(1, { message: 'Вкажіть місто' }),
-    postOffice: z.string().min(1, { message: 'Вкажіть відділення' }),
-    paymentMethod: z.enum(['cash', 'iban'], {
-        errorMap: () => ({ message: 'Оберіть спосіб оплати' }),
-    }),
+    name: z
+        .string({ required_error: REQUIRED })
+        .trim()
+        .min(1, { message: REQUIRED })
+        .min(2, { message: "Ім'я повинно містити щонайменше 2 літери" }),
+    email: z
+        .string({ required_error: REQUIRED })
+        .trim()
+        .min(1, { message: REQUIRED })
+        .email({ message: 'Будь ласка, введіть коректний email' }),
+    phone: z.preprocess(
+        (v) => normalizeUaPhone(typeof v === 'string' ? v : ''),
+        z
+            .string({ required_error: REQUIRED })
+            .min(1, { message: REQUIRED })
+            .refine((v) => isValidUaPhoneE164(v), { message: 'Введіть коректний номер телефону' })
+    ),
+    city: z
+        .string({ required_error: REQUIRED })
+        .trim()
+        .min(1, { message: 'Будь ласка, оберіть місто доставки' }),
+    postOffice: z
+        .string({ required_error: REQUIRED })
+        .trim()
+        .min(1, { message: 'Будь ласка, оберіть відділення або поштомат' }),
+    paymentMethod: z
+        .enum(['cash', 'iban'], {
+            errorMap: () => ({ message: REQUIRED }),
+        })
+        .optional(),
 })
 
 export type CheckoutFormData = z.infer<typeof checkoutSchema>

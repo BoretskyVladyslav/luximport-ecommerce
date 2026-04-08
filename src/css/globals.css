@@ -1,0 +1,118 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root {
+  --font-heading: 'Montserrat', sans-serif;
+  --font-body: 'Open Sans', sans-serif;
+  --color-accent: #C5A059;
+  --color-dark: #111111;
+  --color-emerald: #1B5E3B;
+  --color-gold: #C5A059;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: #ffffff;
+  color: var(--color-dark);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  line-height: 1.6;
+}
+
+::-moz-selection {
+  background: var(--color-emerald);
+  color: #fff;
+}
+
+::selection {
+  background: var(--color-emerald);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e5e5e5;
+  -webkit-transition: background 0.3s;
+  transition: background 0.3s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #111;
+}
+
+*:focus-visible {
+  outline: 1px solid #111;
+  outline-offset: 2px;
+}
+
+::-moz-placeholder {
+  font-family: "Inter", sans-serif;
+  color: #ccc;
+  font-weight: 300;
+  letter-spacing: 0.5px;
+}
+
+::placeholder {
+  font-family: "Inter", sans-serif;
+  color: #ccc;
+  font-weight: 300;
+  letter-spacing: 0.5px;
+}
+
+button,
+a,
+.iconWrapper {
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+}
+
+* {
+  border-radius: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading);
+}

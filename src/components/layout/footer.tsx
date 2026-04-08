@@ -1,7 +1,7 @@
 import React from 'react'
 import Link from 'next/link'
 import styles from './footer.module.scss'
-import { InstagramIcon, FacebookIcon, ViberIcon, TiktokIcon } from '@/components/ui/social-icons'
+import { InstagramIcon, FacebookIcon, ViberIcon } from '@/components/ui/social-icons'
 
 export function Footer() {
     return (
@@ -43,9 +43,6 @@ export function Footer() {
                         </a>
                         <a href="https://invite.viber.com/?g2=AQAIa9r%2FFoLyx1MKtQoVzLSKE3Wfg38mY1N%2FIO4RtY6JHK2rBjNpkkGrkvQZK9mA" target="_blank" rel="noopener noreferrer" className={styles.link} title="Viber">
                             <ViberIcon />
-                        </a>
-                        <a href="#" target="_blank" rel="noopener noreferrer" className={styles.link} title="TikTok">
-                            <TiktokIcon />
                         </a>
                     </div>
                 </div>

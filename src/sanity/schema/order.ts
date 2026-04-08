@@ -13,6 +13,12 @@ export const order = defineType({
     ],
     fields: [
         defineField({
+            name: 'user',
+            title: 'Користувач',
+            type: 'reference',
+            to: [{ type: 'user' }],
+        }),
+        defineField({
             name: 'orderId',
             type: 'string',
             title: 'Номер замовлення',
@@ -27,9 +33,17 @@ export const order = defineType({
                     { title: 'Очікує оплати', value: 'pending' },
                     { title: 'Оплачено', value: 'paid' },
                     { title: 'Скасовано', value: 'cancelled' },
+                    { title: 'Неуспішно', value: 'failed' },
                 ],
             },
             initialValue: 'pending',
+        }),
+        defineField({
+            name: 'inventoryDecremented',
+            title: 'Склад списано',
+            type: 'boolean',
+            initialValue: false,
+            readOnly: true,
         }),
         defineField({
             name: 'customerName',
@@ -85,9 +99,8 @@ export const order = defineType({
         },
         prepare(selection) {
             const { title, subtitle, status } = selection
-            const statusIcon = status === 'paid' ? '✅' : status === 'cancelled' ? '❌' : '⏳'
             return {
-                title: `${statusIcon} Замовлення ${title}`,
+                title: `Замовлення ${title} (${status})`,
                 subtitle: subtitle,
             }
         },

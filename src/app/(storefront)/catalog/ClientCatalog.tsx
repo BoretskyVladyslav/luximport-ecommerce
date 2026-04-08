@@ -4,108 +4,78 @@ import { useState, useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ProductCard } from '@/components/ui/product-card'
 import { ChevronRight } from 'lucide-react'
+import {
+    type CatalogCategory,
+    collectDescendantIds,
+    compareSortOrder,
+    listDescendantsPreorder,
+} from '@/lib/catalog-tree'
+import type { CatalogProduct } from '@/lib/sanity-queries'
 import styles from './page.module.scss'
 
 const premiumEase = [0.25, 0.1, 0.25, 1]
 
-interface Category {
-    _id: string
-    title: string
-    slug: string
-    parent?: { _id: string; title: string }
-}
-
-export function ClientCatalog({ products, categories }: { products: any[]; categories: Category[] }) {
+export function ClientCatalog({
+    products,
+    categories,
+    subcategories,
+}: {
+    products: CatalogProduct[]
+    categories: CatalogCategory[]
+    subcategories: CatalogCategory[]
+}) {
     const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
-    const [expandedMainCats, setExpandedMainCats] = useState<string[]>([])
+    const [expandedMainIds, setExpandedMainIds] = useState<string[]>([])
     const [visibleCount, setVisibleCount] = useState(20)
-    const [sortOrder, setSortOrder] = useState('default')
+    const [catalogSortKey, setCatalogSortKey] = useState('default')
 
-    const exactHierarchy = [
-        {
-            title: "Кондитерські вироби",
-            children: [
-                "Печиво Dr. Gerard",
-                "Желейні цукерки",
-                "Драже",
-                "Батончики",
-                "Вафлі та печиво",
-                "Шоколадні цукерки",
-                "Шоколадні пасти (креми)"
-            ]
-        },
-        {
-            title: "Гарячі напої",
-            children: [
-                "Кава",
-                "Капучіно",
-                "Чай"
-            ]
-        },
-        {
-            title: "Бакалія",
-            children: [
-                "Соуси та Кетчупи",
-                "Консерви",
-                "Олія",
-                "Консервація"
-            ]
-        },
-        {
-            title: "Молочна продукція",
-            children: [
-                "Молоко"
-            ]
-        },
-        {
-            title: "Снеки",
-            children: [
-                "Горіхи"
-            ]
-        }
-    ];
+    const roots = useMemo(
+        () => categories.filter((c) => !c.parent?._id).sort(compareSortOrder),
+        [categories]
+    )
 
     const filteredData = useMemo(() => {
-        let data = products;
+        let data = products
 
         if (activeCategoryId) {
-            const activeGroup = exactHierarchy.find(g => g.title === activeCategoryId);
-            const childTitles = activeGroup ? activeGroup.children : [];
-            const activeLower = activeCategoryId.toLowerCase().trim();
-
-            data = products.filter((p) => {
-                return p.categories?.some((c: any) => {
-                    const title = c.title?.toLowerCase().trim() || '';
-                    if (!title) return false;
-                    
-                    const isDirectMatch = title === activeLower || title.includes(activeLower) || activeLower.includes(title);
-                    
-                    const isChildMatch = childTitles.some(ct => {
-                        const ctLower = ct.toLowerCase().trim();
-                        return title === ctLower || title.includes(ctLower) || ctLower.includes(title);
-                    });
-                    
-                    return isDirectMatch || isChildMatch;
-                });
-            });
+            const idSet = new Set(
+                collectDescendantIds(activeCategoryId, categories, subcategories)
+            )
+            data = products.filter((p) =>
+                p.categories?.some((c) => idSet.has(c._id))
+            )
         }
 
-        if (sortOrder === 'price-asc') {
-            data = [...data].sort((a, b) => a.price - b.price)
-        } else if (sortOrder === 'price-desc') {
-            data = [...data].sort((a, b) => b.price - a.price)
-        } else if (sortOrder === 'name-asc') {
-            data = [...data].sort((a, b) => a.title.localeCompare(b.title))
+        if (catalogSortKey === 'price-asc') {
+            data = [...data].sort((a, b) => {
+                const pa =
+                    typeof a.price === 'number' && Number.isFinite(a.price) ? a.price : Number.POSITIVE_INFINITY
+                const pb =
+                    typeof b.price === 'number' && Number.isFinite(b.price) ? b.price : Number.POSITIVE_INFINITY
+                return pa - pb
+            })
+        } else if (catalogSortKey === 'price-desc') {
+            data = [...data].sort((a, b) => {
+                const pa =
+                    typeof a.price === 'number' && Number.isFinite(a.price) ? a.price : Number.NEGATIVE_INFINITY
+                const pb =
+                    typeof b.price === 'number' && Number.isFinite(b.price) ? b.price : Number.NEGATIVE_INFINITY
+                return pb - pa
+            })
+        } else if (catalogSortKey === 'name-asc') {
+            data = [...data].sort((a, b) =>
+                String(a.title ?? '').localeCompare(String(b.title ?? ''), 'uk')
+            )
         }
 
         return data
-    }, [activeCategoryId, sortOrder, products])
+    }, [activeCategoryId, catalogSortKey, products, categories, subcategories])
 
     const visibleData = filteredData.slice(0, visibleCount)
 
     const toggleMainCat = (id: string) => {
-        setExpandedMainCats(prev =>
-            prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+        setExpandedMainIds((prev) =>
+            prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
         )
     }
 
@@ -143,8 +113,8 @@ export function ClientCatalog({ products, categories }: { products: any[]; categ
                     <span className={styles.sortLabel}>СОРТУВАННЯ:</span>
                     <select
                         className={styles.sortSelect}
-                        value={sortOrder}
-                        onChange={(e) => setSortOrder(e.target.value)}
+                        value={catalogSortKey}
+                        onChange={(e) => setCatalogSortKey(e.target.value)}
                     >
                         <option value='default'>За замовчуванням</option>
                         <option value='price-asc'>Від дешевих до дорогих</option>
@@ -171,54 +141,68 @@ export function ClientCatalog({ products, categories }: { products: any[]; categ
                         <span>Всі товари</span>
                     </div>
 
-                    {exactHierarchy.map((main) => {
-                        const subs = main.children;
-                        const isExpanded = expandedMainCats.includes(main.title)
-                        const isActive = activeCategoryId === main.title || subs.includes(activeCategoryId)
+                    {roots.map((main) => {
+                        const nested = listDescendantsPreorder(
+                            main._id,
+                            categories,
+                            subcategories,
+                            0
+                        )
+                        const isExpanded = expandedMainIds.includes(main._id)
+                        const desc = new Set(
+                            collectDescendantIds(main._id, categories, subcategories)
+                        )
+                        const isActive =
+                            !!activeCategoryId &&
+                            (activeCategoryId === main._id || desc.has(activeCategoryId))
 
                         return (
-                            <div key={main.title} className={styles.categoryGroup}>
-                                <div className={`${styles.mainCategory} ${isActive ? styles.mainCategoryActive : ''}`}>
+                            <div key={main._id} className={styles.categoryGroup}>
+                                <div
+                                    className={`${styles.mainCategory} ${isActive ? styles.mainCategoryActive : ''}`}
+                                >
                                     <span
                                         onClick={() => {
-                                            setActiveCategoryId(main.title)
+                                            setActiveCategoryId(main._id)
                                             setVisibleCount(20)
                                         }}
                                     >
                                         {main.title}
                                     </span>
-                                    {subs.length > 0 && (
+                                    {nested.length > 0 && (
                                         <button
                                             className={`${styles.toggleBtn} ${isExpanded ? styles.toggleBtnOpen : ''}`}
                                             onClick={(e) => {
                                                 e.stopPropagation()
-                                                toggleMainCat(main.title)
+                                                toggleMainCat(main._id)
                                             }}
-                                            aria-label={isExpanded ? 'Collapse' : 'Expand'}
+                                            aria-label={isExpanded ? 'Згорнути' : 'Розгорнути'}
                                         >
                                             <ChevronRight size={12} />
                                         </button>
                                     )}
                                 </div>
                                 <AnimatePresence>
-                                    {isExpanded && subs.length > 0 && (
+                                    {isExpanded && nested.length > 0 && (
                                         <motion.ul
                                             className={styles.subList}
-                                            initial={{ height: 0, opacity: 0 }}
-                                            animate={{ height: 'auto', opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }}
-                                            transition={{ duration: 0.25, ease: premiumEase }}
+                                            initial={{ opacity: 0, scaleY: 0.98 }}
+                                            animate={{ opacity: 1, scaleY: 1 }}
+                                            exit={{ opacity: 0, scaleY: 0.98 }}
+                                            transition={{ duration: 0.18, ease: premiumEase }}
+                                            style={{ willChange: 'transform, opacity' }}
                                         >
-                                            {subs.map(subTitle => (
+                                            {nested.map(({ node: child, depth }) => (
                                                 <li
-                                                    key={subTitle}
-                                                    className={`${styles.subItem} ${activeCategoryId === subTitle ? styles.subItemActive : ''}`}
+                                                    key={child._id}
+                                                    className={`${styles.subItem} ${activeCategoryId === child._id ? styles.subItemActive : ''}`}
+                                                    style={{ paddingLeft: `${0.5 + depth * 0.65}rem` }}
                                                     onClick={() => {
-                                                        setActiveCategoryId(subTitle)
+                                                        setActiveCategoryId(child._id)
                                                         setVisibleCount(20)
                                                     }}
                                                 >
-                                                    {subTitle}
+                                                    {child.title}
                                                 </li>
                                             ))}
                                         </motion.ul>
@@ -234,23 +218,28 @@ export function ClientCatalog({ products, categories }: { products: any[]; categ
                         className={styles.grid}
                         variants={{
                             hidden: { opacity: 0 },
-                            show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+                            show: { opacity: 1, transition: { staggerChildren: 0.1 } },
                         }}
-                        initial="hidden"
-                        animate="show"
+                        initial='hidden'
+                        animate='show'
                     >
                         {visibleData.map((product, index) => (
                             <ProductCard
                                 key={product._id}
+                                id={product._id}
                                 index={index}
-                                title={product.title}
-                                slug={product.slug}
-                                price={`${product.price} ₴`}
+                                title={product.title ?? ''}
+                                slug={product.slug ?? undefined}
+                                price={
+                                    typeof product.price === 'number' && Number.isFinite(product.price)
+                                        ? `${product.price} ₴`
+                                        : '—'
+                                }
                                 wholesalePrice={product.wholesalePrice}
                                 wholesaleMinQuantity={product.wholesaleMinQuantity}
                                 piecesPerBox={product.piecesPerBox}
                                 weight={product.weight}
-                                category={product.categories?.[0]?.title}
+                                category={product.categories?.[0]?.title ?? 'Без категорії'}
                                 image={product.image}
                             />
                         ))}
@@ -260,7 +249,11 @@ export function ClientCatalog({ products, categories }: { products: any[]; categ
                         <div className={styles.loadMoreContainer}>
                             <button
                                 className={styles.loadMoreButton}
-                                onClick={() => setVisibleCount((prev) => Math.min(prev + 20, filteredData.length))}
+                                onClick={() =>
+                                    setVisibleCount((prev) =>
+                                        Math.min(prev + 20, filteredData.length)
+                                    )
+                                }
                             >
                                 ПОКАЗАТИ БІЛЬШЕ
                             </button>

@@ -3,50 +3,27 @@ import type { Metadata } from 'next'
 
 import Image from 'next/image'
 import { client, urlFor } from '@/lib/sanity'
+import { PRODUCT_BY_SLUG_QUERY, type ProductDetail } from '@/lib/sanity-queries'
 import { AddToCartButton } from '@/components/ui/AddToCartButton'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-interface ProductData {
-    _id: string
-    title: string
-    slug: { current: string }
-    price: number
-    wholesalePrice?: number
-    wholesaleMinQuantity?: number
-    piecesPerBox?: number
-    category?: string
-    origin?: string
-    stock?: number
-    description?: string
-    image?: any
-    sku?: string
-    brand?: string
-    /** Stored as a string like "165г", "1.5кг" — unit already included */
-    weight?: string
-}
-
-const PRODUCT_QUERY = `*[_type == "product" && slug.current == $slug][0]{
-  _id,
-  title,
-  slug,
-  price,
-  wholesalePrice,
-  wholesaleMinQuantity,
-  piecesPerBox,
-  category,
-  origin,
-  stock,
-  description,
-  image,
-  sku,
-  brand,
-  weight
-}`
-
-async function getProduct(slug: string): Promise<ProductData | null> {
-    return client.fetch(PRODUCT_QUERY, { slug }, { cache: 'no-store' })
+async function getProduct(slug: string): Promise<ProductDetail | null> {
+    try {
+        const doc = await client.fetch<ProductDetail | null>(
+            PRODUCT_BY_SLUG_QUERY,
+            { slug },
+            { cache: 'no-store' }
+        )
+        if (!doc?.slug?.current) {
+            return null
+        }
+        return doc
+    } catch (e) {
+        console.error('getProduct fetch failed', e)
+        return null
+    }
 }
 
 export async function generateMetadata({
@@ -56,8 +33,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     const product = await getProduct(params.slug)
     if (!product) return {}
+    const title = product.title ?? 'Товар'
     return {
-        title: `${product.title} | Luximport`,
+        title: `${title} | Luximport`,
         description: product.description ?? undefined,
     }
 }
@@ -73,7 +51,11 @@ export default async function ProductPage({
         notFound()
     }
 
-    const imageUrl = product.image ? urlFor(product.image).width(600).height(600).fit('fillmax').bg('ffffff').format('webp').quality(90).url() : null
+    const imageUrl = product.image
+        ? urlFor(product.image).width(600).height(600).fit('fillmax').bg('ffffff').format('webp').quality(90).url()
+        : null
+
+    const displayTitle = product.title ?? 'Товар'
 
     return (
         <main className="mx-auto max-w-7xl px-6 py-20">
@@ -82,10 +64,11 @@ export default async function ProductPage({
                     {imageUrl ? (
                         <Image
                             src={imageUrl}
-                            alt={product.title}
+                            alt={displayTitle}
                             fill
                             className="object-cover object-center w-full h-full"
                             sizes="(max-width: 1024px) 100vw, 50vw"
+                            priority
                         />
                     ) : (
                         <div className="flex h-full items-center justify-center text-xs uppercase tracking-widest text-stone-300">
@@ -99,7 +82,7 @@ export default async function ProductPage({
                         <p className="text-xs uppercase tracking-widest text-stone-400">{product.brand}</p>
                     )}
                     <h1 className="font-serif text-3xl font-light tracking-wide text-stone-900">
-                        {product.title}
+                        {displayTitle}
                     </h1>
                     {product.origin && (
                         <span className="inline-block w-fit border border-stone-200 px-3 py-1 text-xs uppercase tracking-widest text-stone-500">
@@ -111,12 +94,17 @@ export default async function ProductPage({
                     )}
 
                     <div className="border-t border-stone-100 pt-6">
-                        <p className="text-2xl font-light text-stone-900">{product.price} ₴</p>
-                        {product.wholesalePrice !== undefined && product.wholesaleMinQuantity !== undefined && (
-                            <p className="mt-1 text-xs text-stone-400">
-                                {product.wholesalePrice} ₴ від {product.wholesaleMinQuantity} шт.
-                            </p>
-                        )}
+                        <p className="text-2xl font-light text-stone-900">
+                            {Number.isFinite(product.price) ? `${product.price} ₴` : 'Ціну уточнюйте'}
+                        </p>
+                        {product.wholesalePrice !== undefined &&
+                            Number.isFinite(product.wholesalePrice) &&
+                            product.wholesaleMinQuantity !== undefined &&
+                            Number.isFinite(product.wholesaleMinQuantity) && (
+                                <p className="mt-1 text-xs text-stone-400">
+                                    {product.wholesalePrice} ₴ від {product.wholesaleMinQuantity} шт.
+                                </p>
+                            )}
                     </div>
 
                     {product.stock !== undefined && product.stock < 5 && product.stock > 0 && (
@@ -131,14 +119,15 @@ export default async function ProductPage({
 
                     <AddToCartButton
                         id={product._id}
-                        title={product.title}
-                        slug={product.slug?.current ?? ''}
-                        price={product.price}
-                        wholesalePrice={product.wholesalePrice}
-                        wholesaleMinQuantity={product.wholesaleMinQuantity}
-                        piecesPerBox={product.piecesPerBox}
-                        category={product.category}
-                        image={product.image}
+                        title={displayTitle}
+                        slug={product.slug.current}
+                        price={Number.isFinite(product.price) ? product.price : 0}
+                        wholesalePrice={product.wholesalePrice ?? undefined}
+                        wholesaleMinQuantity={product.wholesaleMinQuantity ?? undefined}
+                        piecesPerBox={product.piecesPerBox ?? undefined}
+                        countInStock={product.stock ?? null}
+                        category={product.category ?? undefined}
+                        image={product.image ?? undefined}
                     />
 
                     <div className="border-t border-stone-100 pt-4 text-xs text-stone-400 space-y-1">

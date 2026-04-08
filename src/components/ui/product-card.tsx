@@ -17,11 +17,8 @@ const itemVariants = {
     show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: premiumEase } }
 }
 
-const imageVariants = {
-    hover: { scale: 1.03, transition: { duration: 0.4, ease: premiumEase } }
-}
-
 interface ProductCardProps {
+    id: string
     index: number
     title?: string
     slug?: string
@@ -36,23 +33,40 @@ interface ProductCardProps {
     image?: any
 }
 
-export function ProductCard({ index, title, slug, price, wholesalePrice, wholesaleMinQuantity, piecesPerBox, weight, category, origin, stock, image }: ProductCardProps) {
+export function ProductCard({ id, index, title, slug, price, wholesalePrice, wholesaleMinQuantity, piecesPerBox, weight, category, origin, stock, image }: ProductCardProps) {
     const addItem = useCartStore((state) => state.addItem)
     const { items: wishlistItems, toggleItem } = useWishlistStore()
 
-    const productId = slug ?? `product-${index}`
+    const productId = id
     const productTitle = title ?? `Товар Приклад #${index + 1}`
-    const productPrice = typeof price === 'string'
-        ? parseFloat(price.replace(/[^0-9.]/g, ''))
-        : 100 * (index + 1)
+    const parsedFromString =
+        typeof price === 'string' ? parseFloat(price.replace(/[^0-9.]/g, '')) : NaN
+    const productPrice =
+        typeof price === 'number' && Number.isFinite(price)
+            ? price
+            : Number.isFinite(parsedFromString)
+              ? parsedFromString
+              : 0
     const productCategory = category ?? 'КАТЕГОРІЯ'
+    const hasWholesale =
+        wholesalePrice !== undefined &&
+        wholesaleMinQuantity !== undefined &&
+        Number.isFinite(wholesalePrice) &&
+        Number.isFinite(wholesaleMinQuantity)
+    const wholesaleSaving =
+        hasWholesale && wholesalePrice !== undefined
+            ? productPrice - wholesalePrice
+            : NaN
 
     const isHydrated = useHydration()
 
-    // Only read persisted wishlist state after client mount to avoid SSR mismatch
     const isLiked = isHydrated && wishlistItems.some((item) => item.id === productId)
 
+    const countInStock = typeof stock === 'number' && Number.isFinite(stock) ? stock : null
+    const isOutOfStock = typeof countInStock === 'number' && countInStock <= 0
+
     const handleAddToCart = () => {
+        if (isOutOfStock) return
         addItem({
             id: productId,
             title: productTitle,
@@ -60,7 +74,8 @@ export function ProductCard({ index, title, slug, price, wholesalePrice, wholesa
             wholesalePrice,
             wholesaleMinQuantity,
             piecesPerBox,
-            slug: productId,
+            countInStock,
+            slug: slug ?? '',
             description: '',
             images: image ? [urlFor(image).url()] : [],
             category: productCategory,
@@ -84,11 +99,13 @@ export function ProductCard({ index, title, slug, price, wholesalePrice, wholesa
             variants={itemVariants}
             layout
             whileHover="hover"
+            style={{ willChange: 'transform, opacity' }}
         >
             <div className={styles.imageWrapper}>
-                {origin && (
+                {(origin || isOutOfStock) && (
                     <div className={styles.badgesContainer}>
-                        <span className={styles.badge}>{origin}</span>
+                        {origin && <span className={styles.badge}>{origin}</span>}
+                        {isOutOfStock && <span className={`${styles.badge} ${styles.badgeOutOfStock}`}>Закінчився</span>}
                     </div>
                 )}
                 {image ? (
@@ -98,11 +115,19 @@ export function ProductCard({ index, title, slug, price, wholesalePrice, wholesa
                             alt={productTitle}
                             fill
                             style={{ objectFit: 'contain', objectPosition: 'center' }}
+                            className={isOutOfStock ? 'grayscale blur-[1px]' : undefined}
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         />
                     </div>
                 ) : (
-                    <div className={styles.imagePlaceholder}>Немає фото</div>
+                    <div className={`${styles.imagePlaceholder} ${isOutOfStock ? 'grayscale blur-[1px]' : ''}`}>Немає фото</div>
+                )}
+                {isOutOfStock && (
+                    <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center bg-black/50">
+                        <div className="rounded-md border border-white/30 bg-black/60 px-4 py-2 text-center font-body text-[0.7rem] font-bold uppercase tracking-[0.22em] text-white">
+                            НЕМАЄ В НАЯВНОСТІ
+                        </div>
+                    </div>
                 )}
                 <button
                     className={`${styles.likeBtn} ${isLiked ? styles.likeBtnActive : ''}`}
@@ -115,27 +140,40 @@ export function ProductCard({ index, title, slug, price, wholesalePrice, wholesa
                 <div className={styles.category}>
                     {productCategory}{weight && <span className={styles.weight}> • {weight}</span>}
                 </div>
-                <h3 className={styles.title}>{productTitle}</h3>
+                <h3 className={`${styles.title} ${isOutOfStock ? 'opacity-60' : ''}`}>{productTitle}</h3>
                 {piecesPerBox !== undefined && (
                     <div className={styles.boxQty}>В ящику: {piecesPerBox} шт.</div>
                 )}
-                {wholesalePrice !== undefined && wholesaleMinQuantity !== undefined && (
+                {hasWholesale && (
                     <>
                         <div className={styles.wholesaleBadge}>
                             {wholesalePrice} ₴ від {wholesaleMinQuantity} шт.
                         </div>
-                        <div className={styles.savingsBadge}>
-                            Економія {(productPrice - wholesalePrice).toFixed(2)} ₴ / шт. при замовленні від {piecesPerBox ?? wholesaleMinQuantity} шт.
-                        </div>
+                        {Number.isFinite(wholesaleSaving) && wholesaleSaving > 0 && (
+                            <div className={styles.savingsBadge}>
+                                Економія {wholesaleSaving.toFixed(2)} ₴ / шт. при замовленні від{' '}
+                                {piecesPerBox ?? wholesaleMinQuantity} шт.
+                            </div>
+                        )}
                     </>
                 )}
                 {stock !== undefined && stock < 5 && (
                     <div className={styles.stockWarning}>Залишилось лише {stock} шт.</div>
                 )}
                 <div className={styles.footer}>
-                    <span className={styles.price}>{price ?? `${100 * (index + 1)} ₴`}</span>
-                    <button className={styles.addButton} onClick={handleAddToCart}>
-                        ДОДАТИ
+                    <span className={`${styles.price} ${isOutOfStock ? 'opacity-60' : ''}`}>
+                        {typeof price === 'string' && price.trim() !== ''
+                            ? price
+                            : Number.isFinite(productPrice) && productPrice > 0
+                              ? `${productPrice} ₴`
+                              : 'Ціну уточнюйте'}
+                    </span>
+                    <button
+                        className={`${styles.addButton} ${isOutOfStock ? 'opacity-80' : ''}`}
+                        onClick={handleAddToCart}
+                        disabled={isOutOfStock}
+                    >
+                        {isOutOfStock ? 'Немає в наявності' : 'ДОДАТИ'}
                     </button>
                 </div>
             </div>

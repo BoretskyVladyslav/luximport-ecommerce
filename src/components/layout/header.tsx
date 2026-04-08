@@ -40,6 +40,7 @@ export function Header() {
       initial={{ y: '-100%', opacity: 1 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: premiumEase }}
+      style={{ willChange: 'transform, opacity' }}
     >
       <div className={styles.container}>
         <button

@@ -1,12 +1,41 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import styles from './page.module.scss'
 import { InstagramIcon, FacebookIcon, ViberIcon, TiktokIcon } from '@/components/ui/social-icons'
 
 const premiumEase = [0.25, 0.1, 0.25, 1];
 
+function isValidEmail(email: string) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
 export default function ContactsPage() {
+    const [name, setName] = useState('')
+    const [email, setEmail] = useState('')
+    const [message, setMessage] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
+    const [sent, setSent] = useState(false)
+
+    const onSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (isSubmitting) return
+        const normalizedEmail = email.trim().toLowerCase()
+        if (!name.trim() || !message.trim() || !isValidEmail(normalizedEmail)) return
+        setIsSubmitting(true)
+        setSent(false)
+        try {
+            await new Promise<void>((r) => setTimeout(r, 700))
+            setSent(true)
+            setName('')
+            setEmail('')
+            setMessage('')
+        } finally {
+            setIsSubmitting(false)
+        }
+    }
+
     return (
         <div className={styles.container}>
 
@@ -129,7 +158,7 @@ export default function ContactsPage() {
                     transition={{ delay: 0.4, duration: 0.8, ease: premiumEase }}
                     viewport={{ once: true }}
                 >
-                    <form>
+                    <form onSubmit={onSubmit}>
                         <div className={styles.inputGroup}>
                             <label htmlFor='name' className={styles.inputLabel}>Ім&#39;я</label>
                             <input
@@ -137,6 +166,9 @@ export default function ContactsPage() {
                                 id='name'
                                 className={styles.inputField}
                                 placeholder="Ваше ім'я"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
                             />
                         </div>
 
@@ -147,6 +179,9 @@ export default function ContactsPage() {
                                 id='email'
                                 className={styles.inputField}
                                 placeholder='example@mail.com'
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
                             />
                         </div>
 
@@ -156,11 +191,14 @@ export default function ContactsPage() {
                                 id='message'
                                 className={styles.textareaField}
                                 placeholder='Текст повідомлення...'
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
+                                required
                             />
                         </div>
 
-                        <button type='submit' className={styles.submitBtn}>
-                            НАДІСЛАТИ
+                        <button type='submit' className={styles.submitBtn} disabled={isSubmitting}>
+                            {isSubmitting ? 'НАДСИЛАННЯ...' : sent ? 'НАДІСЛАНО' : 'НАДІСЛАТИ'}
                         </button>
                     </form>
                 </motion.div>

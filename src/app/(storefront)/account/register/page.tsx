@@ -1,22 +1,68 @@
 'use client'
 
-import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuthStore } from '@/store/authStore'
+import toast from 'react-hot-toast'
+import { registerSchema, type RegisterFormData } from '@/lib/validations/auth'
 import styles from '../auth.module.scss'
+import { PhoneInput } from '@/components/ui/phone-input'
 
 export default function RegisterPage() {
-    const [name, setName] = useState('')
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
     const register = useAuthStore((state) => state.register)
     const router = useRouter()
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        register({ id: '1', name, email })
-        router.push('/catalog')
+    const {
+        register: rhfRegister,
+        handleSubmit,
+        formState: { errors, isSubmitting },
+    } = useForm<RegisterFormData>({
+        resolver: zodResolver(registerSchema),
+        defaultValues: { name: '', email: '', phone: '+380', password: '' },
+        shouldFocusError: true,
+    })
+
+    const onSubmit = async (values: RegisterFormData) => {
+        const normalizedEmail = values.email.trim().toLowerCase()
+        const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+                name: values.name.trim(),
+                email: normalizedEmail,
+                phone: values.phone,
+                password: values.password,
+            }),
+        })
+        const data = await res.json().catch(() => null)
+        if (!res.ok) {
+            const msg =
+                typeof data?.message === 'string'
+                    ? data.message
+                    : typeof data?.error === 'string'
+                        ? data.error
+                        : 'Виникла помилка. Перевірте дані та спробуйте ще раз.'
+            toast.error(msg)
+            return
+        }
+        const u = data?.user
+        if (!u || typeof u !== 'object') {
+            toast.error('Виникла помилка. Перевірте дані та спробуйте ще раз.')
+            return
+        }
+        register({
+            id: String(u.id ?? ''),
+            email: String(u.email ?? normalizedEmail),
+            name: typeof u.name === 'string' ? u.name : values.name.trim(),
+            firstName: typeof u.firstName === 'string' ? u.firstName : '',
+            lastName: typeof u.lastName === 'string' ? u.lastName : '',
+            phone: typeof u.phone === 'string' ? u.phone : '',
+            address: typeof u.address === 'string' ? u.address : '',
+        })
+        toast.success('Акаунт створено')
+        router.push('/account/profile')
     }
 
     return (
@@ -27,17 +73,18 @@ export default function RegisterPage() {
                     <p className={styles.subtitle}>LUXIMPORT ACCOUNT</p>
                 </div>
 
-                <form onSubmit={handleSubmit}>
+                <form onSubmit={handleSubmit(onSubmit)} noValidate>
                     <div className={styles.formGroup}>
                         <label htmlFor='name' className={styles.label}>Ім&#39;я</label>
                         <input
                             id='name'
                             type='text'
                             className={styles.input}
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
+                            {...rhfRegister('name')}
                         />
+                        {errors.name?.message && (
+                            <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
+                        )}
                     </div>
 
                     <div className={styles.formGroup}>
@@ -46,10 +93,19 @@ export default function RegisterPage() {
                             id='email'
                             type='email'
                             className={styles.input}
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            required
+                            {...rhfRegister('email')}
                         />
+                        {errors.email?.message && (
+                            <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+                        )}
+                    </div>
+
+                    <div className={styles.formGroup}>
+                        <label htmlFor='phone' className={styles.label}>Телефон</label>
+                        <PhoneInput id="phone" className={styles.input} {...rhfRegister('phone')} />
+                        {errors.phone?.message && (
+                            <p className="text-red-500 text-sm mt-1">{errors.phone.message}</p>
+                        )}
                     </div>
 
                     <div className={styles.formGroup}>
@@ -58,13 +114,16 @@ export default function RegisterPage() {
                             id='password'
                             type='password'
                             className={styles.input}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
+                            {...rhfRegister('password')}
                         />
+                        {errors.password?.message && (
+                            <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+                        )}
                     </div>
 
-                    <button type='submit' className={styles.submitBtn}>СТВОРИТИ АКАУНТ</button>
+                    <button type='submit' className={styles.submitBtn} disabled={isSubmitting}>
+                        {isSubmitting ? 'ОБРОБКА...' : 'СТВОРИТИ АКАУНТ'}
+                    </button>
                 </form>
 
                 <Link href='/account/login' className={styles.switchLink}>

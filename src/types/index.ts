@@ -5,8 +5,8 @@ export interface Product {
   price: number
   wholesalePrice?: number
   wholesaleMinQuantity?: number
-  /** Pieces per box from the Excel import — used as the wholesale threshold */
   piecesPerBox?: number
+  countInStock?: number | null
   description: string
   images: string[]
   category: string
