@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { sanityServer as client } from '@/lib/sanityServer'
 import { getSessionUserIdFromRequestCookie } from '@/lib/auth/session'
-import { buildWayforpayPurchasePayload } from '@/lib/wayforpay-purchase'
+import { buildWayforpayPurchasePayload, WAYFORPAY_GOOGLE_PAY } from '@/lib/wayforpay-purchase'
 
 export const dynamic = 'force-dynamic'
 
@@ -148,6 +148,7 @@ export async function POST(req: Request) {
                 productPrice: payload.productPrice,
                 returnUrl: `${domain}/api/wayforpay/return`,
                 serviceUrl: `${domain}/api/payment/webhook`,
+                googlePay: WAYFORPAY_GOOGLE_PAY,
             },
         })
     } catch (e) {

@@ -62,10 +62,19 @@ export const authOptions: NextAuthOptions = {
                     : typeof token.sub === 'string' && token.sub.trim()
                       ? token.sub.trim()
                       : ''
-            if (session.user) {
-                session.user.id = id
+            const email = session.user?.email ?? null
+            const name = session.user?.name ?? null
+            const image = session.user?.image ?? null
+            return {
+                ...session,
+                expires: session.expires,
+                user: {
+                    id,
+                    email,
+                    name,
+                    image,
+                },
             }
-            return session
         },
     },
 }

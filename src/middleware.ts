@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { getToken } from 'next-auth/jwt'
 
 function b64urlToBytes(input: string) {
     const base64 = input.replace(/-/g, '+').replace(/_/g, '/')
@@ -33,6 +34,20 @@ async function hmacSha256Base64Url(secret: string, data: string) {
     return btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 
+async function hasNextAuthJwt(request: NextRequest): Promise<boolean> {
+    const secret = process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET
+    if (!secret) return false
+    try {
+        const token = await getToken({ req: request, secret })
+        if (!token) return false
+        const id = typeof token.id === 'string' ? token.id.trim() : ''
+        const sub = typeof token.sub === 'string' ? token.sub.trim() : ''
+        return Boolean(id || sub)
+    } catch {
+        return false
+    }
+}
+
 async function isAuthenticated(request: NextRequest) {
     const secret = process.env.AUTH_SECRET
     if (!secret) return false
@@ -56,7 +71,14 @@ async function isAuthenticated(request: NextRequest) {
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
-    const authed = await isAuthenticated(request)
+
+    if (pathname === '/login') {
+        return NextResponse.redirect(new URL('/account/login', request.url))
+    }
+
+    const authedLi = await isAuthenticated(request)
+    const authedJwt = await hasNextAuthJwt(request)
+    const authed = authedLi || authedJwt
 
     const isLogin = pathname === '/account/login'
     const isRegister = pathname === '/account/register'

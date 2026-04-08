@@ -1,13 +1,19 @@
 import crypto from 'crypto'
 
 export function normalizeMerchantDomainName(input: string): string {
+    const raw = input.trim()
+    if (!raw) return ''
     try {
-        const asUrl = new URL(input)
-        return asUrl.host
+        const asUrl = new URL(raw.includes('://') ? raw : `https://${raw}`)
+        return asUrl.hostname.toLowerCase()
     } catch {
-        return input.replace(/^https?:\/\//i, '').split('/')[0].trim()
+        const host = raw.replace(/^https?:\/\//i, '').split('/')[0].trim().toLowerCase()
+        const noPort = host.split(':')[0] ?? host
+        return noPort
     }
 }
+
+export const WAYFORPAY_GOOGLE_PAY = '1'
 
 export function formatWayforpayAmount(amount: number): string {
     return amount.toFixed(2)
@@ -60,5 +66,6 @@ export function buildWayforpayPurchasePayload(input: WayforpayPurchaseInput) {
         productCount: input.productCounts,
         productPrice: input.productPrices,
         merchantSignature,
+        googlePay: WAYFORPAY_GOOGLE_PAY,
     }
 }

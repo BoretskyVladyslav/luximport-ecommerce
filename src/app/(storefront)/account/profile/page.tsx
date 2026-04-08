@@ -19,7 +19,7 @@ import { OrdersListSkeleton, Skeleton } from '@/components/ui/skeletons'
 import type { OrderFulfillmentStatus, OrderPaymentStatus } from '@/types'
 import type { Order as LocalOrder } from '@/store/orderStore'
 import { ProfileOrderCard, type ProfileOrderLine } from './ProfileOrderCard'
-import { normalizeMerchantDomainName } from '@/lib/wayforpay-purchase'
+import { normalizeMerchantDomainName, WAYFORPAY_GOOGLE_PAY } from '@/lib/wayforpay-purchase'
 import styles from './page.module.scss'
 
 const premiumEase = [0.25, 0.1, 0.25, 1]
@@ -371,6 +371,10 @@ export default function ProfilePage() {
                         clientLastName: lastName,
                         clientPhone,
                         clientEmail: user.email,
+                        googlePay:
+                            typeof details.googlePay === 'string' && details.googlePay.trim()
+                                ? details.googlePay.trim()
+                                : WAYFORPAY_GOOGLE_PAY,
                         ...(typeof details.returnUrl === 'string' ? { returnUrl: details.returnUrl } : {}),
                         ...(typeof details.serviceUrl === 'string' ? { serviceUrl: details.serviceUrl } : {}),
                         language: 'UA',
