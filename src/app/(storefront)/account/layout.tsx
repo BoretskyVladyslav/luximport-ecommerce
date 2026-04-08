@@ -1,27 +1,16 @@
+import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
-import { getServerSession } from 'next-auth'
-import { authOptions } from '@/auth'
-import { getSessionUserId } from '@/lib/auth/session'
-import { sanityServer } from '@/lib/sanityServer'
+import { auth } from '@/auth'
 
 export default async function AccountLayout({ children }: { children: React.ReactNode }) {
-    try {
-        const session = await getServerSession(authOptions)
-        console.log('[account-layout] session.user.id', session?.user?.id)
-        const userId = getSessionUserId()
-        if (!userId?.trim()) {
-            return children
-        }
-        const doc = await sanityServer.fetch<{ _id?: string } | null>(
-            '*[_type == "user" && _id == $id][0]{ _id }',
-            { id: userId.trim() }
-        )
-        if (!doc || typeof doc._id !== 'string' || !doc._id) {
-            redirect('/account/login')
-        }
-    } catch (error) {
-        console.error('[PROFILE_CRASH]:', error)
-        redirect('/account/login')
+    const pathname = headers().get('x-pathname') ?? ''
+    const isPublicAuth = pathname === '/account/login' || pathname === '/account/register'
+    if (isPublicAuth) {
+        return children
+    }
+    const session = await auth()
+    if (!session?.user?.id?.trim()) {
+        redirect('/login')
     }
     return children
 }

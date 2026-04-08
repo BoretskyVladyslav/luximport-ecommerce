@@ -54,7 +54,7 @@ export default function LoginPage() {
             address: typeof u.address === 'string' ? u.address : '',
         })
         toast.success('Успішний вхід')
-        window.location.href = '/account/profile'
+        window.location.assign('/account/profile')
     }
 
     return (

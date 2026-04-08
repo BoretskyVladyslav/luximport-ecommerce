@@ -67,11 +67,11 @@ export default function RegisterPage() {
         })
         if (!signInResult?.ok) {
             toast.error('Акаунт створено, але вхід не вдався. Увійдіть вручну.')
-            window.location.href = '/account/login'
+            window.location.assign('/account/login')
             return
         }
         toast.success('Акаунт створено')
-        window.location.href = '/account/profile'
+        window.location.assign('/account/profile')
     }
 
     return (
