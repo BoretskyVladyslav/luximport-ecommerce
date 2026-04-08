@@ -3,10 +3,20 @@
 import { useCallback, useState } from 'react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Copy, ExternalLink } from 'lucide-react'
+import {
+    CheckCircle2,
+    ChevronDown,
+    Copy,
+    CreditCard,
+    ExternalLink,
+    Package,
+    Truck,
+    XCircle,
+} from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Button } from '@/components/ui/button'
 import { urlFor } from '@/lib/sanity'
+import { cn } from '@/lib/utils'
 import type { OrderFulfillmentStatus, OrderPaymentStatus } from '@/types'
 import styles from './ProfileOrderCard.module.scss'
 
@@ -21,8 +31,6 @@ const STEP_UI: { key: OrderFulfillmentStatus; label: string }[] = [
 ]
 
 const NP_TRACKING_BASE = 'https://tracking.novaposhta.ua/#/uk/'
-const premiumEase = [0.25, 0.1, 0.25, 1] as const
-
 export type ProfileOrderLine = {
     productId: string
     title: string
@@ -64,19 +72,6 @@ function lineAfterDot(fulfillment: OrderFulfillmentStatus, dotIndex: number): 'd
     return idx > dotIndex ? 'done' : 'todo'
 }
 
-function stepDotClass(
-    stepKey: OrderFulfillmentStatus,
-    phase: 'done' | 'current' | 'upcoming'
-): string {
-    if (phase === 'done') return `${styles.stepDot} ${styles.stepDotDone}`
-    if (phase === 'upcoming') return `${styles.stepDot} ${styles.stepDotUpcoming}`
-    if (stepKey === 'pending') return `${styles.stepDot} ${styles.stepDotCurrentPending}`
-    if (stepKey === 'paid') return `${styles.stepDot} ${styles.stepDotCurrentProcessing}`
-    if (stepKey === 'processing') return `${styles.stepDot} ${styles.stepDotCurrentProcessing}`
-    if (stepKey === 'shipped') return `${styles.stepDot} ${styles.stepDotCurrentShipped}`
-    return `${styles.stepDot} ${styles.stepDotCurrentCompleted}`
-}
-
 function stepPhase(
     fulfillment: OrderFulfillmentStatus,
     stepIndex: number
@@ -89,10 +84,21 @@ function stepPhase(
     return 'upcoming'
 }
 
-function segmentClass(state: 'done' | 'todo' | 'hidden'): string {
-    if (state === 'hidden') return `${styles.segment} ${styles.segmentHidden}`
-    if (state === 'done') return `${styles.segment} ${styles.segmentDone}`
-    return `${styles.segment} ${styles.segmentTodo}`
+function segmentClassName(state: 'done' | 'todo' | 'hidden'): string {
+    if (state === 'hidden') return 'invisible min-w-[6px] flex-1 rounded-sm'
+    if (state === 'done') return 'h-0.5 min-w-[6px] flex-1 rounded-sm bg-zinc-900'
+    return 'h-0.5 min-w-[6px] flex-1 rounded-sm bg-zinc-200'
+}
+
+function dotClassName(phase: 'done' | 'current' | 'upcoming'): string {
+    const base =
+        'size-3 shrink-0 rounded-full border-2 transition-[border-color,background-color,box-shadow] duration-200'
+    if (phase === 'upcoming') return cn(base, 'border-zinc-200 bg-zinc-200')
+    if (phase === 'done') return cn(base, 'border-zinc-900 bg-zinc-900')
+    return cn(
+        base,
+        'border-zinc-900 bg-zinc-900 shadow-[0_0_0_2px_rgb(255_255_255),0_0_0_4px_rgb(24_24_27)]'
+    )
 }
 
 function paymentHintText(payment: OrderPaymentStatus, settled: boolean): string | null {
@@ -178,13 +184,13 @@ export function ProfileOrderCard({
     }, [ttn])
 
     const onPayClick = useCallback(() => {
-        const id = sanityDocumentId?.trim()
-        if (!id || !onProfilePay) return
+        const oid = sanityDocumentId?.trim()
+        if (!oid || !onProfilePay) return
         if (!widgetReady) {
             toast.error('Платіжна форма ще завантажується. Спробуйте за кілька секунд.')
             return
         }
-        onProfilePay(id)
+        onProfilePay(oid)
     }, [sanityDocumentId, onProfilePay, widgetReady])
 
     const onCancel = useCallback(async () => {
@@ -212,39 +218,39 @@ export function ProfileOrderCard({
     }, [sanityDocumentId, onOrdersInvalidate])
 
     const renderStepper = () => (
-        <div className={styles.stepper} role="list" aria-label="Етапи замовлення">
+        <div
+            className="flex w-full max-sm:-mx-1 max-sm:gap-1 max-sm:overflow-x-auto max-sm:px-1 max-sm:pb-1 max-sm:pt-0.5"
+            role="list"
+            aria-label="Етапи замовлення"
+        >
             {STEP_UI.map((step, i) => {
                 const phase = stepPhase(stepperFulfillment, i)
                 const before = lineBeforeDot(stepperFulfillment, i)
                 const after = lineAfterDot(stepperFulfillment, i)
-                const paymentStageHighlight =
-                    step.key === 'paid' && (phase === 'done' || phase === 'current')
                 return (
-                    <div key={step.key} className={styles.step} role="listitem">
-                        <div className={styles.stepTrack}>
-                            <span className={segmentClass(before)} aria-hidden />
-                            <div className={styles.stepDotWrap}>
+                    <div
+                        key={step.key}
+                        className="relative flex min-w-0 flex-1 flex-col items-center text-center max-sm:min-w-[4.75rem] max-sm:max-w-[5.75rem] max-sm:flex-none"
+                        role="listitem"
+                    >
+                        <div className="mb-2 flex w-full items-center">
+                            <span className={segmentClassName(before)} aria-hidden />
+                            <div className="flex shrink-0 items-center justify-center">
                                 <motion.span
-                                    className={`${stepDotClass(step.key, phase)}${
-                                        paymentStageHighlight ? ` ${styles.stepDotPaymentReceived}` : ''
-                                    }`}
+                                    className={dotClassName(phase)}
                                     initial={false}
-                                    animate={{
-                                        scale: phase === 'current' ? 1.08 : 1,
-                                    }}
+                                    animate={{ scale: phase === 'current' ? 1.12 : 1 }}
                                     transition={{ type: 'spring', stiffness: 400, damping: 28 }}
                                 />
                             </div>
-                            <span className={segmentClass(after)} aria-hidden />
+                            <span className={segmentClassName(after)} aria-hidden />
                         </div>
                         <span
-                            className={`${styles.stepLabel} ${
-                                phase === 'done'
-                                    ? styles.stepLabelDone
-                                    : phase === 'current'
-                                        ? styles.stepLabelCurrent
-                                        : ''
-                            }${paymentStageHighlight ? ` ${styles.stepLabelPaymentReceived}` : ''}`}
+                            className={cn(
+                                'max-w-[5.5rem] text-center text-[10px] font-semibold uppercase leading-tight tracking-wider max-sm:max-w-none',
+                                phase === 'upcoming' && 'text-muted-foreground',
+                                (phase === 'done' || phase === 'current') && 'text-zinc-900'
+                            )}
                         >
                             {step.label}
                         </span>
@@ -260,10 +266,11 @@ export function ProfileOrderCard({
                 <motion.div
                     key="order-details"
                     className={styles.detailsShell}
+                    layout
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: 'auto', opacity: 1 }}
                     exit={{ height: 0, opacity: 0 }}
-                    transition={{ duration: 0.35, ease: premiumEase }}
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
                     style={{ overflow: 'hidden' }}
                 >
                     <div className={styles.detailsInner}>
@@ -306,47 +313,65 @@ export function ProfileOrderCard({
         </AnimatePresence>
     )
 
-    const renderActions = () => (
-        <div className={styles.actionsRow}>
-            <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={!hasLines}
-                aria-expanded={isExpanded}
-                onClick={() => hasLines && setIsExpanded((v) => !v)}
-            >
-                {isExpanded ? 'Згорнути' : 'Переглянути'}
-            </Button>
-            {showPay ? (
+    const renderActions = (opts?: { cancelledOnly?: boolean }) => {
+        const cancelledOnly = opts?.cancelledOnly === true
+        return (
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-4 max-sm:flex-col max-sm:items-stretch">
                 <Button
                     type="button"
-                    variant="default"
+                    variant="outline"
                     size="sm"
-                    disabled={!canRetryPayment || !onProfilePay || profilePayInProgress}
-                    onClick={() => onPayClick()}
+                    disabled={!hasLines}
+                    aria-expanded={isExpanded}
+                    className="text-xs uppercase tracking-wider"
+                    onClick={() => hasLines && setIsExpanded((v) => !v)}
                 >
-                    {profilePayInProgress ? 'Зачекайте…' : 'Оплатити'}
+                    {isExpanded ? 'Згорнути' : 'Деталі замовлення'}
+                    <ChevronDown
+                        className={cn('ml-2 h-4 w-4 shrink-0 transition-transform', isExpanded && 'rotate-180')}
+                        aria-hidden
+                    />
                 </Button>
-            ) : null}
-            {showCancel ? (
-                <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    disabled={!sanityDocumentId?.trim() || isCancelling}
-                    onClick={() => void onCancel()}
-                >
-                    {isCancelling ? 'Зачекайте…' : 'Скасувати'}
-                </Button>
-            ) : null}
-        </div>
-    )
+                {!cancelledOnly ? (
+                    <div className="flex flex-wrap items-center justify-end gap-2 max-sm:w-full max-sm:justify-end">
+                        {showPay ? (
+                            <Button
+                                type="button"
+                                variant="default"
+                                size="sm"
+                                disabled={!canRetryPayment || !onProfilePay || profilePayInProgress}
+                                className="text-xs uppercase tracking-wider"
+                                onClick={() => onPayClick()}
+                            >
+                                <CreditCard className="mr-2 h-4 w-4 shrink-0" aria-hidden />
+                                {profilePayInProgress ? 'Зачекайте…' : 'Оплатити'}
+                            </Button>
+                        ) : null}
+                        {showCancel ? (
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                disabled={!sanityDocumentId?.trim() || isCancelling}
+                                className="text-xs uppercase tracking-wider"
+                                onClick={() => void onCancel()}
+                            >
+                                {isCancelling ? 'Зачекайте…' : 'Скасувати'}
+                            </Button>
+                        ) : null}
+                    </div>
+                ) : null}
+            </div>
+        )
+    }
 
     const renderTracking = () =>
         ttn ? (
             <div className={styles.trackingBlock}>
-                <span className={styles.trackingLabel}>ТТН Нової Пошти</span>
+                <span className={styles.trackingLabel}>
+                    <Truck className="h-3.5 w-3.5 shrink-0 text-zinc-600" aria-hidden />
+                    ТТН Нової Пошти
+                </span>
                 <div className={styles.trackingRow}>
                     <a
                         href={npTrackingUrl(ttn)}
@@ -367,7 +392,11 @@ export function ProfileOrderCard({
 
     if (isCancelled || fulfillment === 'cancelled') {
         return (
-            <div className={styles.cardInner}>
+            <motion.div
+                className={styles.cardInner}
+                layout
+                transition={{ duration: 0.35, ease: 'easeOut' }}
+            >
                 <div className={styles.topRow}>
                     <div className={styles.meta}>
                         <span className={styles.orderId}>{id}</span>
@@ -375,34 +404,32 @@ export function ProfileOrderCard({
                     </div>
                     <div className={styles.totals}>
                         <span className={styles.orderTotal}>{total}</span>
-                        <span className={styles.itemsMeta}>{itemsCount} товарів</span>
+                        <span className={cn(styles.itemsMeta, 'inline-flex items-center gap-1.5')}>
+                            <Package className="h-3 w-3 shrink-0 text-zinc-500" aria-hidden />
+                            {itemsCount} товарів
+                        </span>
                     </div>
                 </div>
-                <div className={styles.cancelledStatusBadge} role="status">
-                    <span className={styles.cancelledStatusBadgeInner}>
-                        {'\u274c'} СКАСОВАНО
-                    </span>
+                <div
+                    className="inline-flex w-fit max-w-full items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-medium tracking-wide text-white"
+                    role="status"
+                >
+                    <XCircle size={18} className="shrink-0" aria-hidden />
+                    <span className="uppercase tracking-wide">Скасовано</span>
                 </div>
                 {renderDetails()}
-                <div className={styles.actionsRow}>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        disabled={!hasLines}
-                        aria-expanded={isExpanded}
-                        onClick={() => hasLines && setIsExpanded((v) => !v)}
-                    >
-                        {isExpanded ? 'Згорнути' : 'Переглянути'}
-                    </Button>
-                </div>
+                {renderActions({ cancelledOnly: true })}
                 {renderTracking()}
-            </div>
+            </motion.div>
         )
     }
 
     return (
-        <div className={styles.cardInner}>
+        <motion.div
+            className={styles.cardInner}
+            layout
+            transition={{ duration: 0.35, ease: 'easeOut' }}
+        >
             <div className={styles.topRow}>
                 <div className={styles.meta}>
                     <span className={styles.orderId}>{id}</span>
@@ -410,21 +437,29 @@ export function ProfileOrderCard({
                 </div>
                 <div className={styles.totals}>
                     <span className={styles.orderTotal}>{total}</span>
-                    <span className={styles.itemsMeta}>{itemsCount} товарів</span>
+                    <span className={cn(styles.itemsMeta, 'inline-flex items-center gap-1.5')}>
+                        <Package className="h-3 w-3 shrink-0 text-zinc-500" aria-hidden />
+                        {itemsCount} товарів
+                    </span>
                 </div>
             </div>
 
             {isPaidDisplay ? (
-                <div className={styles.paidStatusBadge} role="status">
-                    <span className={styles.paidStatusBadgeInner}>
-                        {'\u2705'} ОПЛАЧЕНО
-                    </span>
+                <div
+                    className="inline-flex w-fit max-w-full items-center gap-2 rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium tracking-wide text-white"
+                    role="status"
+                >
+                    <CheckCircle2 size={18} className="shrink-0" aria-hidden />
+                    <span className="uppercase tracking-wide">Оплачено</span>
                 </div>
             ) : null}
 
             {hint ? (
                 <p
-                    className={`${styles.paymentHint} ${payment === 'failed' ? styles.paymentFailed : ''}`}
+                    className={cn(
+                        'text-xs font-medium leading-snug',
+                        payment === 'failed' ? 'text-red-700' : 'text-amber-800'
+                    )}
                 >
                     {hint}
                 </p>
@@ -434,6 +469,6 @@ export function ProfileOrderCard({
             {renderDetails()}
             {renderActions()}
             {renderTracking()}
-        </div>
+        </motion.div>
     )
 }

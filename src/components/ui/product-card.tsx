@@ -4,17 +4,15 @@ import { Heart } from 'lucide-react'
 
 import Image from 'next/image'
 import { motion } from 'framer-motion'
-import { useCartStore } from '@/store/cart'
+import { useStore } from '@/store/cart'
 import { useWishlistStore } from '@/store/wishlistStore'
 import { useHydration } from '@/hooks/useHydration'
 import { urlFor } from '@/lib/sanity'
 import styles from './product-card.module.scss'
 
-const premiumEase = [0.25, 0.1, 0.25, 1];
-
 const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: premiumEase } }
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
 }
 
 interface ProductCardProps {
@@ -34,8 +32,8 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ id, index, title, slug, price, wholesalePrice, wholesaleMinQuantity, piecesPerBox, weight, category, origin, stock, image }: ProductCardProps) {
-    const addItem = useCartStore((state) => state.addItem)
-    const openCart = useCartStore((state) => state.openCart)
+    const addItem = useStore((state) => state.addItem)
+    const openCart = useStore((state) => state.openCart)
     const { items: wishlistItems, toggleItem } = useWishlistStore()
 
     const productId = id
@@ -106,7 +104,6 @@ export function ProductCard({ id, index, title, slug, price, wholesalePrice, who
             className={styles.card}
             variants={itemVariants}
             layout
-            whileHover="hover"
             style={{ willChange: 'transform, opacity' }}
         >
             <div className={styles.imageWrapper}>

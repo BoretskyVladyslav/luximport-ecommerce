@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback } from 'react'
+import { signOut } from 'next-auth/react'
 import { useAuthStore } from '@/store/authStore'
 
 type User = {
@@ -59,8 +60,11 @@ export function useUser() {
     const destroySession = useCallback(async () => {
         try {
             await fetch('/api/auth/logout', { method: 'POST' })
-        } finally {
             logout()
+            await signOut({ callbackUrl: '/' })
+        } catch {
+            logout()
+            await signOut({ callbackUrl: '/' })
         }
     }, [logout])
 

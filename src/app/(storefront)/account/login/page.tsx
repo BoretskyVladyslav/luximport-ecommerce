@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuthStore } from '@/store/authStore'
@@ -11,7 +11,6 @@ import styles from '../auth.module.scss'
 
 export default function LoginPage() {
     const login = useAuthStore((state) => state.login)
-    const router = useRouter()
 
     const {
         register,
@@ -25,23 +24,22 @@ export default function LoginPage() {
 
     const onSubmit = async (values: LoginFormData) => {
         const normalizedEmail = values.email.trim().toLowerCase()
-        const res = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ email: normalizedEmail, password: values.password }),
+        const result = await signIn('credentials', {
+            redirect: false,
+            email: normalizedEmail,
+            password: values.password,
         })
-        const data = await res.json().catch(() => null)
-        if (!res.ok) {
+        if (!result?.ok) {
             const msg =
-                typeof data?.message === 'string'
-                    ? data.message
-                    : typeof data?.error === 'string'
-                        ? data.error
-                        : 'Виникла помилка. Перевірте дані та спробуйте ще раз.'
+                result?.error === 'CredentialsSignin'
+                    ? 'Невірний email або пароль'
+                    : 'Виникла помилка. Перевірте дані та спробуйте ще раз.'
             toast.error(msg)
             return
         }
-        const u = data?.user
+        const meRes = await fetch('/api/user/me')
+        const meData = await meRes.json().catch(() => null)
+        const u = meData?.user
         if (!u || typeof u !== 'object') {
             toast.error('Виникла помилка. Перевірте дані та спробуйте ще раз.')
             return
@@ -55,8 +53,8 @@ export default function LoginPage() {
             phone: typeof u.phone === 'string' ? u.phone : '',
             address: typeof u.address === 'string' ? u.address : '',
         })
-        toast.success('Вхід успішний')
-        router.push('/account/profile')
+        toast.success('Успішний вхід')
+        window.location.href = '/account/profile'
     }
 
     return (

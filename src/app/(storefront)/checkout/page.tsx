@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuthStore } from '@/store/authStore'
-import { useCartStore } from '@/store/cart'
+import { useCartStore, useStore } from '@/store/cart'
+import { useCheckoutDraftStore } from '@/store/checkout'
 import { useOrderStore } from '@/store/orderStore'
 import { useHydration } from '@/hooks/useHydration'
 import { NpSelect } from '@/components/ui/np-select'
@@ -47,15 +48,36 @@ function toNpOptions(input: unknown): NpOption[] {
 
 export default function CheckoutPage() {
     const { user, isAuthenticated } = useAuthStore()
-    const { items, clearCart, totalPrice } = useCartStore()
+    const items = useStore((s) => s.items)
+    const clearCart = useStore((s) => s.clearCart)
+    const totalPrice = useStore((s) => s.totalPrice)
     const { addOrder, setLastOrder } = useOrderStore()
     const isHydrated = useHydration()
     const router = useRouter()
+
+    const [persistReady, setPersistReady] = useState(false)
+    useEffect(() => {
+        let cancelled = false
+        void Promise.all([
+            Promise.resolve(useCartStore.persist.rehydrate()),
+            Promise.resolve(useCheckoutDraftStore.persist.rehydrate()),
+        ])
+            .catch(() => {})
+            .finally(() => {
+                if (!cancelled) setPersistReady(true)
+            })
+        return () => {
+            cancelled = true
+        }
+    }, [])
+
+    const pageReady = isHydrated && persistReady
 
     const [cityRef, setCityRef] = useState('')
     const [checkoutError, setCheckoutError] = useState<string | null>(null)
     const [npError, setNpError] = useState<string | null>(null)
     const [manualDelivery, setManualDelivery] = useState(false)
+    const [profileLoaded, setProfileLoaded] = useState(false)
 
     const checkoutFailureMessage =
         'Помилка при створенні замовлення. Спробуйте ще раз.'
@@ -80,7 +102,8 @@ export default function CheckoutPage() {
     })
 
     useEffect(() => {
-        if (!isHydrated) return
+        if (!pageReady) return
+        setProfileLoaded(false)
         let cancelled = false
         async function run() {
             try {
@@ -101,10 +124,12 @@ export default function CheckoutPage() {
                             : ''
                 const email = typeof u.email === 'string' ? u.email : ''
                 const phone = typeof u.phone === 'string' ? u.phone : ''
+                const draft = useCheckoutDraftStore.getState()
                 if (!cancelled) {
-                    setValue('name', name, { shouldValidate: false })
+                    setValue('name', draft.name.trim() ? draft.name : name, { shouldValidate: false })
                     setValue('email', email, { shouldValidate: false })
-                    setValue('phone', phone, { shouldValidate: false })
+                    setValue('phone', draft.phone.trim() ? draft.phone : phone, { shouldValidate: false })
+                    setProfileLoaded(true)
                 }
             } catch {
                 if (!cancelled) router.push('/account/login')
@@ -114,11 +139,42 @@ export default function CheckoutPage() {
         return () => {
             cancelled = true
         }
-    }, [isHydrated, router, setValue])
+    }, [pageReady, router, setValue])
+
+    useEffect(() => {
+        if (!pageReady) return
+        const d = useCheckoutDraftStore.getState()
+        setValue('city', d.city, { shouldValidate: false })
+        setValue('postOffice', d.postOffice, { shouldValidate: false })
+        setCityRef(d.cityRef)
+        setManualDelivery(d.manualDelivery)
+    }, [pageReady, setValue])
 
     const total = totalPrice()
     const cityValue = watch('city')
     const postOfficeValue = watch('postOffice')
+    const watchName = watch('name')
+    const watchPhone = watch('phone')
+
+    useEffect(() => {
+        if (!pageReady || !profileLoaded) return
+        useCheckoutDraftStore.getState().setDraft({
+            name: watchName,
+            phone: watchPhone,
+            city: cityValue,
+            postOffice: postOfficeValue,
+        })
+    }, [watchName, watchPhone, cityValue, postOfficeValue, pageReady, profileLoaded])
+
+    useEffect(() => {
+        if (!pageReady || !profileLoaded) return
+        useCheckoutDraftStore.getState().setDraft({ cityRef })
+    }, [cityRef, pageReady, profileLoaded])
+
+    useEffect(() => {
+        if (!pageReady || !profileLoaded) return
+        useCheckoutDraftStore.getState().setDraft({ manualDelivery })
+    }, [manualDelivery, pageReady, profileLoaded])
 
     const fetchCities = async (query: string) => {
         setNpError(null)
@@ -297,7 +353,9 @@ export default function CheckoutPage() {
 
             addOrder(newOrder)
             setLastOrder(newOrder)
+            await router.refresh()
             clearCart()
+            useCheckoutDraftStore.getState().clearDraft()
 
             const form = document.createElement('form')
             form.method = 'POST'
@@ -324,6 +382,11 @@ export default function CheckoutPage() {
             })
 
             document.body.appendChild(form)
+            try {
+                sessionStorage.setItem('luximport_checkout_expect_success', '1')
+            } catch {
+                void 0
+            }
             form.submit()
         } catch (error) {
             console.error('Checkout error:', error)
@@ -343,7 +406,7 @@ export default function CheckoutPage() {
         }
     }
 
-    if (!isHydrated) {
+    if (!pageReady) {
         return (
             <div className={styles.container}>
                 <div className={styles.formSection}>

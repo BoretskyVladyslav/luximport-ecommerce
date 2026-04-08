@@ -22,10 +22,10 @@
     display: grid;
     grid-template-columns: 1fr auto 1fr;  
     align-items: center;
-}
+} 
 
 .logo {
-    justify-self: center;
+    justify-self: center;  
     grid-column: 2;
     font-size: 1.25rem;
     font-weight: 800;
@@ -45,9 +45,9 @@
 
     @include desktop {
         display: flex;
-        align-items: center;
-        gap: 3rem;
-        grid-column: 1;
+        align-items: center; 
+        gap: 3rem;  
+        grid-column: 1; 
         justify-self: start;
     }
 
@@ -162,5 +162,23 @@
         &:hover {
             color: #888;
         }
+    }
+}
+
+.mobileLogout {
+    font-family: $font-primary;
+    font-size: 1.5rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #111;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    padding: 0;
+
+    &:hover {
+        color: #888;
     }
 }

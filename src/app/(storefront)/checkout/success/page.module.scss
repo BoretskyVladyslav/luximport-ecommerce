@@ -1,336 +1,191 @@
-@use '../../../../styles/variables.scss' as *;
+@use '../../../../styles/variables' as *;
 @use '../../../../styles/mixins' as *;
 
-.pageWrapper {
-    min-height: 100vh;
-    background-color: #fafafa;
-    padding-bottom: 6rem;
-}
-
-.receiptContainer {
-    @include container;
+.shell {
+    min-height: calc(100vh - 80px);
     display: flex;
+    align-items: center;
     justify-content: center;
-    padding-top: 4rem;
-    position: relative;
-    z-index: 2;
-    /* overlap the slider slightly if desired, or just sit beautifully below */
+    background: $color-white;
+    padding: 3rem $container-padding 4rem;
 }
 
-.receiptCard {
-    background: #fff;
-    border: 1px solid var(--border-light, #e5e5e5);
+.inner {
     width: 100%;
-    max-width: 800px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.04);
-}
-
-/* ── Receipt Header ──────────────────────────────── */
-
-.receiptHeader {
-    padding: 3rem 4rem;
-    border-bottom: 1px solid var(--border-light, #e5e5e5);
-    background: #fff;
+    max-width: 36rem;
+    margin: 0 auto;
     text-align: center;
-    position: relative;
-
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 4px;
-        background: var(--color-emerald);
-    }
-
-    @include mobile {
-        padding: 2.5rem 1.5rem;
-    }
-}
-
-.orderStatusIcon {
-    margin-bottom: 1.5rem;
-    color: var(--color-emerald);
-    display: flex;
-    justify-content: center;
-}
-
-.orderId {
-    font-family: var(--font-body);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    color: var(--color-gold);
-    margin-bottom: 1rem;
-    font-weight: 600;
-}
-
-.customerGreeting {
-    font-family: var(--font-heading);
-    font-size: 1.8rem;
-    font-weight: 300;
-    color: #111;
-    line-height: 1.4;
-}
-
-/* ── Section Blocks ──────────────────────────────── */
-
-.section {
-    padding: 3rem 4rem;
-    border-bottom: 1px solid var(--border-light, #e5e5e5);
-
-    &:last-child {
-        border-bottom: none;
-    }
-
-    @include mobile {
-        padding: 2rem 1.5rem;
-    }
-}
-
-.sectionTitle {
-    font-family: var(--font-heading);
-    font-size: 0.85rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    color: var(--color-emerald);
-    text-transform: uppercase;
-    margin-bottom: 2rem;
-    display: flex;
-    align-items: center;
-
-    &::after {
-        content: '';
-        flex: 1;
-        height: 1px;
-        background: var(--border-light, #e5e5e5);
-        margin-left: 1.5rem;
-    }
-}
-
-/* ── Order Table ─────────────────────────────────── */
-
-.orderTable {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.tableHeader {
-    font-family: var(--font-body);
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: #888;
-    border-bottom: 1px solid var(--border-light, #e5e5e5);
-
-    th {
-        padding-bottom: 1rem;
-        font-weight: 500;
-        text-align: left;
-
-        &:last-child {
-            text-align: right;
-        }
-
-        @include mobile {
-            &.hideMobile {
-                display: none;
-            }
-        }
-    }
-}
-
-.tableRow {
-    border-bottom: 1px solid #f5f5f5;
-
-    &:last-child {
-        border-bottom: none;
-    }
-
-    td {
-        padding: 1.5rem 0;
-        vertical-align: top;
-
-        &:last-child {
-            text-align: right;
-        }
-
-        @include mobile {
-            &.hideMobile {
-                display: none;
-            }
-        }
-    }
-}
-
-.itemMeta {
-    display: flex;
-    gap: 1.5rem;
-    align-items: center;
-
-    @include mobile {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 1rem;
-    }
-}
-
-.itemImage {
-    width: 60px;
-    height: 60px;
-    background: #f7f7f7;
-    position: relative;
-    border: 1px solid #f0f0f0;
-    flex-shrink: 0;
-}
-
-.itemName {
-    font-family: var(--font-body);
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: #111;
-    margin-bottom: 0.25rem;
-}
-
-.wholesaleBadge {
-    font-family: var(--font-body);
-    font-size: 0.7rem;
-    color: var(--color-gold);
-    font-style: italic;
-}
-
-.itemQuantity {
-    font-family: var(--font-body);
-    font-size: 0.9rem;
-    color: #555;
-    font-weight: 500;
-}
-
-.itemPrice {
-    font-family: var(--font-body);
-    font-size: 0.9rem;
-    color: #888;
-}
-
-.itemTotal {
-    font-family: var(--font-heading);
-    font-size: 1.05rem;
-    font-weight: 500;
-    color: #111;
-}
-
-/* ── Order Total Row ─────────────────────────────── */
-
-.summaryRow {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1rem;
-    padding-top: 2rem;
-    border-top: 2px solid #111;
-}
-
-.totalLabel {
-    font-family: var(--font-heading);
-    font-size: 1.2rem;
-    font-weight: 400;
-    color: #111;
-}
-
-.totalAmount {
-    font-family: var(--font-heading);
-    font-size: 1.8rem;
-    font-weight: 600;
-    color: #111;
-}
-
-/* ── Contact Info Grid ───────────────────────────── */
-
-.infoGrid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 3rem;
-
-    @include mobile {
-        grid-template-columns: 1fr;
-        gap: 2rem;
-    }
-}
-
-.infoBlock {
-    .infoLabel {
-        font-family: var(--font-body);
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        color: #888;
-        margin-bottom: 0.75rem;
-    }
-
-    .infoValue {
-        font-family: var(--font-body);
-        font-size: 0.95rem;
-        font-weight: 400;
-        color: #111;
-        line-height: 1.6;
-    }
-}
-
-/* ── Footer / Actions ────────────────────────────── */
-
-.receiptFooter {
-    padding: 3rem 4rem;
-    background: #fafafa;
-    text-align: center;
-    border-top: 1px solid var(--border-light, #e5e5e5);
-
-    @include mobile {
-        padding: 2.5rem 1.5rem;
-    }
-}
-
-.actionButton {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.2rem 3rem;
-    background-color: var(--color-emerald);
-    color: #fff;
-    font-family: var(--font-body);
-    font-size: 0.8rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    border: none;
-    cursor: pointer;
-    text-decoration: none;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-
-    &:hover {
-        background-color: #155030;
-        transform: translateY(-2px);
-    }
-}
-
-/* ── Fallback  ───────────────────────────────────── */
-
-.fallback {
-    min-height: 60vh;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 4rem 2rem;
-    text-align: center;
+}
 
-    h1 {
-        font-family: var(--font-heading);
-        font-size: 1.5rem;
-        font-weight: 300;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        margin-bottom: 2rem;
-        color: #111;
+.iconWrap {
+    margin-bottom: 2rem;
+}
+
+.icon {
+    display: block;
+    filter: drop-shadow(0 4px 24px rgba(6, 78, 59, 0.18));
+}
+
+.heading {
+    font-family: $font-primary;
+    font-size: clamp(1.35rem, 4vw, 1.85rem);
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    line-height: 1.25;
+    color: #0a0a0a;
+    text-transform: uppercase;
+    margin: 0 0 1.25rem;
+}
+
+.subheading {
+    font-family: $font-primary;
+    font-size: 0.9375rem;
+    font-weight: 400;
+    line-height: 1.65;
+    color: #2a2a2a;
+    margin: 0 0 2rem;
+    max-width: 32rem;
+}
+
+.orderLine {
+    font-family: $font-primary;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #3d3d3d;
+    margin: 0 0 2.5rem;
+}
+
+.orderStrong {
+    font-weight: 700;
+    color: #0a0a0a;
+    letter-spacing: 0.06em;
+}
+
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 22rem;
+
+    @include mobile {
+        max-width: none;
     }
+}
+
+.btnPrimary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 1rem 1.5rem;
+    font-family: $font-primary;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: $color-white;
+    background: $color-emerald;
+    border: 2px solid $color-emerald;
+    transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+
+    &:hover {
+        background: #164a32;
+        border-color: #164a32;
+        color: $color-white;
+    }
+}
+
+.btnSecondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 1rem 1.5rem;
+    font-family: $font-primary;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    text-decoration: none;
+    color: #0a0a0a;
+    background: $color-white;
+    border: 2px solid #0a0a0a;
+    transition: background 0.25s ease, color 0.25s ease;
+
+    &:hover {
+        background: #0a0a0a;
+        color: $color-white;
+    }
+}
+
+.loadingText {
+    font-family: $font-primary;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #404040;
+    margin: 0;
+}
+
+.fallbackTitle {
+    font-family: $font-primary;
+    font-size: 1.125rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #0a0a0a;
+    margin: 0 0 0.75rem;
+}
+
+.fallbackSub {
+    font-family: $font-primary;
+    font-size: 0.875rem;
+    color: #525252;
+    margin: 0 0 2rem;
+    line-height: 1.5;
+}
+
+.skelIcon {
+    width: 7rem;
+    height: 7rem;
+    margin-bottom: 2rem;
+}
+
+.skelTitle {
+    width: min(100%, 20rem);
+    height: 2rem;
+    margin-bottom: 1.25rem;
+}
+
+.skelLine {
+    width: 100%;
+    height: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.skelLineShort {
+    width: 70%;
+    height: 0.875rem;
+    margin-bottom: 2rem;
+}
+
+.skelButtons {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    width: 100%;
+    max-width: 22rem;
+}
+
+.skelBtn {
+    width: 100%;
+    height: 3.25rem;
 }

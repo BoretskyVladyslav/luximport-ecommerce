@@ -1,43 +1,98 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 
 import Link from 'next/link'
 import { CheckCircle2 } from 'lucide-react'
 import { useOrderStore } from '@/store/orderStore'
-import { useCartStore } from '@/store/cart'
+import { useStore } from '@/store/cart'
+import { useCheckoutDraftStore } from '@/store/checkout'
 import { useHydration } from '@/hooks/useHydration'
 import { useUser } from '@/hooks/useUser'
-import { SuccessSlider } from './success-slider'
 import { revalidateProfilePath } from './actions'
-import Image from 'next/image'
 import { Skeleton } from '@/components/ui/skeletons'
 import styles from './page.module.scss'
 
+const deepEmerald = '#064e3b'
+
+const containerVariants = {
+    hidden: { opacity: 0 },
+    show: {
+        opacity: 1,
+        transition: { staggerChildren: 0.1, delayChildren: 0.08 },
+    },
+}
+
+const itemVariants = {
+    hidden: { opacity: 0, y: 28 },
+    show: {
+        opacity: 1,
+        y: 0,
+        transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+    },
+}
+
+function formatOrderDisplay(lastId: string | undefined, urlOrder: string): string {
+    const raw = (lastId?.trim() || urlOrder.trim()).replace(/^#/, '')
+    if (!raw) return ''
+    return raw.startsWith('#') ? raw : `#${raw}`
+}
+
 export default function CheckoutSuccessPage() {
     const { lastOrder } = useOrderStore()
-    const { clearCart } = useCartStore()
+    const clearCart = useStore((state) => state.clearCart)
     const isHydrated = useHydration()
+    const router = useRouter()
+    const searchParams = useSearchParams()
     const { refresh } = useUser()
     const [isCheckingSession, setIsCheckingSession] = useState(true)
-    const [didPostActions, setDidPostActions] = useState(false)
+    const didPostPurchaseCleanup = useRef(false)
+
+    const orderFromUrl = searchParams.get('order')?.trim() ?? ''
+
+    useEffect(() => {
+        if (!isHydrated) return
+        void router.refresh()
+    }, [isHydrated, router])
+
+    useEffect(() => {
+        if (!isHydrated) return
+        if (didPostPurchaseCleanup.current) return
+        const fromWfp = searchParams.get('from') === 'wfp'
+        let expectFlag = false
+        try {
+            expectFlag = sessionStorage.getItem('luximport_checkout_expect_success') === '1'
+        } catch {
+            expectFlag = false
+        }
+        if (!fromWfp && !expectFlag) return
+        didPostPurchaseCleanup.current = true
+        try {
+            sessionStorage.removeItem('luximport_checkout_expect_success')
+        } catch {
+            void 0
+        }
+        void router.refresh()
+        clearCart()
+        useCheckoutDraftStore.getState().clearDraft()
+        toast.success('Замовлення успішно оформлено!')
+    }, [isHydrated, router, clearCart, searchParams])
 
     useEffect(() => {
         if (!isHydrated) return
         let cancelled = false
-        const t = setTimeout(async () => {
-            if (cancelled) return
+        void (async () => {
             try {
                 await refresh()
             } finally {
                 if (!cancelled) setIsCheckingSession(false)
             }
-        }, 2000)
+        })()
         return () => {
             cancelled = true
-            clearTimeout(t)
         }
     }, [isHydrated, refresh])
 
@@ -46,161 +101,101 @@ export default function CheckoutSuccessPage() {
         void revalidateProfilePath()
     }, [isHydrated])
 
-    useEffect(() => {
-        if (!isHydrated) return
-        if (isCheckingSession) return
-        if (didPostActions) return
-        clearCart()
-        toast.success('Замовлення успішно оформлено!')
-        setDidPostActions(true)
-    }, [clearCart, didPostActions, isCheckingSession, isHydrated])
+    const orderDisplay = formatOrderDisplay(lastOrder?.id, orderFromUrl)
+    const hasOrderContext = Boolean(lastOrder || orderFromUrl)
 
     if (!isHydrated) {
         return (
-            <div className={styles.fallback}>
-                <Skeleton className="h-10 w-72 rounded-md" />
-                <div className="mt-6 space-y-3">
-                    <Skeleton className="h-4 w-60 rounded-sm" />
-                    <Skeleton className="h-4 w-52 rounded-sm" />
+            <div className={styles.shell}>
+                <div className={styles.inner}>
+                    <Skeleton className={`${styles.skelIcon} rounded-full`} />
+                    <Skeleton className={`${styles.skelTitle} rounded-sm`} />
+                    <Skeleton className={`${styles.skelLine} rounded-sm`} />
+                    <Skeleton className={`${styles.skelLineShort} rounded-sm`} />
+                    <div className={styles.skelButtons}>
+                        <Skeleton className={`${styles.skelBtn} rounded-none`} />
+                        <Skeleton className={`${styles.skelBtn} rounded-none`} />
+                    </div>
                 </div>
             </div>
         )
     }
+
     if (isCheckingSession) {
         return (
-            <div className={styles.fallback}>
-                <h1>Перевіряємо сесію...</h1>
+            <div className={styles.shell}>
+                <div className={styles.inner}>
+                    <p className={styles.loadingText}>Перевіряємо сесію...</p>
+                </div>
             </div>
         )
     }
 
-    if (!lastOrder) {
+    if (!hasOrderContext) {
         return (
-            <div className={styles.fallback}>
-                <h1>Замовлення не знайдено</h1>
-                <Link href="/" className={styles.actionButton}>
-                    Повернутися до каталогу
-                </Link>
+            <div className={styles.shell}>
+                <motion.div
+                    className={styles.inner}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                >
+                    <h1 className={styles.fallbackTitle}>Замовлення не знайдено</h1>
+                    <p className={styles.fallbackSub}>Перейдіть на головну або до каталогу.</p>
+                    <Link href="/" className={styles.btnPrimary}>
+                        НА ГОЛОВНУ
+                    </Link>
+                </motion.div>
             </div>
         )
     }
 
     return (
-        <div className={styles.pageWrapper}>
-            <SuccessSlider />
-            <div className={styles.receiptContainer}>
-                <motion.div
-                    initial={{ opacity: 0, y: 30 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.7, delay: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-                    style={{ willChange: 'transform, opacity' }}
-                    className={styles.receiptCard}
-                >
-                    <div className={styles.receiptHeader}>
-                        <div className={styles.orderStatusIcon}>
-                            <CheckCircle2 strokeWidth={1} size={48} />
-                        </div>
-                        <p className={styles.orderId}>Замовлення #{lastOrder.id}</p>
-                        <h2 className={styles.customerGreeting}>
-                            Оформлено успішно
-                        </h2>
-                    </div>
-
-                    <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>Деталі замовлення</h3>
-
-                        <table className={styles.orderTable}>
-                            <thead>
-                                <tr className={styles.tableHeader}>
-                                    <th>Товар</th>
-                                    <th className={styles.hideMobile}>Ціна</th>
-                                    <th>Кіл-ть</th>
-                                    <th>Сума</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {lastOrder.items.map((item: any) => {
-                                    const threshold = item.piecesPerBox ?? item.wholesaleMinQuantity
-                                    const isWholesale = threshold && item.quantity >= threshold
-                                    const applyPrice = isWholesale ? item.wholesalePrice : item.price
-                                    const itemTotal = (applyPrice || 0) * item.quantity
-                                    const imageSrc = item.images && item.images.length > 0 ? item.images[0] : '/placeholder.jpg'
-
-                                    return (
-                                        <tr key={item.id} className={styles.tableRow}>
-                                            <td>
-                                                <div className={styles.itemMeta}>
-                                                    <div className={styles.itemImage}>
-                                                        {item.images && item.images.length > 0 ? (
-                                                            <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-                                                                <Image
-                                                                    src={item.images[0]}
-                                                                    alt={item.title}
-                                                                    fill
-                                                                    style={{ objectFit: 'cover' }}
-                                                                    sizes="80px"
-                                                                />
-                                                            </div>
-                                                        ) : (
-                                                            <div className="w-full h-full bg-stone-200" />
-                                                        )}
-                                                    </div>
-                                                    <div>
-                                                        <h4 className={styles.itemName}>{item.title}</h4>
-                                                        {isWholesale && (
-                                                            <span className={styles.wholesaleBadge}>Гуртова ціна</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className={styles.hideMobile}>
-                                                <span className={styles.itemPrice}>{applyPrice} ₴</span>
-                                            </td>
-                                            <td>
-                                                <span className={styles.itemQuantity}>{item.quantity}x</span>
-                                            </td>
-                                            <td>
-                                                <span className={styles.itemTotal}>{itemTotal.toLocaleString('uk-UA')} ₴</span>
-                                            </td>
-                                        </tr>
-                                    )
-                                })}
-                            </tbody>
-                        </table>
-
-                        <div className={styles.summaryRow}>
-                            <span className={styles.totalLabel}>Разом</span>
-                            <span className={styles.totalAmount}>{lastOrder.total}</span>
-                        </div>
-                    </div>
-
-                    <div className={styles.section}>
-                        <div className={styles.infoGrid}>
-                            <div className={styles.infoBlock}>
-                                <h3 className={styles.sectionTitle}>Контактні дані</h3>
-                                <div className={styles.infoValue}>
-                                    <p>{lastOrder.customerName}</p>
-                                    <p>{lastOrder.customerPhone || '—'}</p>
-                                    <p className="text-sm mt-1 text-slate-500">{lastOrder.customerPhone || '—'}</p>
-                                </div>
-                            </div>
-                            <div className={styles.infoBlock}>
-                                <h3 className={styles.sectionTitle}>Доставка</h3>
-                                <div className={styles.infoValue}>
-                                    <p>{lastOrder.shippingAddress}</p>
-                                    <p className="text-sm mt-1 text-slate-500">Доставка Новою Поштою (за тарифами перевізника)</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className={styles.receiptFooter}>
-                        <Link href="/catalog" className={styles.actionButton}>
-                            Повернутися до каталогу
-                        </Link>
-                    </div>
+        <div className={styles.shell}>
+            <motion.div
+                className={styles.inner}
+                variants={containerVariants}
+                initial="hidden"
+                animate="show"
+            >
+                <motion.div variants={itemVariants} className={styles.iconWrap}>
+                    <motion.div
+                        initial={{ scale: 0.85, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1], delay: 0.05 }}
+                    >
+                        <CheckCircle2
+                            className={styles.icon}
+                            strokeWidth={1}
+                            size={112}
+                            color={deepEmerald}
+                            aria-hidden
+                        />
+                    </motion.div>
                 </motion.div>
-            </div>
+
+                <motion.h1 variants={itemVariants} className={styles.heading}>
+                    ДЯКУЄМО ЗА ЗАМОВЛЕННЯ!
+                </motion.h1>
+
+                <motion.p variants={itemVariants} className={styles.subheading}>
+                    Ваше замовлення успішно прийнято в обробку. Лист із деталями вже надіслано на вашу пошту.
+                </motion.p>
+
+                <motion.p variants={itemVariants} className={styles.orderLine}>
+                    Номер замовлення:{' '}
+                    <span className={styles.orderStrong}>{orderDisplay || '—'}</span>
+                </motion.p>
+
+                <motion.div variants={itemVariants} className={styles.actions}>
+                    <Link href="/account/profile" className={styles.btnPrimary}>
+                        ПЕРЕЙТИ ДО ЗАМОВЛЕНЬ
+                    </Link>
+                    <Link href="/" className={styles.btnSecondary}>
+                        ПРОДОВЖИТИ ПОКУПКИ
+                    </Link>
+                </motion.div>
+            </motion.div>
         </div>
     )
 }

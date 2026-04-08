@@ -161,3 +161,20 @@
 .mobileMenu a:hover {
   color: #888;
 }
+
+.mobileLogout {
+  font-family: "Inter", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #111;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  padding: 0;
+}
+.mobileLogout:hover {
+  color: #888;
+}

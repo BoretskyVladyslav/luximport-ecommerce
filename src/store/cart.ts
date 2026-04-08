@@ -1,3 +1,4 @@
+import { useLayoutEffect, useState } from 'react'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { CartItem, Product } from '@/types'
@@ -226,7 +227,7 @@ export const useCartStore = create<CartState>()(
             },
         }),
         {
-            name: 'luximport-cart',
+            name: 'luximport-cart-storage',
             storage: safeJsonStorage(() => localStorage),
             partialize: (state) => ({ items: state.items, isOpen: state.isOpen }),
             onRehydrateStorage: () => (state) => {
@@ -254,3 +255,33 @@ export const useCartStore = create<CartState>()(
         }
     )
 )
+
+function getServerCartSnapshot(): CartState {
+    return {
+        items: [],
+        isOpen: false,
+        cartIssues: {},
+        stockWarning: null,
+        isValidating: false,
+        lastValidatedKey: null,
+        validateCart: async () => {},
+        hasBlockingIssues: () => false,
+        addItem: () => {},
+        removeItem: () => {},
+        updateQuantity: () => {},
+        openCart: () => {},
+        closeCart: () => {},
+        toggleCart: () => {},
+        clearCart: () => {},
+        totalPrice: () => 0,
+    }
+}
+
+export function useStore<T>(selector: (state: CartState) => T, equalityFn?: (a: T, b: T) => boolean): T {
+    const [mounted, setMounted] = useState(false)
+    useLayoutEffect(() => {
+        setMounted(true)
+    }, [])
+    const fromStore = useCartStore(selector, equalityFn)
+    return mounted ? fromStore : selector(getServerCartSnapshot())
+}

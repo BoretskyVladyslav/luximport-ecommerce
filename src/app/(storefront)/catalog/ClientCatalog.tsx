@@ -217,11 +217,11 @@ export function ClientCatalog({
                     <motion.div
                         className={styles.grid}
                         variants={{
-                            hidden: { opacity: 0 },
-                            show: { opacity: 1, transition: { staggerChildren: 0.1 } },
+                            hidden: {},
+                            visible: { transition: { staggerChildren: 0.1 } },
                         }}
-                        initial='hidden'
-                        animate='show'
+                        initial="hidden"
+                        animate="visible"
                     >
                         {visibleData.map((product, index) => (
                             <ProductCard

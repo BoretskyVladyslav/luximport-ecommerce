@@ -1,15 +1,17 @@
+import { Suspense } from 'react'
 import { client } from '@/lib/sanity'
 import {
     GROQ_ORDER_MANUAL_SORT_THEN_NEWEST,
     PRODUCTS_CATALOG_QUERY,
     type CatalogProduct,
 } from '@/lib/sanity-queries'
+import { CatalogPageSkeleton } from '@/components/ui/skeletons'
 import { ClientCatalog } from './ClientCatalog'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export default async function CatalogPage() {
+async function CatalogPageInner() {
     let products: CatalogProduct[] = []
     try {
         products = await client.fetch<CatalogProduct[]>(PRODUCTS_CATALOG_QUERY, {}, { cache: 'no-store' })
@@ -44,10 +46,14 @@ export default async function CatalogPage() {
     )
 
     return (
-        <ClientCatalog
-            products={products}
-            categories={categories}
-            subcategories={subcategories}
-        />
+        <ClientCatalog products={products} categories={categories} subcategories={subcategories} />
+    )
+}
+
+export default function CatalogPage() {
+    return (
+        <Suspense fallback={<CatalogPageSkeleton />}>
+            <CatalogPageInner />
+        </Suspense>
     )
 }

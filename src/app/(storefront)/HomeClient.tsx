@@ -7,9 +7,9 @@ import { ProductCard } from '@/components/ui/product-card'
 import type { HomeTeaserProduct } from '@/lib/sanity-queries'
 import styles from './page.module.scss'
 
-const premiumEase = [0.25, 0.1, 0.25, 1];
+const premiumEase = [0.25, 0.1, 0.25, 1]
 
-export function HomeClient({ products }: { products: HomeTeaserProduct[] }) {
+export function HomePageFrame({ children }: { children: React.ReactNode }) {
     return (
         <main>
             <HeroSlider />
@@ -22,7 +22,7 @@ export function HomeClient({ products }: { products: HomeTeaserProduct[] }) {
                         className={styles.advantageEditorial}
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, margin: "-50px" }}
+                        viewport={{ once: true, margin: '-50px' }}
                         transition={{ duration: 0.8, ease: premiumEase, delay: 0 }}
                     >
                         <span className={styles.advantageNumber}>01</span>
@@ -38,7 +38,7 @@ export function HomeClient({ products }: { products: HomeTeaserProduct[] }) {
                         className={styles.advantageEditorial}
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, margin: "-50px" }}
+                        viewport={{ once: true, margin: '-50px' }}
                         transition={{ duration: 0.8, ease: premiumEase, delay: 0.2 }}
                     >
                         <span className={styles.advantageNumber}>02</span>
@@ -54,7 +54,7 @@ export function HomeClient({ products }: { products: HomeTeaserProduct[] }) {
                         className={styles.advantageEditorial}
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
-                        viewport={{ once: true, margin: "-50px" }}
+                        viewport={{ once: true, margin: '-50px' }}
                         transition={{ duration: 0.8, ease: premiumEase, delay: 0.4 }}
                     >
                         <span className={styles.advantageNumber}>03</span>
@@ -68,51 +68,56 @@ export function HomeClient({ products }: { products: HomeTeaserProduct[] }) {
                 </div>
             </section>
 
-            <section className={styles.bestSellersSection}>
-                <motion.div
-                    className={styles.bestSellersHeader}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true, margin: "-50px" }}
-                    transition={{ duration: 0.8, ease: premiumEase }}
-                >
-                    <p className={styles.bestSellersMeta}>SEASONAL SELECTION</p>
-                    <h2 className={styles.bestSellersTitle}>ХІТИ ПРОДАЖУ</h2>
-                </motion.div>
-                <motion.div
-                    className={styles.bestSellersGrid}
-                    variants={{
-                        hidden: { opacity: 0 },
-                        show: { opacity: 1, transition: { staggerChildren: 0.1 } }
-                    }}
-                    initial="hidden"
-                    whileInView="show"
-                    viewport={{ once: true, margin: "-50px" }}
-                >
-                    {products.map((product, index) => (
-                        <ProductCard
-                            key={product._id}
-                            id={product._id}
-                            index={index}
-                            title={product.title ?? ''}
-                            slug={product.slug ?? undefined}
-                            price={
-                                typeof product.price === 'number' && Number.isFinite(product.price)
-                                    ? `${product.price} ₴`
-                                    : '—'
-                            }
-                            wholesalePrice={product.wholesalePrice}
-                            wholesaleMinQuantity={product.wholesaleMinQuantity}
-                            piecesPerBox={product.piecesPerBox}
-                            weight={product.weight}
-                            category={product.category}
-                            image={product.image}
-                            stock={product.stock}
-                        />
-                    ))}
-                </motion.div>
-            </section>
-
+            {children}
         </main>
+    )
+}
+
+export function HomeBestSellers({ products }: { products: HomeTeaserProduct[] }) {
+    return (
+        <section className={styles.bestSellersSection}>
+            <motion.div
+                className={styles.bestSellersHeader}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-50px' }}
+                transition={{ duration: 0.8, ease: premiumEase }}
+            >
+                <p className={styles.bestSellersMeta}>SEASONAL SELECTION</p>
+                <h2 className={styles.bestSellersTitle}>ХІТИ ПРОДАЖУ</h2>
+            </motion.div>
+            <motion.div
+                className={styles.bestSellersGrid}
+                variants={{
+                    hidden: {},
+                    visible: { transition: { staggerChildren: 0.1 } },
+                }}
+                initial="hidden"
+                whileInView="visible"
+                viewport={{ once: true, margin: '-50px' }}
+            >
+                {products.map((product, index) => (
+                    <ProductCard
+                        key={product._id}
+                        id={product._id}
+                        index={index}
+                        title={product.title ?? ''}
+                        slug={product.slug ?? undefined}
+                        price={
+                            typeof product.price === 'number' && Number.isFinite(product.price)
+                                ? `${product.price} ₴`
+                                : '—'
+                        }
+                        wholesalePrice={product.wholesalePrice}
+                        wholesaleMinQuantity={product.wholesaleMinQuantity}
+                        piecesPerBox={product.piecesPerBox}
+                        weight={product.weight}
+                        category={product.category}
+                        image={product.image}
+                        stock={product.stock}
+                    />
+                ))}
+            </motion.div>
+        </section>
     )
 }

@@ -1,8 +1,10 @@
+import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { client } from '@/lib/sanity'
 import { PRODUCTS_BY_CATEGORY_REFS_QUERY, type CategoryGridProduct } from '@/lib/sanity-queries'
-import { ProductCard } from '@/components/ui/product-card'
+import { CategoryProductGrid } from '@/components/ui/category-product-grid'
+import { CategoryPageSkeleton } from '@/components/ui/skeletons'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
@@ -102,12 +104,8 @@ export async function generateMetadata({
     }
 }
 
-export default async function CategoryPage({
-    params,
-}: {
-    params: { slug: string }
-}) {
-    const data = await getCategoryData(params.slug)
+async function CategoryPageBody({ slug }: { slug: string }) {
+    const data = await getCategoryData(slug)
 
     if (!data) {
         notFound()
@@ -132,31 +130,20 @@ export default async function CategoryPage({
             {data.products.length === 0 ? (
                 <p className="text-sm text-stone-400">У цій категорії поки що немає товарів.</p>
             ) : (
-                <div className="grid grid-cols-2 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-                    {data.products.map((product, index) => (
-                        <ProductCard
-                            key={product._id}
-                            id={product._id}
-                            index={index}
-                            title={product.title ?? ''}
-                            slug={product.slug ?? undefined}
-                            price={
-                                typeof product.price === 'number' && Number.isFinite(product.price)
-                                    ? `${product.price} ₴`
-                                    : '—'
-                            }
-                            wholesalePrice={product.wholesalePrice}
-                            wholesaleMinQuantity={product.wholesaleMinQuantity}
-                            piecesPerBox={product.piecesPerBox}
-                            weight={product.weight}
-                            category={product.category ?? 'Без категорії'}
-                            origin={product.origin}
-                            stock={product.stock}
-                            image={product.image}
-                        />
-                    ))}
-                </div>
+                <CategoryProductGrid products={data.products} />
             )}
         </main>
+    )
+}
+
+export default function CategoryPage({
+    params,
+}: {
+    params: { slug: string }
+}) {
+    return (
+        <Suspense fallback={<CategoryPageSkeleton />}>
+            <CategoryPageBody slug={params.slug} />
+        </Suspense>
     )
 }

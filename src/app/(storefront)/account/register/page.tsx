@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { signIn } from 'next-auth/react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useAuthStore } from '@/store/authStore'
@@ -12,7 +12,6 @@ import { PhoneInput } from '@/components/ui/phone-input'
 
 export default function RegisterPage() {
     const register = useAuthStore((state) => state.register)
-    const router = useRouter()
 
     const {
         register: rhfRegister,
@@ -61,8 +60,18 @@ export default function RegisterPage() {
             phone: typeof u.phone === 'string' ? u.phone : '',
             address: typeof u.address === 'string' ? u.address : '',
         })
+        const signInResult = await signIn('credentials', {
+            redirect: false,
+            email: normalizedEmail,
+            password: values.password,
+        })
+        if (!signInResult?.ok) {
+            toast.error('Акаунт створено, але вхід не вдався. Увійдіть вручну.')
+            window.location.href = '/account/login'
+            return
+        }
         toast.success('Акаунт створено')
-        router.push('/account/profile')
+        window.location.href = '/account/profile'
     }
 
     return (

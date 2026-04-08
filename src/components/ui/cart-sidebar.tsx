@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Plus, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useCartStore } from '@/store/cart'
+import { shallow } from 'zustand/shallow'
+import { useStore } from '@/store/cart'
 import { useHydration } from '@/hooks/useHydration'
 import Image from 'next/image'
 import { urlFor } from '@/lib/sanity'
@@ -14,7 +15,36 @@ import styles from './cart-sidebar.module.scss'
 const FREE_SHIPPING_THRESHOLD_UAH = 15000
 
 export function CartSidebar() {
-    const { items, isOpen, toggleCart, removeItem, updateQuantity, totalPrice, addItem, validateCart, cartIssues, hasBlockingIssues, stockWarning, isValidating } = useCartStore()
+    const {
+        items,
+        isOpen,
+        toggleCart,
+        removeItem,
+        updateQuantity,
+        totalPrice,
+        addItem,
+        validateCart,
+        cartIssues,
+        hasBlockingIssues,
+        stockWarning,
+        isValidating,
+    } = useStore(
+        (s) => ({
+            items: s.items,
+            isOpen: s.isOpen,
+            toggleCart: s.toggleCart,
+            removeItem: s.removeItem,
+            updateQuantity: s.updateQuantity,
+            totalPrice: s.totalPrice,
+            addItem: s.addItem,
+            validateCart: s.validateCart,
+            cartIssues: s.cartIssues,
+            hasBlockingIssues: s.hasBlockingIssues,
+            stockWarning: s.stockWarning,
+            isValidating: s.isValidating,
+        }),
+        shallow
+    )
     const isHydrated = useHydration()
     const pathname = usePathname()
     const router = useRouter()

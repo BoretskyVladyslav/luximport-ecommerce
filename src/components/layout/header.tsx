@@ -2,26 +2,31 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ShoppingBag, Menu, X, Heart, User } from 'lucide-react'
+import { useSession } from 'next-auth/react'
+import { ShoppingBag, Menu, X, Heart, User, LogOut } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useCartStore } from '@/store/cart'
+import { useStore } from '@/store/cart'
 import { useWishlistStore } from '@/store/wishlistStore'
-import { useAuthStore } from '@/store/authStore'
 import { useHydration } from '@/hooks/useHydration'
+import { useUser } from '@/hooks/useUser'
 import styles from './header.module.scss'
 import { cn } from '@/lib/utils'
 
-const premiumEase = [0.25, 0.1, 0.25, 1];
+const premiumEase = [0.25, 0.1, 0.25, 1]
 
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const items = useCartStore((state) => state.items)
-  const openCart = useCartStore((state) => state.openCart)
+  const { data: session, status } = useSession()
+  const items = useStore((state) => state.items)
+  const openCart = useStore((state) => state.openCart)
   const wishlistItems = useWishlistStore((state) => state.items)
   const openWishlist = useWishlistStore((state) => state.openWishlist)
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
   const isHydrated = useHydration()
+  const { destroySession } = useUser()
+  const sessionReady = status !== 'loading'
+  const hasSessionUser = Boolean(session?.user)
+  const userIconHref = hasSessionUser ? '/account/profile' : '/account/login'
 
   const itemCount = items.reduce((acc, item) => acc + item.quantity, 0)
   const wishlistCount = wishlistItems.length
@@ -79,12 +84,31 @@ export function Header() {
               <span className={styles.badge}>{itemCount}</span>
             )}
           </button>
-          <Link
-            href={isAuthenticated ? '/account/profile' : '/account/login'}
-            className={styles.cartButton}
-          >
-            <User size={20} />
-          </Link>
+          {isHydrated ? (
+            !sessionReady ? (
+              <Link href="/account/login" className={styles.cartButton}>
+                <User size={20} />
+              </Link>
+            ) : hasSessionUser ? (
+              <>
+                <Link href={userIconHref} className={styles.cartButton}>
+                  <User size={20} />
+                </Link>
+                <button
+                  type="button"
+                  className={styles.cartButton}
+                  onClick={() => void destroySession()}
+                  aria-label="Вийти"
+                >
+                  <LogOut size={20} />
+                </button>
+              </>
+            ) : (
+              <Link href={userIconHref} className={styles.cartButton}>
+                <User size={20} />
+              </Link>
+            )
+          ) : null}
         </div>
       </div>
 
@@ -119,6 +143,27 @@ export function Header() {
               <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}>
                 <Link href="/contacts" onClick={() => setIsMobileMenuOpen(false)}>Контакти</Link>
               </motion.div>
+              {isHydrated && sessionReady && hasSessionUser ? (
+                <>
+                  <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}>
+                    <Link href={userIconHref} onClick={() => setIsMobileMenuOpen(false)}>
+                      Профіль
+                    </Link>
+                  </motion.div>
+                  <motion.div variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsMobileMenuOpen(false)
+                        void destroySession()
+                      }}
+                      className={styles.mobileLogout}
+                    >
+                      Вийти
+                    </button>
+                  </motion.div>
+                </>
+              ) : null}
             </motion.div>
           </motion.div>
         )}

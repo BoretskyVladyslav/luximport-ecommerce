@@ -41,7 +41,8 @@ export async function GET() {
                 address: user.address ?? '',
             },
         })
-    } catch {
+    } catch (error) {
+        console.error('[API_USER_ME]:', error)
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
     }
 }

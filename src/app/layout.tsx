@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { GoogleTagManager } from '@next/third-parties/google'
 import { getMetadataBase } from '@/lib/site-url'
 import { ToastProvider } from '@/components/providers/toast-provider'
+import { AuthProvider } from '@/components/providers/auth-provider'
 
 export const metadata: Metadata = {
     metadataBase: getMetadataBase(),
@@ -25,7 +26,9 @@ export default function RootLayout({
         <html lang="uk" suppressHydrationWarning>
             <body suppressHydrationWarning>
                 <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID || 'GTM-KCB7NCH8'} />
-                <ToastProvider>{children}</ToastProvider>
+                <AuthProvider>
+                    <ToastProvider>{children}</ToastProvider>
+                </AuthProvider>
             </body>
         </html>
     )

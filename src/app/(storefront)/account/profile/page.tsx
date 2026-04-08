@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Script from 'next/script'
+import { signOut } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useUser } from '@/hooks/useUser'
@@ -21,7 +22,24 @@ import { ProfileOrderCard, type ProfileOrderLine } from './ProfileOrderCard'
 import { normalizeMerchantDomainName } from '@/lib/wayforpay-purchase'
 import styles from './page.module.scss'
 
-const premiumEase = [0.25, 0.1, 0.25, 1];
+const premiumEase = [0.25, 0.1, 0.25, 1]
+
+const orderListVariants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.08 } },
+}
+
+const orderRowVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
+}
+
+const signOutToLogin = () => {
+    if (typeof window === 'undefined') return
+    void fetch('/api/auth/logout', { method: 'POST' }).finally(() => {
+        void signOut({ callbackUrl: '/account/login' })
+    })
+}
 
 const FULFILLMENT_SET: ReadonlySet<string> = new Set([
     'pending',
@@ -195,7 +213,10 @@ function digitsPhoneForWidget(raw: string): string {
     return '380000000000'
 }
 
-function widgetClientNames(user: { firstName?: string; lastName?: string; name?: string }) {
+function widgetClientNames(user: { firstName?: string; lastName?: string; name?: string } | null | undefined) {
+    if (!user) {
+        return { firstName: 'Клієнт', lastName: '—' }
+    }
     const parts = (user.name || '').trim().split(/\s+/).filter(Boolean)
     const firstName = user.firstName?.trim() || parts[0] || 'Клієнт'
     const lastName = user.lastName?.trim() || (parts.length > 1 ? parts.slice(1).join(' ') : '—')
@@ -203,10 +224,10 @@ function widgetClientNames(user: { firstName?: string; lastName?: string; name?:
 }
 
 export default function ProfilePage() {
+    const router = useRouter()
     const { user, isAuthenticated, refresh, updateUser, destroySession } = useUser()
     const { orders } = useOrderStore()
     const isHydrated = useHydration()
-    const router = useRouter()
 
     const [activeTab, setActiveTab] = useState('orders')
     const [orderFilter, setOrderFilter] = useState('all')
@@ -239,6 +260,10 @@ export default function ProfilePage() {
     }, [])
 
     useEffect(() => {
+        void router.refresh()
+    }, [router])
+
+    useEffect(() => {
         if (!isHydrated) return
         let cancelled = false
         async function run() {
@@ -247,7 +272,7 @@ export default function ProfilePage() {
             try {
                 const nextUser = await refresh()
                 if (!nextUser) {
-                    if (!cancelled) router.push('/account/login')
+                    if (!cancelled) signOutToLogin()
                     return
                 }
                 if (!cancelled) {
@@ -260,7 +285,8 @@ export default function ProfilePage() {
 
                 const mapped = await fetchServerOrders()
                 if (!cancelled) setServerOrders(mapped)
-            } catch {
+            } catch (error) {
+                console.error('[PROFILE_CRASH]:', error)
                 if (!cancelled) setError('Не вдалося завантажити профіль')
             } finally {
                 if (!cancelled) setIsLoadingProfile(false)
@@ -270,7 +296,14 @@ export default function ProfilePage() {
         return () => {
             cancelled = true
         }
-    }, [isHydrated, refresh, router, setValue, fetchServerOrders])
+    }, [isHydrated, refresh, setValue, fetchServerOrders])
+
+    useEffect(() => {
+        if (!isHydrated || isLoadingProfile) return
+        if (!isAuthenticated || !user) {
+            signOutToLogin()
+        }
+    }, [isHydrated, isLoadingProfile, isAuthenticated, user])
 
     const startProfilePayment = useCallback(
         async (sanityDocumentId: string) => {
@@ -343,9 +376,22 @@ export default function ProfilePage() {
                         language: 'UA',
                     },
                     () => {
-                        toast.success('Оплачено!')
-                        router.refresh()
-                        void fetchServerOrders().then(setServerOrders)
+                        void fetch('/api/orders/sync-payment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ orderId: sanityDocumentId }),
+                        })
+                            .then((res) => {
+                                if (!res.ok) {
+                                    throw new Error(String(res.status))
+                                }
+                                toast.success('Оплату успішно підтверджено!')
+                                window.location.reload()
+                            })
+                            .catch((error: unknown) => {
+                                console.error('Sync error:', error)
+                                toast.error('Оплата пройшла, але статус оновлюється...')
+                            })
                     },
                     () => {
                         toast.error('Оплату відхилено')
@@ -360,7 +406,7 @@ export default function ProfilePage() {
                 setPaymentLoadingOrderId(null)
             }
         },
-        [user, wayforpayScriptReady, router, fetchServerOrders]
+        [user, wayforpayScriptReady]
     )
 
     if (!isHydrated || isLoadingProfile) {
@@ -368,7 +414,7 @@ export default function ProfilePage() {
             <div className={styles.container}>
                 <div className={styles.dashboardHero}>
                     <div className="animate-pulse">
-                        <Skeleton className="h-10 w-64 rounded-md bg-stone-200/70" />
+                        <Skeleton className="h-10 w-64 rounded-md" />
                         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
                             {Array.from({ length: 3 }).map((_, i) => (
                                 <div key={i} className="rounded-lg border border-stone-200 bg-white px-6 py-5">
@@ -381,14 +427,14 @@ export default function ProfilePage() {
                 </div>
                 <div className={styles.content}>
                     <div className="mb-8 flex flex-wrap items-center gap-3">
-                        <Skeleton className="h-10 w-44 rounded-md bg-stone-200/70" />
-                        <Skeleton className="h-10 w-44 rounded-md bg-stone-200/70" />
-                        <Skeleton className="h-10 w-44 rounded-md bg-stone-200/70" />
+                        <Skeleton className="h-10 w-44 rounded-md" />
+                        <Skeleton className="h-10 w-44 rounded-md" />
+                        <Skeleton className="h-10 w-44 rounded-md" />
                     </div>
                     <div className="animate-pulse">
                         <div className="mb-6 flex flex-wrap gap-2">
                             {Array.from({ length: 4 }).map((_, i) => (
-                                <Skeleton key={i} className="h-9 w-20 rounded-md bg-stone-200/70" />
+                                <Skeleton key={i} className="h-9 w-20 rounded-md" />
                             ))}
                         </div>
                         <OrdersListSkeleton count={6} />
@@ -406,9 +452,8 @@ export default function ProfilePage() {
             : sourceOrders.filter((o) => o.status === orderFilter)
 
     const handleLogout = async () => {
-        await destroySession()
         toast.success('Ви вийшли з акаунта')
-        router.push('/')
+        await destroySession()
     }
 
     const onSaveSettings = async (values: ProfileUpdateFormData) => {
@@ -452,7 +497,8 @@ export default function ProfilePage() {
                 address: typeof u.address === 'string' ? u.address : values.address?.trim() ?? '',
             })
             toast.success('Дані збережено')
-        } catch {
+        } catch (error) {
+            console.error('[PROFILE_CRASH]:', error)
             const msg = 'Виникла помилка. Перевірте дані та спробуйте ще раз.'
             setError(msg)
             toast.error(msg)
@@ -561,15 +607,14 @@ export default function ProfilePage() {
                                 ))}
                             </div>
 
-                            <motion.div className={styles.orderList} layout>
-                                <AnimatePresence mode="popLayout">
+                            <AnimatePresence mode="popLayout">
                                     {sourceOrders.length === 0 ? (
                                         <motion.div
                                             key="empty-orders"
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             exit={{ opacity: 0 }}
-                                            transition={{ duration: 0.4 }}
+                                            transition={{ duration: 0.35, ease: 'easeOut' }}
                                             style={{ padding: '2rem 0', fontFamily: 'var(--font-body)' }}
                                             layout
                                         >
@@ -590,54 +635,68 @@ export default function ProfilePage() {
                                             initial={{ opacity: 0 }}
                                             animate={{ opacity: 1 }}
                                             exit={{ opacity: 0 }}
-                                            transition={{ duration: 0.4 }}
+                                            transition={{ duration: 0.35, ease: 'easeOut' }}
                                             style={{ fontFamily: 'var(--font-body)', color: '#888', fontSize: '0.9rem' }}
                                             layout
                                         >
                                             Немає замовлень у цій категорії.
                                         </motion.p>
                                     ) : (
-                                        filteredOrders.map((order) => {
-                                            const { canPay, isPaid, isCancelled } = orderPaymentUiFlags(order)
-                                            return (
-                                            <motion.div
-                                                key={order.id}
-                                                className={styles.orderItem}
-                                                layout
-                                                initial={{ opacity: 0, scale: 0.98 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.98 }}
-                                                transition={{ duration: 0.4, ease: premiumEase }}
-                                            >
-                                                <ProfileOrderCard
-                                                    id={order.id}
-                                                    date={order.date}
-                                                    total={order.total}
-                                                    itemsCount={itemsCountForOrder(order)}
-                                                    fulfillment={fulfillmentForDisplay(order)}
-                                                    payment={paymentForDisplay(order)}
-                                                    canPay={canPay}
-                                                    isPaidDisplay={isPaid}
-                                                    isCancelled={isCancelled}
-                                                    trackingNumber={order.trackingNumber}
-                                                    lines={buildDetailLines(order)}
-                                                    sanityDocumentId={order.sanityDocumentId}
-                                                    onOrdersInvalidate={() => {
-                                                        void fetchServerOrders().then(setServerOrders)
-                                                    }}
-                                                    onProfilePay={startProfilePayment}
-                                                    profilePayInProgress={
-                                                        paymentLoadingOrderId !== null &&
-                                                        paymentLoadingOrderId === order.sanityDocumentId
-                                                    }
-                                                    wayforpayReady={wayforpayScriptReady}
-                                                />
-                                            </motion.div>
-                                            )
-                                        })
+                                        <motion.div
+                                            key={`orders-${orderFilter}`}
+                                            className={styles.orderList}
+                                            initial="hidden"
+                                            animate="visible"
+                                            variants={orderListVariants}
+                                            layout
+                                        >
+                                            {filteredOrders.map((order) => {
+                                                const { canPay, isPaid, isCancelled } =
+                                                    orderPaymentUiFlags(order)
+                                                return (
+                                                    <motion.div
+                                                        key={order.id}
+                                                        className={styles.orderItem}
+                                                        variants={orderRowVariants}
+                                                        layout
+                                                        exit={{
+                                                            opacity: 0,
+                                                            y: 12,
+                                                            transition: { duration: 0.25, ease: 'easeOut' },
+                                                        }}
+                                                    >
+                                                        <ProfileOrderCard
+                                                            id={order.id}
+                                                            date={order.date}
+                                                            total={order.total}
+                                                            itemsCount={itemsCountForOrder(order)}
+                                                            fulfillment={fulfillmentForDisplay(order)}
+                                                            payment={paymentForDisplay(order)}
+                                                            canPay={canPay}
+                                                            isPaidDisplay={isPaid}
+                                                            isCancelled={isCancelled}
+                                                            trackingNumber={order.trackingNumber}
+                                                            lines={buildDetailLines(order)}
+                                                            sanityDocumentId={order.sanityDocumentId}
+                                                            onOrdersInvalidate={() => {
+                                                                void fetchServerOrders().then(
+                                                                    setServerOrders
+                                                                )
+                                                            }}
+                                                            onProfilePay={startProfilePayment}
+                                                            profilePayInProgress={
+                                                                paymentLoadingOrderId !== null &&
+                                                                paymentLoadingOrderId ===
+                                                                    order.sanityDocumentId
+                                                            }
+                                                            wayforpayReady={wayforpayScriptReady}
+                                                        />
+                                                    </motion.div>
+                                                )
+                                            })}
+                                        </motion.div>
                                     )}
                                 </AnimatePresence>
-                            </motion.div>
                         </motion.div>
                     )}
 

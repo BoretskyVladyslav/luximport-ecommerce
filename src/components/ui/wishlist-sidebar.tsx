@@ -4,14 +4,14 @@ import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { X } from 'lucide-react'
 import { useWishlistStore } from '@/store/wishlistStore'
-import { useCartStore } from '@/store/cart'
+import { useStore } from '@/store/cart'
 import { useHydration } from '@/hooks/useHydration'
 import Image from 'next/image'
 import styles from './wishlist-sidebar.module.scss'
 
 export function WishlistSidebar() {
     const { items, isOpen, closeWishlist, toggleItem } = useWishlistStore()
-    const addItem = useCartStore((state) => state.addItem)
+    const addItem = useStore((state) => state.addItem)
     const isHydrated = useHydration()
     const pathname = usePathname()
     const prevPathnameRef = useRef<string | null>(null)

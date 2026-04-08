@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { randomUUID } from 'crypto'
 import { createClient } from 'next-sanity'
 import { parseCartItems, parseTotalAmount } from '@/lib/order-payload'
@@ -277,6 +278,7 @@ export async function POST(req: Request) {
             }
         }
 
+        revalidatePath('/account/profile')
         return NextResponse.json({ success: true, sanityDocumentId: createdDocument._id })
     } catch (error) {
         const msg = typeof (error as any)?.message === 'string' ? (error as any).message : ''

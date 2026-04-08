@@ -4,12 +4,12 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { checkoutSchema, CheckoutFormData } from '@/lib/validations/checkout'
-import { useCartStore, useStore } from '@/store/useCartStore'
+import { useStore } from '@/store/cart'
 
 export default function CheckoutForm() {
     const router = useRouter()
     const items = useStore((state) => state.items)
-    const clearCart = useCartStore((state) => state.clearCart)
+    const clearCart = useStore((state) => state.clearCart)
 
     const {
         register,

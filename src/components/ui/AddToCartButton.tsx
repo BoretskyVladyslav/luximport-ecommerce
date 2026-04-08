@@ -1,6 +1,6 @@
 'use client'
 
-import { useCartStore } from '@/store/cart'
+import { useStore } from '@/store/cart'
 import { urlFor } from '@/lib/sanity'
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
 }
 
 export function AddToCartButton({ id, title, slug, price, wholesalePrice, wholesaleMinQuantity, piecesPerBox, countInStock, category, image }: Props) {
-    const addItem = useCartStore((state) => state.addItem)
+    const addItem = useStore((state) => state.addItem)
 
     const isOutOfStock = typeof countInStock === 'number' && countInStock <= 0
 
