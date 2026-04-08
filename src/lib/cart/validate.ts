@@ -50,6 +50,13 @@ function isPositiveInt(v: unknown): v is number {
 }
 
 export async function validateCartAgainstSanity(lines: ClientCartLine[]) {
+    return validateCartAgainstSanityWithClient(lines)
+}
+
+export async function validateCartAgainstSanityWithClient(
+    lines: ClientCartLine[],
+    client: { fetch: <T>(query: string, params?: Record<string, unknown>) => Promise<T> } = sanityServer
+) {
     const normalized: ClientCartLine[] = []
     for (const line of lines) {
         if (!line || typeof line !== 'object') continue
@@ -68,7 +75,7 @@ export async function validateCartAgainstSanity(lines: ClientCartLine[]) {
         }
     }
 
-    const products = await sanityServer.fetch<SanityProductPricing[]>(
+    const products = await client.fetch<SanityProductPricing[]>(
         `*[_type == "product" && _id in $ids && !(_id match "drafts.*")]{
             _id,
             title,

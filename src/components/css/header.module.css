@@ -1,0 +1,163 @@
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  background-color: #ffffff;
+}
+.header.scrolled {
+  background-color: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  height: 80px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+}
+
+.logo {
+  justify-self: center;
+  grid-column: 2;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: #111;
+  cursor: pointer;
+  text-decoration: none;
+}
+@media (min-width: 1024px) {
+  .logo {
+    grid-column: 2;
+  }
+}
+
+.nav {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .nav {
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+    grid-column: 1;
+    justify-self: start;
+  }
+}
+.nav a {
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #111;
+  transition: color 0.3s ease;
+  position: relative;
+}
+.nav a::after {
+  content: "";
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 1px;
+  background-color: #111;
+  transition: width 0.3s ease, background-color 0.3s ease;
+}
+.nav a:hover {
+  color: #888;
+}
+.nav a:hover::after {
+  width: 100%;
+  background-color: #888;
+}
+
+.iconGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  grid-column: 3;
+  justify-self: end;
+}
+
+.cartButton,
+.mobileToggle {
+  position: relative;
+  padding: 0.5rem;
+  transition: color 0.3s ease;
+  color: #111;
+}
+.cartButton:hover,
+.mobileToggle:hover {
+  color: #888;
+}
+
+.mobileToggle {
+  grid-column: 1;
+  justify-self: start;
+  margin-left: -0.5rem;
+}
+@media (min-width: 1024px) {
+  .mobileToggle {
+    display: none;
+  }
+}
+
+.cartButton {
+  margin-right: -0.5rem;
+}
+
+.badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 1rem;
+  width: 1rem;
+  background-color: #d4a373;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.mobileMenu {
+  position: absolute;
+  top: 80px;
+  left: 0;
+  width: 100%;
+  height: calc(100vh - 80px);
+  background-color: #ffffff;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+}
+@media (min-width: 1024px) {
+  .mobileMenu {
+    display: none;
+  }
+}
+.mobileMenu a {
+  font-family: "Inter", sans-serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #111;
+  transition: color 0.3s ease;
+}
+.mobileMenu a:hover {
+  color: #888;
+}

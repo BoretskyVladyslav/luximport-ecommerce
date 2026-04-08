@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
+import { safeJsonStorage } from '@/store/persistStorage'
 
 interface User {
     id: string
@@ -32,8 +33,29 @@ export const useAuthStore = create<AuthState>()(
         }),
         {
             name: 'li_auth',
-            storage: createJSONStorage(() => sessionStorage),
+            storage: safeJsonStorage(() => sessionStorage),
             partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+            onRehydrateStorage: () => (state) => {
+                if (!state) return
+                const u: any = state.user
+                const id = typeof u?.id === 'string' ? u.id : ''
+                const email = typeof u?.email === 'string' ? u.email : ''
+                if (!id.trim() || !email.trim()) {
+                    state.user = null
+                    state.isAuthenticated = false
+                    return
+                }
+                state.user = {
+                    id,
+                    email,
+                    name: typeof u?.name === 'string' ? u.name : '',
+                    firstName: typeof u?.firstName === 'string' ? u.firstName : '',
+                    lastName: typeof u?.lastName === 'string' ? u.lastName : '',
+                    phone: typeof u?.phone === 'string' ? u.phone : '',
+                    address: typeof u?.address === 'string' ? u.address : '',
+                }
+                state.isAuthenticated = Boolean(state.user)
+            },
         }
     )
 )

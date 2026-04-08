@@ -1,5 +1,7 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
+import { safeJsonStorage } from '@/store/persistStorage'
+import type { OrderFulfillmentStatus, OrderPaymentStatus } from '@/types'
 
 export interface OrderItem {
     id: string
@@ -8,6 +10,8 @@ export interface OrderItem {
     quantity: number
     wholesalePrice?: number
     wholesaleMinQuantity?: number
+    imageUrl?: string
+    images?: string[]
 }
 
 export interface Order {
@@ -18,8 +22,17 @@ export interface Order {
     total: string
     customerName: string
     customerPhone: string
+    customerEmail?: string
     shippingAddress: string
     items: OrderItem[]
+    itemsCount?: number
+    trackingNumber?: string
+    fulfillment?: OrderFulfillmentStatus
+    payment?: OrderPaymentStatus
+    isPaid?: boolean
+    sanityOrderStatus?: string
+    sanityDocumentId?: string
+    totalAmount?: number
 }
 
 interface OrderState {
@@ -41,7 +54,12 @@ export const useOrderStore = create<OrderState>()(
         }),
         {
             name: 'order-storage',
-            storage: createJSONStorage(() => localStorage),
+            storage: safeJsonStorage(() => localStorage),
+            onRehydrateStorage: () => (state) => {
+                if (!state) return
+                state.orders = Array.isArray(state.orders) ? state.orders : []
+                state.lastOrder = state.lastOrder && typeof state.lastOrder === 'object' ? state.lastOrder : null
+            },
         }
     )
 )

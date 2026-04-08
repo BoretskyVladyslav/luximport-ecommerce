@@ -1,18 +1,5 @@
 import { NextResponse } from 'next/server'
-import crypto from 'crypto'
-
-function normalizeMerchantDomainName(input: string): string {
-    try {
-        const asUrl = new URL(input)
-        return asUrl.host
-    } catch {
-        return input.replace(/^https?:\/\//i, '').split('/')[0].trim()
-    }
-}
-
-function formatWayforpayAmount(amount: number): string {
-    return amount.toFixed(2)
-}
+import { buildWayforpayPurchasePayload } from '@/lib/wayforpay-purchase'
 
 function toNumberArray(label: string, v: unknown): { ok: true; arr: number[] } | { ok: false; error: string } {
     if (Array.isArray(v)) {
@@ -105,35 +92,20 @@ export async function POST(req: Request) {
             )
         }
 
-        const merchantDomainName = normalizeMerchantDomainName(domain)
-        const orderDate = Math.floor(Date.now() / 1000)
-        const amountStr = formatWayforpayAmount(amount)
-
-        const signatureString = [
+        const payload = buildWayforpayPurchasePayload({
             merchantAccount,
-            merchantDomainName,
-            orderReference.trim(),
-            String(orderDate),
-            amountStr,
-            currency.trim(),
-            names.arr.join(';'),
-            counts.arr.map(String).join(';'),
-            prices.arr.map(String).join(';'),
-        ].join(';')
-
-        const merchantSignature = crypto.createHmac('md5', secretKey).update(signatureString).digest('hex')
+            secretKey,
+            domain,
+            orderReference: orderReference.trim(),
+            amount,
+            currency: currency.trim(),
+            productNames: names.arr,
+            productCounts: counts.arr,
+            productPrices: prices.arr,
+        })
 
         return NextResponse.json({
-            merchantAccount,
-            merchantDomainName,
-            orderReference: orderReference.trim(),
-            orderDate,
-            amount: amountStr,
-            currency: currency.trim(),
-            productName: names.arr,
-            productCount: counts.arr,
-            productPrice: prices.arr,
-            merchantSignature,
+            ...payload,
             returnUrl: `${domain}/api/wayforpay/return`,
             serviceUrl: `${domain}/api/payment/webhook`,
         })

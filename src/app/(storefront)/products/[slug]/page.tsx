@@ -56,6 +56,7 @@ export default async function ProductPage({
         : null
 
     const displayTitle = product.title ?? 'Товар'
+    const isOutOfStock = typeof product.stock === 'number' && Number.isFinite(product.stock) ? product.stock <= 0 : false
 
     return (
         <main className="mx-auto max-w-7xl px-6 py-20">
@@ -66,13 +67,20 @@ export default async function ProductPage({
                             src={imageUrl}
                             alt={displayTitle}
                             fill
-                            className="object-cover object-center w-full h-full"
+                            className={isOutOfStock ? "object-cover object-center w-full h-full grayscale blur-sm" : "object-cover object-center w-full h-full"}
                             sizes="(max-width: 1024px) 100vw, 50vw"
                             priority
                         />
                     ) : (
                         <div className="flex h-full items-center justify-center text-xs uppercase tracking-widest text-stone-300">
                             No image
+                        </div>
+                    )}
+                    {isOutOfStock && (
+                        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40">
+                            <div className="rounded-md bg-black/70 px-5 py-2 text-center font-body text-[0.7rem] font-bold uppercase tracking-[0.22em] text-white">
+                                РОЗПРОДАНО
+                            </div>
                         </div>
                     )}
                 </div>

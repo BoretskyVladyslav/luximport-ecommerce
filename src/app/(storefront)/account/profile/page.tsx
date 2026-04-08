@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Script from 'next/script'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useUser } from '@/hooks/useUser'
@@ -14,14 +15,35 @@ import { useHydration } from '@/hooks/useHydration'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { OrdersListSkeleton, Skeleton } from '@/components/ui/skeletons'
+import type { OrderFulfillmentStatus, OrderPaymentStatus } from '@/types'
+import type { Order as LocalOrder } from '@/store/orderStore'
+import { ProfileOrderCard, type ProfileOrderLine } from './ProfileOrderCard'
+import { normalizeMerchantDomainName } from '@/lib/wayforpay-purchase'
 import styles from './page.module.scss'
 
 const premiumEase = [0.25, 0.1, 0.25, 1];
 
-const statusClass: Record<string, string> = {
-    processing: styles.statusProcessing,
-    delivered: styles.statusDelivered,
-    cancelled: styles.statusCancelled,
+const FULFILLMENT_SET: ReadonlySet<string> = new Set([
+    'pending',
+    'paid',
+    'processing',
+    'shipped',
+    'completed',
+    'cancelled',
+])
+
+function parseFulfillment(raw: string): OrderFulfillmentStatus {
+    return FULFILLMENT_SET.has(raw) ? (raw as OrderFulfillmentStatus) : 'pending'
+}
+
+function parsePayment(rawPayment: unknown, rawStatus: string): OrderPaymentStatus {
+    if (rawPayment === 'pending' || rawPayment === 'paid' || rawPayment === 'cancelled' || rawPayment === 'failed') {
+        return rawPayment
+    }
+    if (rawStatus === 'paid' || rawStatus === 'cancelled' || rawStatus === 'failed') {
+        return rawStatus as OrderPaymentStatus
+    }
+    return 'pending'
 }
 
 const orderTabs = [
@@ -33,6 +55,151 @@ const orderTabs = [
 
 function isValidEmail(email: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+    return typeof v === 'object' && v !== null && !Array.isArray(v)
+}
+
+type OrderListEntry = LocalOrder & {
+    fulfillment?: OrderFulfillmentStatus
+    payment?: OrderPaymentStatus
+    isPaid?: boolean
+    sanityOrderStatus?: string
+    detailLines?: ProfileOrderLine[]
+    sanityDocumentId?: string
+    totalAmount?: number
+}
+
+function mapDetailLinesFromApi(raw: unknown): ProfileOrderLine[] {
+    if (!Array.isArray(raw)) return []
+    const out: ProfileOrderLine[] = []
+    for (let i = 0; i < raw.length; i++) {
+        const row = raw[i]
+        if (!row || typeof row !== 'object') continue
+        const r = row as Record<string, unknown>
+        const productId = typeof r.productId === 'string' ? r.productId : `line-${i}`
+        const title = typeof r.title === 'string' ? r.title : ''
+        const quantity =
+            typeof r.quantity === 'number' && Number.isFinite(r.quantity) ? Math.max(0, Math.trunc(r.quantity)) : 0
+        const price = typeof r.price === 'number' && Number.isFinite(r.price) ? r.price : 0
+        const image = r.image !== undefined && r.image !== null ? r.image : undefined
+        out.push({ productId, title, quantity, price, image })
+    }
+    return out
+}
+
+function mapApiOrderRow(o: Record<string, unknown>): OrderListEntry | null {
+    const createdAt = typeof o._createdAt === 'string' ? o._createdAt : ''
+    const dt = createdAt ? new Date(createdAt) : null
+    const date = dt && !Number.isNaN(dt.valueOf()) ? dt.toLocaleDateString('uk-UA') : ''
+    const rawStatus = typeof o.status === 'string' ? o.status : 'pending'
+    const payment = parsePayment(o.paymentStatus, rawStatus)
+    const fulfillment = parseFulfillment(rawStatus)
+    const isPaid = o.isPaid === true || payment === 'paid'
+    const status =
+        fulfillment === 'cancelled'
+            ? ('cancelled' as const)
+            : fulfillment === 'completed'
+                ? ('delivered' as const)
+                : ('processing' as const)
+    const orderId = typeof o.orderId === 'string' && o.orderId ? o.orderId : typeof o._id === 'string' ? o._id : ''
+    if (!orderId) return null
+    const totalAmount = typeof o.totalAmount === 'number' && Number.isFinite(o.totalAmount) ? o.totalAmount : 0
+    const detailLines = mapDetailLinesFromApi(o.items)
+    const itemsCount =
+        typeof o.itemsCount === 'number' && Number.isFinite(o.itemsCount)
+            ? Math.max(0, Math.trunc(o.itemsCount))
+            : detailLines.length
+    const trackingNumber =
+        typeof o.trackingNumber === 'string' && o.trackingNumber.trim() ? o.trackingNumber.trim() : undefined
+    const sanityDocumentId = typeof o._id === 'string' ? o._id : undefined
+    return {
+        id: orderId,
+        date,
+        status,
+        statusText: '',
+        fulfillment,
+        payment,
+        isPaid,
+        total: `${totalAmount.toLocaleString('uk-UA')} ₴`,
+        shippingAddress: typeof o.shippingAddress === 'string' ? o.shippingAddress : '',
+        customerName: typeof o.customerName === 'string' ? o.customerName : '',
+        customerPhone: typeof o.customerPhone === 'string' ? o.customerPhone : '',
+        customerEmail: typeof o.customerEmail === 'string' ? o.customerEmail : '',
+        items: detailLines.map((l) => ({
+            id: l.productId,
+            title: l.title,
+            quantity: l.quantity,
+            price: l.price,
+        })),
+        itemsCount,
+        trackingNumber,
+        detailLines,
+        sanityDocumentId,
+        totalAmount,
+        sanityOrderStatus: rawStatus,
+    }
+}
+
+function buildDetailLines(order: OrderListEntry): ProfileOrderLine[] {
+    if (order.detailLines && order.detailLines.length > 0) return order.detailLines
+    return (order.items || []).map((it) => ({
+        productId: it.id,
+        title: it.title,
+        quantity: it.quantity,
+        price: it.price,
+        imageUrl: it.imageUrl ?? it.images?.[0],
+    }))
+}
+
+function fulfillmentForDisplay(order: OrderListEntry): OrderFulfillmentStatus {
+    if (order.fulfillment) return order.fulfillment
+    if (order.status === 'delivered') return 'completed'
+    if (order.status === 'cancelled') return 'cancelled'
+    return 'pending'
+}
+
+function paymentForDisplay(order: OrderListEntry): OrderPaymentStatus {
+    const p = order.payment
+    if (p === 'pending' || p === 'paid' || p === 'cancelled' || p === 'failed') return p
+    return 'pending'
+}
+
+function itemsCountForOrder(order: OrderListEntry): number {
+    if (typeof order.itemsCount === 'number' && Number.isFinite(order.itemsCount)) {
+        return Math.max(0, Math.trunc(order.itemsCount))
+    }
+    return Array.isArray(order.items) ? order.items.length : 0
+}
+
+function orderPaymentUiFlags(order: OrderListEntry) {
+    const status = order.sanityOrderStatus ?? 'pending'
+    const canPay = !Boolean(order.isPaid) && status === 'pending'
+    const isPaid =
+        Boolean(order.isPaid) ||
+        status === 'processing' ||
+        status === 'shipped' ||
+        status === 'paid' ||
+        status === 'completed'
+    const isCancelled = order.status === 'cancelled' || status === 'cancelled'
+    return { canPay, isPaid, isCancelled }
+}
+
+function digitsPhoneForWidget(raw: string): string {
+    const d = raw.replace(/\D/g, '')
+    if (d.length >= 12 && d.startsWith('380')) return d
+    if (d.length === 10 && d.startsWith('0')) return `38${d}`
+    if (d.length === 9) return `380${d}`
+    if (d.length >= 11 && d.startsWith('38')) return d
+    return '380000000000'
+}
+
+function widgetClientNames(user: { firstName?: string; lastName?: string; name?: string }) {
+    const parts = (user.name || '').trim().split(/\s+/).filter(Boolean)
+    const firstName = user.firstName?.trim() || parts[0] || 'Клієнт'
+    const lastName = user.lastName?.trim() || (parts.length > 1 ? parts.slice(1).join(' ') : '—')
+    return { firstName: firstName.slice(0, 120), lastName: lastName.slice(0, 120) }
 }
 
 export default function ProfilePage() {
@@ -47,15 +214,9 @@ export default function ProfilePage() {
     const [email, setEmail] = useState('')
     const [isLoadingProfile, setIsLoadingProfile] = useState(true)
     const [error, setError] = useState<string | null>(null)
-    const [serverOrders, setServerOrders] = useState<Array<{
-        id: string
-        date: string
-        status: 'processing' | 'delivered' | 'cancelled'
-        statusText: string
-        total: string
-        shippingAddress: string
-        itemsCount: number
-    }>>([])
+    const [serverOrders, setServerOrders] = useState<OrderListEntry[]>([])
+    const [wayforpayScriptReady, setWayforpayScriptReady] = useState(false)
+    const [paymentLoadingOrderId, setPaymentLoadingOrderId] = useState<string | null>(null)
 
     const {
         register,
@@ -67,6 +228,15 @@ export default function ProfilePage() {
         defaultValues: { firstName: '', lastName: '', phone: '', address: '' },
         shouldFocusError: true,
     })
+
+    const fetchServerOrders = useCallback(async (): Promise<OrderListEntry[]> => {
+        const res = await fetch('/api/orders/me', { method: 'GET' })
+        const data = await res.json().catch(() => null)
+        const raw = Array.isArray(data?.orders) ? data.orders : []
+        return raw
+            .map((row: unknown) => mapApiOrderRow(isRecord(row) ? row : {}))
+            .filter((x): x is OrderListEntry => x !== null)
+    }, [])
 
     useEffect(() => {
         if (!isHydrated) return
@@ -88,44 +258,7 @@ export default function ProfilePage() {
                     setValue('address', nextUser.address || '', { shouldValidate: false })
                 }
 
-                const res = await fetch('/api/orders/me', { method: 'GET' })
-                const data = await res.json().catch(() => null)
-                const raw = Array.isArray(data?.orders) ? data.orders : []
-                const mapped = raw
-                    .map((o: any) => {
-                        const createdAt = typeof o?._createdAt === 'string' ? o._createdAt : ''
-                        const dt = createdAt ? new Date(createdAt) : null
-                        const date = dt && !Number.isNaN(dt.valueOf()) ? dt.toLocaleDateString('uk-UA') : ''
-                        const statusRaw = typeof o?.status === 'string' ? o.status : 'pending'
-                        const status =
-                            statusRaw === 'cancelled' || statusRaw === 'failed'
-                                ? ('cancelled' as const)
-                                : statusRaw === 'paid'
-                                    ? ('delivered' as const)
-                                    : ('processing' as const)
-                        const statusText =
-                            statusRaw === 'paid'
-                                ? 'ОПЛАЧЕНО'
-                                : statusRaw === 'cancelled'
-                                    ? 'СКАСОВАНО'
-                                    : statusRaw === 'failed'
-                                        ? 'НЕУСПІШНО'
-                                        : 'ОЧІКУЄ ОПЛАТИ'
-                        const orderId = typeof o?.orderId === 'string' && o.orderId ? o.orderId : String(o?._id ?? '')
-                        const totalAmount = typeof o?.totalAmount === 'number' && Number.isFinite(o.totalAmount) ? o.totalAmount : 0
-                        const itemsCount = Array.isArray(o?.items) ? o.items.length : 0
-                        return {
-                            id: orderId,
-                            date,
-                            status,
-                            statusText,
-                            total: `${totalAmount.toLocaleString('uk-UA')} ₴`,
-                            shippingAddress: typeof o?.shippingAddress === 'string' ? o.shippingAddress : '',
-                            itemsCount,
-                        }
-                    })
-                    .filter((x: any) => x && typeof x.id === 'string' && x.id)
-
+                const mapped = await fetchServerOrders()
                 if (!cancelled) setServerOrders(mapped)
             } catch {
                 if (!cancelled) setError('Не вдалося завантажити профіль')
@@ -137,7 +270,98 @@ export default function ProfilePage() {
         return () => {
             cancelled = true
         }
-    }, [isHydrated, refresh, router, setValue])
+    }, [isHydrated, refresh, router, setValue, fetchServerOrders])
+
+    const startProfilePayment = useCallback(
+        async (sanityDocumentId: string) => {
+            if (typeof window === 'undefined') return
+            if (!wayforpayScriptReady || !window.Wayforpay) {
+                toast.error('Платіжна форма ще завантажується. Спробуйте за кілька секунд.')
+                return
+            }
+            if (!user) return
+            setPaymentLoadingOrderId(sanityDocumentId)
+            try {
+                const res = await fetch('/api/payment/generate-retry', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ orderId: sanityDocumentId }),
+                })
+                const data = (await res.json().catch(() => null)) as Record<string, unknown> | null
+                if (!res.ok || !data || data.success !== true) {
+                    toast.error(typeof data?.error === 'string' ? data.error : 'Не вдалося ініціювати оплату')
+                    return
+                }
+                const od = data.orderDetails
+                if (!od || typeof od !== 'object' || Array.isArray(od)) {
+                    toast.error('Не вдалося ініціювати оплату')
+                    return
+                }
+                const details = od as Record<string, unknown>
+                const pubMerchant = process.env.NEXT_PUBLIC_WAYFORPAY_MERCHANT_ACCOUNT?.trim()
+                const pubDomain = process.env.NEXT_PUBLIC_DOMAIN?.trim()
+                const merchantAccount =
+                    pubMerchant || (typeof details.merchantAccount === 'string' ? details.merchantAccount : '')
+                const merchantDomainName = pubDomain
+                    ? normalizeMerchantDomainName(pubDomain)
+                    : typeof details.merchantDomainName === 'string'
+                      ? details.merchantDomainName
+                      : ''
+                if (!merchantAccount || !merchantDomainName) {
+                    toast.error('Налаштування оплати неповні. Зверніться до підтримки.')
+                    return
+                }
+                const productName = details.productName
+                const productPrice = details.productPrice
+                const productCount = details.productCount
+                if (!Array.isArray(productName) || !Array.isArray(productPrice) || !Array.isArray(productCount)) {
+                    toast.error('Не вдалося ініціювати оплату')
+                    return
+                }
+                const { firstName, lastName } = widgetClientNames(user)
+                const clientPhone = digitsPhoneForWidget(user.phone || '')
+                const wfp = new window.Wayforpay()
+                wfp.run(
+                    {
+                        merchantAccount,
+                        merchantDomainName,
+                        authorizationType: 'SimpleSignature',
+                        merchantSignature: String(data.signature),
+                        orderReference: String(data.retryReference),
+                        orderDate: String(details.orderDate),
+                        amount: String(details.amount),
+                        currency: typeof details.currency === 'string' ? details.currency : 'UAH',
+                        productName,
+                        productPrice,
+                        productCount,
+                        clientFirstName: firstName,
+                        clientLastName: lastName,
+                        clientPhone,
+                        clientEmail: user.email,
+                        ...(typeof details.returnUrl === 'string' ? { returnUrl: details.returnUrl } : {}),
+                        ...(typeof details.serviceUrl === 'string' ? { serviceUrl: details.serviceUrl } : {}),
+                        language: 'UA',
+                    },
+                    () => {
+                        toast.success('Оплачено!')
+                        router.refresh()
+                        void fetchServerOrders().then(setServerOrders)
+                    },
+                    () => {
+                        toast.error('Оплату відхилено')
+                    },
+                    () => {
+                        toast('Очікування оплати')
+                    }
+                )
+            } catch {
+                toast.error('Не вдалося ініціювати оплату')
+            } finally {
+                setPaymentLoadingOrderId(null)
+            }
+        },
+        [user, wayforpayScriptReady, router, fetchServerOrders]
+    )
 
     if (!isHydrated || isLoadingProfile) {
         return (
@@ -237,6 +461,11 @@ export default function ProfilePage() {
 
     return (
         <>
+            <Script
+                src="https://secure.wayforpay.com/server/pay-widget.js"
+                strategy="afterInteractive"
+                onLoad={() => setWayforpayScriptReady(true)}
+            />
             <LoadingOverlay show={isSubmitting} />
         <div className={styles.container}>
             <div className={styles.dashboardHero}>
@@ -368,7 +597,9 @@ export default function ProfilePage() {
                                             Немає замовлень у цій категорії.
                                         </motion.p>
                                     ) : (
-                                        filteredOrders.map((order) => (
+                                        filteredOrders.map((order) => {
+                                            const { canPay, isPaid, isCancelled } = orderPaymentUiFlags(order)
+                                            return (
                                             <motion.div
                                                 key={order.id}
                                                 className={styles.orderItem}
@@ -378,21 +609,32 @@ export default function ProfilePage() {
                                                 exit={{ opacity: 0, scale: 0.98 }}
                                                 transition={{ duration: 0.4, ease: premiumEase }}
                                             >
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                                                    <span className={styles.orderId}>{order.id}</span>
-                                                    <span className={styles.orderDate}>{order.date}</span>
-                                                </div>
-                                                <span className={`${styles.orderStatus} ${statusClass[order.status]}`}>
-                                                    {order.statusText}
-                                                </span>
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-end', minWidth: '150px' }}>
-                                                    <span className={styles.orderTotal}>{order.total}</span>
-                                                    <span style={{ fontFamily: 'var(--font-body)', fontSize: '0.65rem', color: '#888', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                                                        {'itemsCount' in order ? (order as any).itemsCount : order.items?.length || 0} Товарів
-                                                    </span>
-                                                </div>
+                                                <ProfileOrderCard
+                                                    id={order.id}
+                                                    date={order.date}
+                                                    total={order.total}
+                                                    itemsCount={itemsCountForOrder(order)}
+                                                    fulfillment={fulfillmentForDisplay(order)}
+                                                    payment={paymentForDisplay(order)}
+                                                    canPay={canPay}
+                                                    isPaidDisplay={isPaid}
+                                                    isCancelled={isCancelled}
+                                                    trackingNumber={order.trackingNumber}
+                                                    lines={buildDetailLines(order)}
+                                                    sanityDocumentId={order.sanityDocumentId}
+                                                    onOrdersInvalidate={() => {
+                                                        void fetchServerOrders().then(setServerOrders)
+                                                    }}
+                                                    onProfilePay={startProfilePayment}
+                                                    profilePayInProgress={
+                                                        paymentLoadingOrderId !== null &&
+                                                        paymentLoadingOrderId === order.sanityDocumentId
+                                                    }
+                                                    wayforpayReady={wayforpayScriptReady}
+                                                />
                                             </motion.div>
-                                        ))
+                                            )
+                                        })
                                     )}
                                 </AnimatePresence>
                             </motion.div>

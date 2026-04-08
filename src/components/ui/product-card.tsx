@@ -35,6 +35,7 @@ interface ProductCardProps {
 
 export function ProductCard({ id, index, title, slug, price, wholesalePrice, wholesaleMinQuantity, piecesPerBox, weight, category, origin, stock, image }: ProductCardProps) {
     const addItem = useCartStore((state) => state.addItem)
+    const openCart = useCartStore((state) => state.openCart)
     const { items: wishlistItems, toggleItem } = useWishlistStore()
 
     const productId = id
@@ -65,7 +66,12 @@ export function ProductCard({ id, index, title, slug, price, wholesalePrice, who
     const countInStock = typeof stock === 'number' && Number.isFinite(stock) ? stock : null
     const isOutOfStock = typeof countInStock === 'number' && countInStock <= 0
 
-    const handleAddToCart = () => {
+    const handleAddToCart = (e: React.MouseEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (process.env.NODE_ENV !== 'production') {
+            console.log('ADD_TO_CART_CLICKED', productId)
+        }
         if (isOutOfStock) return
         addItem({
             id: productId,
@@ -80,9 +86,11 @@ export function ProductCard({ id, index, title, slug, price, wholesalePrice, who
             images: image ? [urlFor(image).url()] : [],
             category: productCategory,
         })
+        openCart()
     }
 
     const handleToggleWishlist = (e: React.MouseEvent) => {
+        e.preventDefault()
         e.stopPropagation()
         toggleItem({
             id: productId,
@@ -115,7 +123,7 @@ export function ProductCard({ id, index, title, slug, price, wholesalePrice, who
                             alt={productTitle}
                             fill
                             style={{ objectFit: 'contain', objectPosition: 'center' }}
-                            className={isOutOfStock ? 'grayscale blur-[1px]' : undefined}
+                            className={isOutOfStock ? 'grayscale blur-sm' : undefined}
                             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                         />
                     </div>
@@ -123,13 +131,14 @@ export function ProductCard({ id, index, title, slug, price, wholesalePrice, who
                     <div className={`${styles.imagePlaceholder} ${isOutOfStock ? 'grayscale blur-[1px]' : ''}`}>Немає фото</div>
                 )}
                 {isOutOfStock && (
-                    <div className="pointer-events-none absolute inset-0 z-[5] flex items-center justify-center bg-black/50">
-                        <div className="rounded-md border border-white/30 bg-black/60 px-4 py-2 text-center font-body text-[0.7rem] font-bold uppercase tracking-[0.22em] text-white">
-                            НЕМАЄ В НАЯВНОСТІ
+                    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-black/40">
+                        <div className="rounded-md bg-black/70 px-5 py-2 text-center font-body text-[0.7rem] font-bold uppercase tracking-[0.22em] text-white">
+                            РОЗПРОДАНО
                         </div>
                     </div>
                 )}
                 <button
+                    type="button"
                     className={`${styles.likeBtn} ${isLiked ? styles.likeBtnActive : ''}`}
                     onClick={handleToggleWishlist}
                 >
@@ -169,6 +178,7 @@ export function ProductCard({ id, index, title, slug, price, wholesalePrice, who
                               : 'Ціну уточнюйте'}
                     </span>
                     <button
+                        type="button"
                         className={`${styles.addButton} ${isOutOfStock ? 'opacity-80' : ''}`}
                         onClick={handleAddToCart}
                         disabled={isOutOfStock}

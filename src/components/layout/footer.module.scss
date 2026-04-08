@@ -15,13 +15,13 @@
 
     @media (max-width: 768px) {   
         grid-template-columns: 1fr;
-    }
-}
+    } 
+} 
 
 .column {
     display: flex;
     flex-direction: column;
-    padding: 6rem 3rem;
+    padding: 6rem 3rem; 
     border-right: 1px solid #f0f0f0;
     gap: 1.25rem;
 

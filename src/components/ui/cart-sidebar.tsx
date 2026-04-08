@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { Plus, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -18,6 +18,7 @@ export function CartSidebar() {
     const isHydrated = useHydration()
     const pathname = usePathname()
     const router = useRouter()
+    const prevPathnameRef = useRef<string | null>(null)
     const [recommendations, setRecommendations] = useState<CartRecommendationProduct[]>([])
     const [recsLoading, setRecsLoading] = useState(false)
     const [validationLoading, setValidationLoading] = useState(false)
@@ -31,7 +32,10 @@ export function CartSidebar() {
     }, [items])
 
     useEffect(() => {
-        if (isOpen) toggleCart()
+        const prev = prevPathnameRef.current
+        prevPathnameRef.current = pathname
+        if (!prev) return
+        if (prev !== pathname && isOpen) toggleCart()
     }, [pathname, isOpen, toggleCart])
 
     useEffect(() => {

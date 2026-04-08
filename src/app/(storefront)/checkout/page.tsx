@@ -224,7 +224,7 @@ export default function CheckoutPage() {
                 }),
             })
 
-            const createdOrder = await createOrderRes.json()
+            const createdOrder = await createOrderRes.json().catch(() => null)
 
             if (!createOrderRes.ok) {
                 const msg = typeof createdOrder?.message === 'string' ? createdOrder.message : checkoutFailureMessage
@@ -234,7 +234,14 @@ export default function CheckoutPage() {
                 return
             }
 
-            const sanityOrderId = createdOrder.sanityDocumentId
+            const sanityOrderId = typeof createdOrder?.sanityDocumentId === 'string' ? createdOrder.sanityDocumentId : ''
+            if (!sanityOrderId) {
+                const msg = checkoutFailureMessage
+                setCheckoutError(msg)
+                toast.error(msg)
+                clearTimeout(slowTimer)
+                return
+            }
 
             const productNames = items.map(item => item.title)
             const productCounts = items.map(item => item.quantity)
@@ -279,6 +286,13 @@ export default function CheckoutPage() {
                 customerPhone: sanitizedPhone,
                 shippingAddress: `${data.city}, ${data.postOffice}`,
                 items: [...items],
+                fulfillment: 'pending' as const,
+                payment: 'pending' as const,
+                isPaid: false,
+                sanityOrderStatus: 'pending',
+                itemsCount: items.length,
+                sanityDocumentId: sanityOrderId,
+                totalAmount: total,
             }
 
             addOrder(newOrder)

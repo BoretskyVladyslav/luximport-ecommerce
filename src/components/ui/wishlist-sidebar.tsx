@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { usePathname } from 'next/navigation'
 import { X } from 'lucide-react'
 import { useWishlistStore } from '@/store/wishlistStore'
@@ -14,9 +14,13 @@ export function WishlistSidebar() {
     const addItem = useCartStore((state) => state.addItem)
     const isHydrated = useHydration()
     const pathname = usePathname()
+    const prevPathnameRef = useRef<string | null>(null)
 
     useEffect(() => {
-        if (isOpen) closeWishlist()
+        const prev = prevPathnameRef.current
+        prevPathnameRef.current = pathname
+        if (!prev) return
+        if (prev !== pathname && isOpen) closeWishlist()
     }, [pathname, isOpen, closeWishlist])
 
     const handleAddToCart = (item: { id: string; title: string; price: number; category: string }) => {

@@ -17,7 +17,7 @@ export function Header() {
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const items = useCartStore((state) => state.items)
-  const toggleCart = useCartStore((state) => state.toggleCart)
+  const openCart = useCartStore((state) => state.openCart)
   const wishlistItems = useWishlistStore((state) => state.items)
   const openWishlist = useWishlistStore((state) => state.openWishlist)
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
@@ -44,6 +44,7 @@ export function Header() {
     >
       <div className={styles.container}>
         <button
+          type="button"
           className={styles.mobileToggle}
           onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         >
@@ -62,14 +63,15 @@ export function Header() {
         </Link>
 
         <div className={styles.iconGroup}>
-          <button className={styles.cartButton} style={{ position: 'relative' }} onClick={openWishlist}>
+          <button type="button" className={styles.cartButton} style={{ position: 'relative' }} onClick={openWishlist}>
             <Heart size={20} />
             {isHydrated && wishlistCount > 0 && (
               <span className={styles.badge}>{wishlistCount}</span>
             )}
           </button>
           <button
-            onClick={toggleCart}
+            type="button"
+            onClick={openCart}
             className={styles.cartButton}
           >
             <ShoppingBag size={20} />

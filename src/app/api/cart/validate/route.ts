@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { validateCartAgainstSanity } from '@/lib/cart/validate'
+import { validateCartAgainstSanityWithClient } from '@/lib/cart/validate'
+import { sanityServer } from '@/lib/sanityServer'
 
 function isRecord(v: unknown): v is Record<string, unknown> {
     return typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
             clientPiecesPerBox?: number
         }>
 
-        const result = await validateCartAgainstSanity(lines)
+        const result = await validateCartAgainstSanityWithClient(lines, sanityServer)
         const status = result.ok ? 200 : 409
         return NextResponse.json(result, { status })
     } catch {

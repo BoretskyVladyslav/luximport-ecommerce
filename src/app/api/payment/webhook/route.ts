@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import crypto from 'crypto'
 import { createClient } from 'next-sanity'
 
-const sanityClient = createClient({
+const writeClient = createClient({
     projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
     dataset: process.env.NEXT_PUBLIC_SANITY_DATASET,
     apiVersion: process.env.NEXT_PUBLIC_SANITY_API_VERSION,
@@ -90,8 +90,13 @@ export async function POST(req: Request) {
         }
 
         const ref = orderReference.trim()
+        const sanityId = ref.split('_')[0]
 
-        const orderDoc = (await sanityClient.getDocument(ref)) as Record<string, unknown> | null
+        if (!sanityId) {
+            return NextResponse.json({ error: 'Invalid orderReference' }, { status: 400 })
+        }
+
+        const orderDoc = (await writeClient.getDocument(sanityId)) as Record<string, unknown> | null
         if (!orderDoc || orderDoc._type !== 'order') {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 })
         }
@@ -102,127 +107,76 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Amount mismatch' }, { status: 400 })
         }
 
-        const currentStatus = typeof orderDoc.status === 'string' ? orderDoc.status : 'pending'
-        const inventoryDecremented = Boolean(orderDoc.inventoryDecremented)
-        const rev = typeof orderDoc._rev === 'string' ? orderDoc._rev : null
-
         const txStatus = typeof transactionStatus === 'string' ? transactionStatus : ''
         const isApproved = txStatus === 'Approved'
 
-        if (!isApproved) {
-            if (currentStatus !== 'paid') {
-                const nextStatus =
-                    txStatus === 'Declined' || txStatus === 'Expired' || txStatus === 'Voided' ? 'cancelled' : 'failed'
-                try {
-                    await sanityClient
-                        .patch(ref)
-                        .set({ status: nextStatus })
-                        .commit()
-                } catch (patchErr) {
-                    console.error('Sanity patch (mark non-approved) failed:', patchErr)
+        if (isApproved && orderDoc.isPaid !== true) {
+            try {
+                await writeClient
+                    .patch(sanityId)
+                    .set({ isPaid: true, status: 'processing' })
+                    .commit()
+            } catch (e) {
+                const refreshed = (await writeClient.getDocument(sanityId)) as Record<string, unknown> | null
+                const ok = refreshed && refreshed._type === 'order' && refreshed.isPaid === true
+                if (!ok) {
+                    console.error('Sanity patch (payment success) failed:', e)
                     return NextResponse.json({ error: 'Order update failed' }, { status: 500 })
                 }
             }
-        } else {
-            const shouldRunFulfillment = !inventoryDecremented
 
-            if (shouldRunFulfillment) {
-                if (!rev) {
-                    return NextResponse.json({ error: 'Order revision missing' }, { status: 500 })
-                }
-
-                try {
-                    await sanityClient
-                        .patch(ref)
-                        .ifRevisionId(rev)
-                        .set({ status: 'paid', inventoryDecremented: true })
-                        .commit()
-                } catch (e) {
-                    const refreshed = (await sanityClient.getDocument(ref)) as Record<string, unknown> | null
-                    const refreshedInv = Boolean(refreshed && refreshed._type === 'order' ? refreshed.inventoryDecremented : false)
-                    if (!refreshedInv) {
-                        console.error('Sanity patch (idempotency lock) failed:', e)
-                        return NextResponse.json({ error: 'Order update failed' }, { status: 500 })
-                    }
-                }
-
-                const items = orderDoc.items
-                if (Array.isArray(items)) {
-                    for (const item of items) {
-                        if (!item || typeof item !== 'object') continue
-                        const row = item as Record<string, unknown>
-                        const productId = row.productId
-                        const quantity = row.quantity
-                        if (typeof productId === 'string' && productId && typeof quantity === 'number' && quantity > 0) {
-                            try {
-                                await sanityClient.patch(productId).dec({ stock: quantity }).commit()
-                            } catch (e) {
-                                console.error(`Error decrementing stock for product ${productId}:`, e)
-                            }
-                        }
-                    }
-                }
-
-                try {
-                    const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
-                    const host = process.env.NEXT_PUBLIC_DOMAIN || req.headers.get('host')
-                    if (host) {
-                        const rawItems = orderDoc.items
-                        const emailItems = Array.isArray(rawItems)
-                            ? rawItems.map((raw, i) => {
-                                  if (!raw || typeof raw !== 'object') {
-                                      return {
-                                          id: `line-${i}`,
-                                          title: '',
-                                          price: 0,
-                                          quantity: 0,
-                                      }
-                                  }
-                                  const row = raw as Record<string, unknown>
-                                  const productId = typeof row.productId === 'string' ? row.productId : `line-${i}`
+            try {
+                const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
+                const host = process.env.NEXT_PUBLIC_DOMAIN || req.headers.get('host')
+                if (host) {
+                    const rawItems = orderDoc.items
+                    const emailItems = Array.isArray(rawItems)
+                        ? rawItems.map((raw, i) => {
+                              if (!raw || typeof raw !== 'object') {
                                   return {
-                                      id: productId,
-                                      title: typeof row.title === 'string' ? row.title : '',
-                                      price: typeof row.price === 'number' && Number.isFinite(row.price) ? row.price : 0,
-                                      quantity:
-                                          typeof row.quantity === 'number' && Number.isFinite(row.quantity)
-                                              ? row.quantity
-                                              : 0,
+                                      id: `line-${i}`,
+                                      title: '',
+                                      price: 0,
+                                      quantity: 0,
                                   }
-                              })
-                            : []
+                              }
+                              const row = raw as Record<string, unknown>
+                              const productId = typeof row.productId === 'string' ? row.productId : `line-${i}`
+                              return {
+                                  id: productId,
+                                  title: typeof row.title === 'string' ? row.title : '',
+                                  price: typeof row.price === 'number' && Number.isFinite(row.price) ? row.price : 0,
+                                  quantity:
+                                      typeof row.quantity === 'number' && Number.isFinite(row.quantity)
+                                          ? row.quantity
+                                          : 0,
+                              }
+                          })
+                        : []
 
-                        const emailRes = await fetch(`${protocol}://${host}/api/checkout/email`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                orderId: String(orderDoc.orderId ?? ''),
-                                customerName: String(orderDoc.customerName ?? ''),
-                                customerPhone: String(orderDoc.customerPhone ?? ''),
-                                customerEmail: String(orderDoc.customerEmail ?? ''),
-                                shippingAddress: String(orderDoc.shippingAddress ?? ''),
-                                items: emailItems,
-                                total: `${orderDoc.totalAmount} UAH`,
-                                date: new Date().toLocaleDateString('uk-UA'),
-                            }),
-                        })
-                        if (!emailRes.ok) {
-                            const text = await emailRes.text().catch(() => '')
-                            console.error('Email API returned', emailRes.status, text)
-                        }
-                    } else {
-                        console.error('Cannot trigger email: no host / NEXT_PUBLIC_DOMAIN')
+                    const emailRes = await fetch(`${protocol}://${host}/api/checkout/email`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            orderId: String(orderDoc.orderId ?? ''),
+                            customerName: String(orderDoc.customerName ?? ''),
+                            customerPhone: String(orderDoc.customerPhone ?? ''),
+                            customerEmail: String(orderDoc.customerEmail ?? ''),
+                            shippingAddress: String(orderDoc.shippingAddress ?? ''),
+                            items: emailItems,
+                            total: `${orderDoc.totalAmount} UAH`,
+                            date: new Date().toLocaleDateString('uk-UA'),
+                        }),
+                    })
+                    if (!emailRes.ok) {
+                        const text = await emailRes.text().catch(() => '')
+                        console.error('Email API returned', emailRes.status, text)
                     }
-                } catch (emailErr) {
-                    console.error('Webhook email trigger error:', emailErr)
+                } else {
+                    console.error('Cannot trigger email: no host / NEXT_PUBLIC_DOMAIN')
                 }
-            } else if (currentStatus !== 'paid') {
-                try {
-                    await sanityClient.patch(ref).set({ status: 'paid' }).commit()
-                } catch (patchErr) {
-                    console.error('Sanity patch (mark paid) failed:', patchErr)
-                    return NextResponse.json({ error: 'Order update failed' }, { status: 500 })
-                }
+            } catch (emailErr) {
+                console.error('Webhook email trigger error:', emailErr)
             }
         }
 

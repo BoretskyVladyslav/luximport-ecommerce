@@ -1,12 +1,25 @@
 import { NextResponse } from 'next/server'
-import { Resend } from 'resend'
-import CustomerReceiptEmail from '@/emails/CustomerReceiptEmail'
-import AdminNotificationEmail from '@/emails/AdminNotificationEmail'
-
-const resend = new Resend(process.env.RESEND_API_KEY)
+import { sendOrderEmails, type OrderEmailLine } from '@/lib/send-order-emails'
 
 function isRecord(v: unknown): v is Record<string, unknown> {
     return typeof v === 'object' && v !== null && !Array.isArray(v)
+}
+
+function parseEmailItems(raw: unknown): OrderEmailLine[] | null {
+    if (!Array.isArray(raw)) return null
+    const out: OrderEmailLine[] = []
+    for (let i = 0; i < raw.length; i++) {
+        const row = raw[i]
+        if (!row || typeof row !== 'object' || Array.isArray(row)) return null
+        const o = row as Record<string, unknown>
+        const id = typeof o.id === 'string' ? o.id : `line-${i}`
+        const title = typeof o.title === 'string' ? o.title : ''
+        const price = typeof o.price === 'number' && Number.isFinite(o.price) ? o.price : 0
+        const quantity =
+            typeof o.quantity === 'number' && Number.isFinite(o.quantity) ? Math.max(0, Math.trunc(o.quantity)) : 0
+        out.push({ id, title, price, quantity })
+    }
+    return out
 }
 
 export async function POST(req: Request) {
@@ -40,8 +53,9 @@ export async function POST(req: Request) {
         if (typeof customerPhone !== 'string') {
             return NextResponse.json({ success: false, error: 'Invalid customerPhone' }, { status: 400 })
         }
-        if (!Array.isArray(items)) {
-            return NextResponse.json({ success: false, error: 'items must be an array' }, { status: 400 })
+        const parsedItems = parseEmailItems(items)
+        if (!parsedItems) {
+            return NextResponse.json({ success: false, error: 'items must be an array of line objects' }, { status: 400 })
         }
         if (typeof total !== 'string' && typeof total !== 'number') {
             return NextResponse.json({ success: false, error: 'Invalid total' }, { status: 400 })
@@ -51,57 +65,30 @@ export async function POST(req: Request) {
         }
 
         if (!process.env.RESEND_API_KEY) {
-            console.error('RESEND_API_KEY is not set')
+            console.error('[ORDER_EMAIL] RESEND_API_KEY is not set')
             return NextResponse.json({ success: false, error: 'Email not configured' }, { status: 503 })
         }
 
-        const adminEmail = 'oljacenuk88@gmail.com'
-        const fromAddress = 'Luximport <info@luximport.org>'
+        const totalFormatted = String(total)
+        const dateFormatted = typeof date === 'string' && date.trim() ? date.trim() : new Date().toLocaleDateString('uk-UA', { dateStyle: 'long' })
 
-        const notifications: Promise<unknown>[] = []
-
-        const adminPromise = resend.emails.send({
-            from: fromAddress,
-            to: adminEmail,
-            subject: `Нове замовлення ${orderId}`,
-            react: AdminNotificationEmail({
-                orderId,
-                customerName,
-                customerPhone,
+        try {
+            await sendOrderEmails({
+                orderId: orderId.trim(),
+                customerName: customerName.trim(),
                 customerEmail: typeof customerEmail === 'string' ? customerEmail : '',
-                items,
-                total: String(total),
+                customerPhone,
                 shippingAddress: typeof shippingAddress === 'string' ? shippingAddress : '',
-                date: typeof date === 'string' ? date : '',
-            }),
-        })
-        notifications.push(adminPromise)
-
-        if (typeof customerEmail === 'string' && customerEmail.trim()) {
-            const customerPromise = resend.emails.send({
-                from: fromAddress,
-                to: customerEmail.trim(),
-                subject: `Підтвердження замовлення ${orderId}`,
-                react: CustomerReceiptEmail({
-                    orderId,
-                    customerName,
-                    items,
-                    total: String(total),
-                    shippingAddress: typeof shippingAddress === 'string' ? shippingAddress : '',
-                    date: typeof date === 'string' ? date : '',
-                }),
+                items: parsedItems,
+                totalFormatted,
+                dateFormatted,
             })
-            notifications.push(customerPromise)
+        } catch (err) {
+            console.error('[ORDER_EMAIL]', err)
+            return NextResponse.json({ success: false, error: 'Failed to send email' }, { status: 500 })
         }
 
-        const results = await Promise.allSettled(notifications)
-
-        const errors = results.filter((result) => result.status === 'rejected')
-        if (errors.length > 0) {
-            console.error('Some emails failed to send:', errors)
-        }
-
-        return NextResponse.json({ success: true, results })
+        return NextResponse.json({ success: true })
     } catch (error) {
         console.error('Email API error:', error)
         return NextResponse.json({ success: false, error: 'Failed to send email' }, { status: 500 })

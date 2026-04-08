@@ -26,6 +26,28 @@ export const order = defineType({
         }),
         defineField({
             name: 'status',
+            title: 'Статус замовлення',
+            type: 'string',
+            options: {
+                list: [
+                    { title: 'Нове замовлення', value: 'pending' },
+                    { title: 'Оплачено', value: 'paid' },
+                    { title: 'В обробці', value: 'processing' },
+                    { title: 'Відправлено', value: 'shipped' },
+                    { title: 'Виконано', value: 'completed' },
+                    { title: 'Скасовано', value: 'cancelled' },
+                ],
+            },
+            initialValue: 'pending',
+        }),
+        defineField({
+            name: 'isPaid',
+            title: 'Оплачено',
+            type: 'boolean',
+            initialValue: false,
+        }),
+        defineField({
+            name: 'paymentStatus',
             title: 'Статус оплати',
             type: 'string',
             options: {
@@ -37,6 +59,16 @@ export const order = defineType({
                 ],
             },
             initialValue: 'pending',
+        }),
+        defineField({
+            name: 'trackingNumber',
+            type: 'string',
+            title: 'ТТН (Номер відстеження)',
+        }),
+        defineField({
+            name: 'adminNotes',
+            type: 'text',
+            title: 'Нотатки адміністратора (невидимі для клієнта)',
         }),
         defineField({
             name: 'inventoryDecremented',
@@ -99,8 +131,17 @@ export const order = defineType({
         },
         prepare(selection) {
             const { title, subtitle, status } = selection
+            const statusLabels: Record<string, string> = {
+                pending: 'Нове',
+                paid: 'Оплачено',
+                processing: 'В обробці',
+                shipped: 'Відправлено',
+                completed: 'Виконано',
+                cancelled: 'Скасовано',
+            }
+            const label = typeof status === 'string' ? statusLabels[status] ?? status : ''
             return {
-                title: `Замовлення ${title} (${status})`,
+                title: `Замовлення ${title}${label ? ` (${label})` : ''}`,
                 subtitle: subtitle,
             }
         },

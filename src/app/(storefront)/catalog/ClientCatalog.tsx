@@ -240,6 +240,7 @@ export function ClientCatalog({
                                 piecesPerBox={product.piecesPerBox}
                                 weight={product.weight}
                                 category={product.categories?.[0]?.title ?? 'Без категорії'}
+                                stock={product.stock ?? undefined}
                                 image={product.image}
                             />
                         ))}

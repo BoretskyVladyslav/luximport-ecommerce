@@ -1,17 +1,25 @@
 import { NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
-import { sanityServer } from '@/lib/sanityServer'
+import { createClient } from 'next-sanity'
 import { parseCartItems, parseTotalAmount } from '@/lib/order-payload'
-import { validateCartAgainstSanity } from '@/lib/cart/validate'
+import { validateCartAgainstSanityWithClient } from '@/lib/cart/validate'
 import { fromCents, toCents } from '@/lib/money'
 import { getSessionUserId } from '@/lib/auth/session'
+import { sendOrderEmails } from '@/lib/send-order-emails'
 
 export async function POST(req: Request) {
     try {
+        console.log("[DEBUG_ENV] TOKEN EXISTS:", !!process.env.SANITY_API_TOKEN, "LENGTH:", process.env.SANITY_API_TOKEN?.length);
         if (!process.env.SANITY_API_TOKEN) {
-            console.error('[SERVER_DEBUG]: missing env SANITY_API_TOKEN')
             return NextResponse.json({ message: 'Сервіс тимчасово недоступний. Спробуйте пізніше.' }, { status: 400 })
         }
+        const writeClient = createClient({
+            projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
+            dataset: process.env.NEXT_PUBLIC_SANITY_DATASET,
+            apiVersion: process.env.NEXT_PUBLIC_SANITY_API_VERSION || '2024-02-17',
+            token: process.env.SANITY_API_TOKEN,
+            useCdn: false,
+        })
         let body: unknown
         try {
             body = await req.json()
@@ -63,7 +71,7 @@ export async function POST(req: Request) {
         }
 
         const ids = Array.from(requestedById.keys())
-        const stockRows = await sanityServer.fetch<Array<{ _id: string; title: string | null; stock: number | null }>>(
+        const stockRows = await writeClient.fetch<Array<{ _id: string; title: string | null; stock: number | null }>>(
             `*[_type == "product" && _id in $ids && !(_id match "drafts.*")]{
                 _id,
                 title,
@@ -96,7 +104,7 @@ export async function POST(req: Request) {
             }
         }
 
-        const validation = await validateCartAgainstSanity(
+        const validation = await validateCartAgainstSanityWithClient(
             itemsResult.items.map((i) => ({
                 productId: i.productId,
                 quantity: i.quantity,
@@ -104,7 +112,8 @@ export async function POST(req: Request) {
                 clientWholesalePrice: i.wholesalePrice,
                 clientWholesaleMinQuantity: i.wholesaleMinQuantity,
                 clientPiecesPerBox: i.piecesPerBox,
-            }))
+            })),
+            writeClient
         )
 
         if (!validation.ok) {
@@ -130,13 +139,13 @@ export async function POST(req: Request) {
 
         const sessionUserIdRaw = getSessionUserId()
         const sessionUserId = typeof sessionUserIdRaw === 'string' && sessionUserIdRaw.trim() ? sessionUserIdRaw.trim() : null
-        if (sessionUserId) {
-            console.log('DEBUG_SESSION_USER_ID:', sessionUserId)
-        }
         const sanityOrder = {
             _type: 'order' as const,
             orderId: orderId.trim(),
             status: 'pending' as const,
+            isPaid: false,
+            paymentStatus: 'pending' as const,
+            inventoryDecremented: true,
             ...(sessionUserId
                 ? {
                       user: {
@@ -159,27 +168,95 @@ export async function POST(req: Request) {
             })),
         }
 
-        console.log('ORDER_PAYLOAD:', JSON.stringify(sanityOrder, null, 2))
-        console.log('--- ATTEMPTING SANITY CREATE ---', JSON.stringify(sanityOrder, null, 2))
+        for (const row of sanityOrder.items) {
+            if (!row || typeof row.productId !== 'string' || !row.productId.trim()) {
+                throw new Error('Один із товарів має некоректний ID. Оновіть кошик.')
+            }
+        }
 
         let createdDocument: { _id: string }
         try {
-            const result = await sanityServer.transaction().create(sanityOrder as any).commit()
-            createdDocument = { _id: String((result as any)?._id ?? '') }
-            if (!createdDocument._id) {
-                return NextResponse.json({ message: 'Не вдалося створити замовлення. Спробуйте ще раз.' }, { status: 400 })
+            const createdOrder = await writeClient.create(sanityOrder as any)
+            const createdId = typeof (createdOrder as any)?._id === 'string' ? String((createdOrder as any)._id) : ''
+            if (!createdId) {
+                return NextResponse.json({ success: false, message: 'Sanity Error: Empty result from create()' }, { status: 400 })
             }
-        } catch (error) {
-            console.error('--- SANITY CREATE FAILED ---', error)
-            const mapped = mapSanityCreateErrorToMessage(error)
-            return NextResponse.json({ message: mapped }, { status: 400 })
+            createdDocument = { _id: createdId }
+        } catch (error: any) {
+            const errorMessage =
+                error?.details?.description ||
+                error?.message ||
+                (() => {
+                    try {
+                        return JSON.stringify(error)
+                    } catch {
+                        return String(error)
+                    }
+                })()
+            console.error('[RAW_SANITY_ERROR]:', errorMessage)
+            return NextResponse.json({ success: false, message: `Sanity Error: ${errorMessage}` }, { status: 400 })
         }
+
+        try {
+            await Promise.all(
+                sanityOrder.items.map(async (item: any) => {
+                    const productId = typeof item?.productId === 'string' ? item.productId.trim() : ''
+                    const quantity = typeof item?.quantity === 'number' && Number.isFinite(item.quantity) ? Math.max(0, Math.trunc(item.quantity)) : 0
+                    if (!productId || quantity <= 0) return
+                    await writeClient.patch(productId).dec({ stock: quantity }).commit()
+                })
+            )
+        } catch (error: any) {
+            const errorMessage =
+                error?.details?.description ||
+                error?.message ||
+                (() => {
+                    try {
+                        return JSON.stringify(error)
+                    } catch {
+                        return String(error)
+                    }
+                })()
+            console.error('[RAW_SANITY_ERROR]:', errorMessage)
+            return NextResponse.json({ success: false, message: `Sanity Error: ${errorMessage}` }, { status: 400 })
+        }
+
+        const dateFormatted = new Date().toLocaleDateString('uk-UA', { dateStyle: 'long' })
+        const emailItems = sanityOrder.items.map((item) => ({
+            id: String(item.productId),
+            title: typeof item.title === 'string' ? item.title : '',
+            price: typeof item.price === 'number' && Number.isFinite(item.price) ? item.price : 0,
+            quantity:
+                typeof item.quantity === 'number' && Number.isFinite(item.quantity)
+                    ? Math.max(0, Math.trunc(item.quantity))
+                    : 0,
+        }))
+        const totalFormatted = `${fromCents(validation.totalCents).toLocaleString('uk-UA', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        })} ₴`
+        void (async () => {
+            try {
+                await sendOrderEmails({
+                    orderId: sanityOrder.orderId,
+                    customerName: sanityOrder.customerName,
+                    customerEmail: sanityOrder.customerEmail,
+                    customerPhone: sanityOrder.customerPhone,
+                    shippingAddress: sanityOrder.shippingAddress,
+                    items: emailItems,
+                    totalFormatted,
+                    dateFormatted,
+                })
+            } catch (err) {
+                console.error('[ORDER_EMAIL]', err)
+            }
+        })()
 
         if (sessionUserId) {
             const incomingPhone = customerPhone.trim()
             const incomingAddress = typeof shippingAddress === 'string' ? shippingAddress.trim() : ''
             const incomingName = customerName.trim()
-            const existing = await sanityServer.fetch<{
+            const existing = await writeClient.fetch<{
                 _id: string
                 name: string | null
                 phone: string | null
@@ -195,15 +272,18 @@ export async function POST(req: Request) {
                 if ((!existing.name || !existing.name.trim()) && incomingName) patch.name = incomingName
                 const hasUpdates = Object.keys(patch).length > 0
                 if (hasUpdates) {
-                    await sanityServer.patch(sessionUserId).set(patch).commit()
+                    await writeClient.patch(sessionUserId).set(patch).commit()
                 }
             }
         }
 
         return NextResponse.json({ success: true, sanityDocumentId: createdDocument._id })
     } catch (error) {
-        console.error('Error creating pending order:', error)
-        return NextResponse.json({ message: 'Виникла помилка. Перевірте дані та спробуйте ще раз.' }, { status: 400 })
+        const msg = typeof (error as any)?.message === 'string' ? (error as any).message : ''
+        return NextResponse.json(
+            { success: false, message: msg || 'Виникла помилка. Перевірте дані та спробуйте ще раз.' },
+            { status: 400 }
+        )
     }
 }
 
@@ -236,6 +316,9 @@ function mapSanityCreateErrorToMessage(error: unknown) {
             orderId: 'Номер замовлення',
             user: 'Користувач',
             status: 'Статус',
+            paymentStatus: 'Статус оплати',
+            trackingNumber: 'ТТН',
+            adminNotes: 'Нотатки адміністратора',
         }
         if (field && labels[field]) return `Помилка в полі ${labels[field]}`
         return 'Помилка в даних замовлення. Перевірте поля та спробуйте ще раз.'

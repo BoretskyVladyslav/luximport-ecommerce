@@ -11,6 +11,7 @@ import { useCartStore } from '@/store/cart'
 import { useHydration } from '@/hooks/useHydration'
 import { useUser } from '@/hooks/useUser'
 import { SuccessSlider } from './success-slider'
+import { revalidateProfilePath } from './actions'
 import Image from 'next/image'
 import { Skeleton } from '@/components/ui/skeletons'
 import styles from './page.module.scss'
@@ -39,6 +40,11 @@ export default function CheckoutSuccessPage() {
             clearTimeout(t)
         }
     }, [isHydrated, refresh])
+
+    useEffect(() => {
+        if (!isHydrated) return
+        void revalidateProfilePath()
+    }, [isHydrated])
 
     useEffect(() => {
         if (!isHydrated) return

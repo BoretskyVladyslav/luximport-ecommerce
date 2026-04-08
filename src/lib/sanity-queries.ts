@@ -187,3 +187,30 @@ export type CategoryGridProduct = {
 export type CartRecommendationProduct = CatalogProduct & {
     category?: string | null
 }
+
+export const GROQ_USER_ORDER_LIST_PROJECTION = `
+    _id,
+    orderId,
+    status,
+    "isPaid": coalesce(isPaid, false),
+    paymentStatus,
+    trackingNumber,
+    totalAmount,
+    shippingAddress,
+    customerName,
+    customerEmail,
+    customerPhone,
+    "itemsCount": coalesce(count(items), 0),
+    items[]{
+        productId,
+        title,
+        quantity,
+        price,
+        "image": *[_type == "product" && _id == ^.productId][0].image
+    },
+    _createdAt
+`
+
+export const GROQ_USER_ORDERS_BY_USER_REF = `*[_type == "order" && user._ref == $userId] | order(_createdAt desc) {
+${GROQ_USER_ORDER_LIST_PROJECTION}
+}`

@@ -1,8 +1,9 @@
 import { create } from 'zustand'
-import { persist, createJSONStorage } from 'zustand/middleware'
+import { persist } from 'zustand/middleware'
 import { CartItem, Product } from '@/types'
 import { toCents, fromCents } from '@/lib/money'
 import { unitPriceForQuantity } from '@/lib/cart/pricing'
+import { safeJsonStorage } from '@/store/persistStorage'
 
 interface CartState {
     items: CartItem[]
@@ -16,6 +17,8 @@ interface CartState {
     addItem: (product: Product) => void
     removeItem: (productId: string) => void
     updateQuantity: (productId: string, quantity: number) => void
+    openCart: () => void
+    closeCart: () => void
     toggleCart: () => void
     clearCart: () => void
     totalPrice: () => number
@@ -155,7 +158,7 @@ export const useCartStore = create<CartState>()(
                 const normalizedCountInStock =
                     typeof product.countInStock === 'number' && Number.isFinite(product.countInStock)
                         ? Math.max(0, Math.trunc(product.countInStock))
-                        : 0
+                        : 999999
                 if (normalizedCountInStock <= 0) return
                 if (existingItem) {
                     if (existingItem.quantity >= normalizedCountInStock) return
@@ -203,6 +206,8 @@ export const useCartStore = create<CartState>()(
                     ),
                 })
             },
+            openCart: () => set({ isOpen: true }),
+            closeCart: () => set({ isOpen: false }),
             toggleCart: () => set({ isOpen: !get().isOpen }),
             clearCart: () => set({ items: [], cartIssues: {}, stockWarning: null, isValidating: false, lastValidatedKey: null }),
             totalPrice: () => {
@@ -222,7 +227,7 @@ export const useCartStore = create<CartState>()(
         }),
         {
             name: 'luximport-cart',
-            storage: createJSONStorage(() => localStorage),
+            storage: safeJsonStorage(() => localStorage),
             partialize: (state) => ({ items: state.items, isOpen: state.isOpen }),
             onRehydrateStorage: () => (state) => {
                 if (!state) return
