@@ -1,6 +1,7 @@
 import { defineConfig } from 'sanity'
-import { deskTool } from 'sanity/desk'
 import { visionTool } from '@sanity/vision'
+import { structureTool } from 'sanity/structure'
+import { deskStructure } from './src/sanity/deskStructure'
 import { schema } from './src/sanity/schema'
 
 export default defineConfig({
@@ -12,7 +13,7 @@ export default defineConfig({
 
     basePath: '/studio',
 
-    plugins: [deskTool(), visionTool()],
+    plugins: [structureTool({ structure: deskStructure }), visionTool()],
 
     schema: {
         types: schema.types, 

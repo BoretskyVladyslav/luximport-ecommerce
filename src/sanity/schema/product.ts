@@ -36,40 +36,35 @@ export const product = defineType({
   title: 'Товар',
   type: 'document',
   icon: BasketIcon,
-  groups: [
-    { name: 'basic', title: 'Основна інформація', default: true },
-    { name: 'media', title: 'Медіа' },
-    { name: 'pricing', title: 'Ціноутворення' },
-    { name: 'inventory', title: 'Склад і логістика' },
-    { name: 'seo', title: 'SEO та відображення' },
+  fieldsets: [
+    { name: 'main', title: '📦 Основна інформація' },
+    { name: 'price', title: '💰 Ціна та Наявність' },
+    { name: 'media', title: '📸 Фотографії' },
   ],
   fields: [
     defineField({
       name: 'title',
       type: 'string',
       title: 'Назва товару',
-      description: 'Клієнтоорієнтована назва продукту (відображається в каталозі).',
-      group: 'basic',
+      description: 'Назва, яку бачать покупці в каталозі та в кошику.',
+      fieldset: 'main',
       options: { search: { weight: 10 } },
-      validation: (Rule) =>
-        Rule.required()
-          .error('Введіть назву товару — її бачитимуть покупці в каталозі та в кошику.')
-          .min(1)
-          .error('Назва не може складатися лише з пробілів.'),
+      validation: (Rule) => Rule.required().error("Назва товару обов'язкова"),
     }),
     defineField({
       name: 'slug',
       type: 'slug',
       title: 'Посилання (slug / URL)',
       description: PRODUCT_SLUG_HELP,
-      group: 'basic',
+      fieldset: 'main',
       options: {
         source: 'title',
+        maxLength: 96,
         slugify: slugifyTitleForSlug,
       },
       validation: (Rule) =>
         Rule.required()
-          .error('Згенеруйте slug: натисніть «Generate» після введення назви (джерело — назва товару).')
+          .error("Slug обов'язковий")
           .custom(productSlugUnique()),
     }),
 
@@ -79,7 +74,7 @@ export const product = defineType({
       title: 'Категорії для магазину',
       description:
         'Можна обрати одну або кілька позицій: «Категорія» (головний розділ) або «Підкатегорія». У пошуку показуються назви та тип розділу. Той самий запис двічі додати не можна. Без хоча б однієї категорії товар не опублікувати.',
-      group: 'basic',
+      fieldset: 'main',
       options: {
         layout: 'tags',
         sortable: true,
@@ -117,73 +112,68 @@ export const product = defineType({
     }),
     defineField({
       name: 'description',
-      type: 'text',
       title: 'Опис товару',
-      group: 'basic',
+      description: 'Детальний опис. Можна використовувати списки та виділення тексту.',
+      fieldset: 'main',
+      type: 'array',
+      of: [{ type: 'block' }],
     }),
     defineField({
       name: 'brand',
       type: 'string',
       title: 'Бренд/Виробник',
-      group: 'basic',
+      description: 'Бренд або виробник товару (для фільтрів і пошуку).',
+      fieldset: 'main',
       options: { search: { weight: 8 } },
     }),
     defineField({
       name: 'origin',
       type: 'string',
       title: 'Країна походження',
-      group: 'basic',
+      description: 'Країна виробництва або походження товару.',
+      fieldset: 'main',
     }),
     defineField({
       name: 'sku',
       type: 'string',
       title: 'Артикул (SKU)',
       description: 'Використовується у пошуку в Studio та для внутрішнього обліку.',
-      validation: (Rule) => Rule.required(),
+      fieldset: 'main',
+      validation: (Rule) => Rule.required().error('Артикул (SKU) обовʼязковий'),
       initialValue: () => `LUX-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-      group: 'basic',
       options: { search: { weight: 10 } },
     }),
     defineField({
       name: 'barcode',
       type: 'string',
       title: 'Штрихкод',
-      group: 'basic',
+      description: 'Штрихкод товару (за потреби).',
+      fieldset: 'main',
       options: { search: { weight: 9 } },
     }),
     defineField({
-      name: 'image',
-      type: 'image',
-      title: 'Зображення товару',
+      name: 'images',
+      type: 'array',
+      title: 'Фотографії товару',
       description:
-        'Обовʼязкове основне фото для каталогу, картки товару та кошика. Рекомендовано квадрат 1:1, чітке зображення упаковки або товару. У списку Studio показується саме це зображення.',
-      options: { hotspot: true },
-      group: 'media',
-      validation: (Rule) =>
-        Rule.custom((value) => {
-          const ref =
-            value && typeof value === 'object' && 'asset' in value
-              ? (value as { asset?: { _ref?: string } }).asset?._ref
-              : undefined
-          return ref
-            ? true
-            : 'Додайте зображення: натисніть поле та завантажте файл. Без фото товар не можна коректно показати на сайті.'
+        'Додайте щонайменше одне фото. Перше фото використовується як основне в каталозі та в превʼю.',
+      fieldset: 'media',
+      options: { sortable: true },
+      of: [
+        defineArrayMember({
+          type: 'image',
+          options: { hotspot: true },
         }),
+      ],
+      validation: (Rule) => Rule.required().min(1).error('Додайте хоча б одне фото'),
     }),
     defineField({
       name: 'price',
       type: 'number',
       title: 'Роздрібна ціна (₴)',
       description: 'Стандартна ціна за 1 одиницю.',
-      group: 'pricing',
-      validation: (Rule) =>
-        Rule.required()
-          .error('Вкажіть роздрібну ціну в гривнях за одиницю товару.')
-          .custom((v) => {
-            if (typeof v !== 'number' || Number.isNaN(v)) return 'Ціна має бути числом.'
-            if (v <= 0) return 'Ціна має бути додатною (більшою за 0 ₴).'
-            return true
-          }),
+      fieldset: 'price',
+      validation: (Rule) => Rule.required().positive().error('Ціна має бути більшою за 0'),
     }),
     defineField({
       name: 'wholesalePrice',
@@ -191,7 +181,7 @@ export const product = defineType({
       title: 'Ціна зі знижкою (опт, ₴)',
       description:
         'Знижена ціна за одиницю при замовленні від зазначеної кількості (гурт). На вітрині показується як альтернатива роздрібній.',
-      group: 'pricing',
+      fieldset: 'price',
       validation: (Rule) => Rule.min(0),
     }),
     defineField({
@@ -199,7 +189,7 @@ export const product = defineType({
       type: 'number',
       title: 'Мін. кількість для опту',
       description: 'Кількість одиниць у кошику, необхідна для активації оптової ціни.',
-      group: 'pricing',
+      fieldset: 'price',
       validation: (Rule) =>
         Rule.custom((qty) => {
           if (qty === undefined || qty === null) return true
@@ -214,7 +204,7 @@ export const product = defineType({
       type: 'number',
       title: 'Рекомендована роздрібна ціна (MSRP)',
       description: 'Рекомендована ціна продажу від виробника (для довідки).',
-      group: 'pricing',
+      fieldset: 'price',
       validation: (Rule) => Rule.min(0),
     }),
     defineField({
@@ -222,22 +212,16 @@ export const product = defineType({
       type: 'number',
       title: 'Залишок на складі',
       description: 'Скільки одиниць є в наявності (автоматично списується при покупці).',
-      group: 'inventory',
-      validation: (Rule) =>
-        Rule.custom((v) => {
-          if (v === undefined || v === null) return true
-          if (typeof v !== 'number' || !Number.isInteger(v) || v < 0) {
-            return 'Вкажіть ціле число ≥ 0'
-          }
-          return true
-        }),
+      fieldset: 'price',
+      initialValue: 1,
+      validation: (Rule) => Rule.required().min(0).error("Залишок не може бути від'ємним"),
     }),
     defineField({
       name: 'weightKg',
       type: 'number',
       title: 'Вага брутто (кг)',
       description: 'Використовується для розрахунку вартості доставки.',
-      group: 'inventory',
+      fieldset: 'main',
       validation: (Rule) =>
         Rule.custom((v) => {
           if (v === undefined || v === null) return true
@@ -250,14 +234,14 @@ export const product = defineType({
       type: 'string',
       title: 'Фасування (в ящику)',
       description: 'Наприклад: "12 шт/ящ".',
-      group: 'inventory',
+      fieldset: 'main',
     }),
     defineField({
       name: 'piecesPerBox',
       type: 'number',
       title: 'Кількість штук у ящику',
       description: 'Числовий еквівалент фасування (шт/ящ). Імпортується з колонки "шт в ящиу" Excel-файлу.',
-      group: 'inventory',
+      fieldset: 'main',
       validation: (Rule) =>
         Rule.custom((v) => {
           if (v === undefined || v === null) return true
@@ -272,13 +256,14 @@ export const product = defineType({
       type: 'string',
       title: 'Вага / Об\'єм',
       description: 'Вага або об\'єм одиниці товару (наприклад: "165г", "1л"). Витягується автоматично з назви при імпорті.',
-      group: 'inventory',
+      fieldset: 'main',
     }),
     defineField({
       name: 'dimensions',
       type: 'object',
       title: 'Габарити (ДхШхВ)',
-      group: 'inventory',
+      description: 'Габарити одиниці товару для логістики (за потреби).',
+      fieldset: 'main',
       fields: [
         defineField({
           name: 'length',
@@ -319,7 +304,7 @@ export const product = defineType({
       description:
         'Менше число — вище у списку на сайті: 1 = найвищий пріоритет (зверху), 99 = типовий низький пріоритет. Поле можна залишити порожнім — на сайті такі товари поводяться як 99 і сортуються серед «звичайних» за датою (новіші першими).',
       initialValue: 99,
-      group: 'seo',
+      fieldset: 'main',
       validation: (Rule) =>
         Rule.custom((v) => {
           if (v === undefined || v === null) return true
@@ -333,21 +318,29 @@ export const product = defineType({
   preview: {
     select: {
       title: 'title',
+      media: 'images.0',
       price: 'price',
-      brand: 'brand',
-      media: 'image',
+      stock: 'stock',
     },
     prepare(selection) {
-      const { title, price, brand, media } = selection
+      const { title, media, price, stock } = selection
       const priceNum =
         typeof price === 'number'
           ? price
           : typeof price === 'string'
             ? Number.parseFloat(price)
             : Number.NaN
-      const priceStr = Number.isFinite(priceNum) ? `${priceNum.toLocaleString('uk-UA')} ₴` : null
-      const brandStr = typeof brand === 'string' ? brand.trim() : ''
-      const subtitle = [priceStr, brandStr || null].filter(Boolean).join(' · ') || undefined
+      const priceStr = Number.isFinite(priceNum) ? `₴${priceNum.toLocaleString('uk-UA')}` : '—'
+      const stockNum =
+        typeof stock === 'number'
+          ? stock
+          : typeof stock === 'string'
+            ? Number.parseInt(stock, 10)
+            : Number.NaN
+      const stockLabel = Number.isFinite(stockNum)
+        ? `В наявності: ${stockNum}`
+        : 'В наявності: —'
+      const subtitle = `${priceStr} | ${stockLabel}`
       const safeMedia =
         media &&
         typeof media === 'object' &&

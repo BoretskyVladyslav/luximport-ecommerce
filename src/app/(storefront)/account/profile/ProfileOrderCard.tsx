@@ -26,7 +26,7 @@ const STEP_UI: { key: OrderFulfillmentStatus; label: string }[] = [
     { key: 'pending', label: 'Очікує підтвердження' },
     { key: 'paid', label: 'Платіж отримано' },
     { key: 'processing', label: 'Комплектується' },
-    { key: 'shipped', label: 'Прямує до вас' },
+    { key: 'shipped', label: 'Відправлено' },
     { key: 'completed', label: 'Отримано' },
 ]
 
@@ -55,6 +55,9 @@ function lineImageSrc(line: ProfileOrderLine): string | null {
     }
     return null
 }
+
+const imageSkeletonDataUrl =
+    'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI1MiIgaGVpZ2h0PSI1MiI+PHJlY3Qgd2lkdGg9IjUyIiBoZWlnaHQ9IjUyIiBmaWxsPSIjZjRmNGY1Ii8+PC9zdmc+'
 
 function lineBeforeDot(fulfillment: OrderFulfillmentStatus, dotIndex: number): 'done' | 'todo' | 'hidden' {
     if (dotIndex === 0) return 'hidden'
@@ -287,6 +290,9 @@ export function ProfileOrderCard({
                                                 alt=""
                                                 width={52}
                                                 height={52}
+                                                sizes="52px"
+                                                placeholder="blur"
+                                                blurDataURL={imageSkeletonDataUrl}
                                                 unoptimized
                                             />
                                         ) : null}

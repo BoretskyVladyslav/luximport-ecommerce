@@ -3,7 +3,6 @@ import bcrypt from 'bcryptjs'
 import { z } from 'zod'
 import { sanityServer } from '@/lib/sanityServer'
 import { normalizeEmail } from '@/lib/auth/crypto'
-import { setSessionCookie } from '@/lib/auth/session'
 
 const RegisterSchema = z.object({
     name: z.string().trim().min(1).max(120),
@@ -50,8 +49,6 @@ export async function POST(req: Request) {
             phone: phone ?? '',
             createdAt: new Date().toISOString(),
         })
-
-        setSessionCookie(created._id)
 
         return NextResponse.json(
             {

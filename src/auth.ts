@@ -45,12 +45,21 @@ export const authOptions: NextAuthOptions = {
         }),
     ],
     callbacks: {
-        async jwt({ token, user }) {
+        async jwt({ token, user, trigger, session }) {
             if (user) {
                 const uid = typeof user.id === 'string' && user.id.trim() ? user.id.trim() : ''
                 if (uid) {
                     token.id = uid
                     token.sub = uid
+                }
+                if (typeof (user as any).name === 'string') {
+                    token.name = (user as any).name
+                }
+            }
+            if (trigger === 'update') {
+                const nextName = (session as any)?.name
+                if (typeof nextName === 'string') {
+                    token.name = nextName
                 }
             }
             return token
@@ -63,7 +72,7 @@ export const authOptions: NextAuthOptions = {
                       ? token.sub.trim()
                       : ''
             const email = session.user?.email ?? null
-            const name = session.user?.name ?? null
+            const name = typeof (token as any).name === 'string' ? (token as any).name : session.user?.name ?? null
             const image = session.user?.image ?? null
             return {
                 ...session,

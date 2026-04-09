@@ -2,12 +2,33 @@ import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 
 import Image from 'next/image'
+import { PortableText } from '@portabletext/react'
 import { client, urlFor } from '@/lib/sanity'
 import { PRODUCT_BY_SLUG_QUERY, type ProductDetail } from '@/lib/sanity-queries'
 import { AddToCartButton } from '@/components/ui/AddToCartButton'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
+
+function portableTextToPlainText(value: unknown): string | null {
+    if (!Array.isArray(value)) return null
+    const text = value
+        .flatMap((block) => {
+            if (!block || typeof block !== 'object') return []
+            const children = (block as { _type?: string; children?: unknown[] }).children
+            if (!Array.isArray(children)) return []
+            return children
+                .map((child) => {
+                    if (!child || typeof child !== 'object') return ''
+                    return typeof (child as { text?: unknown }).text === 'string' ? (child as { text: string }).text : ''
+                })
+                .filter(Boolean)
+        })
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+    return text.length ? text : null
+}
 
 async function getProduct(slug: string): Promise<ProductDetail | null> {
     try {
@@ -34,9 +55,11 @@ export async function generateMetadata({
     const product = await getProduct(params.slug)
     if (!product) return {}
     const title = product.title ?? 'Товар'
+    const plainDescription =
+        typeof product.description === 'string' ? product.description : portableTextToPlainText(product.description)
     return {
         title: `${title} | Luximport`,
-        description: product.description ?? undefined,
+        description: plainDescription ?? undefined,
     }
 }
 
@@ -97,9 +120,13 @@ export default async function ProductPage({
                             {product.origin}
                         </span>
                     )}
-                    {product.description && (
+                    {typeof product.description === 'string' && product.description.trim() ? (
                         <p className="text-sm leading-relaxed text-stone-500">{product.description}</p>
-                    )}
+                    ) : Array.isArray(product.description) && product.description.length ? (
+                        <div className="prose prose-stone max-w-none text-sm leading-relaxed">
+                            <PortableText value={product.description} />
+                        </div>
+                    ) : null}
 
                     <div className="border-t border-stone-100 pt-6">
                         <p className="text-2xl font-light text-stone-900">

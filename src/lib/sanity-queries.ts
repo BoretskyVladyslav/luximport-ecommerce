@@ -26,10 +26,17 @@ export const GROQ_PRODUCT_CARD_FIELDS = `
     origin,
     stock,
     "slug": slug.current,
-    image
+    "image": coalesce(image, images[0])
 `
 
-export const PRODUCTS_CATALOG_QUERY = `*[_type == "product"] | order(${GROQ_ORDER_MANUAL_SORT_THEN_NEWEST}) {
+export const PRODUCTS_CATALOG_QUERY = `*[
+  _type == "product" &&
+  (
+    !defined($categorySlug) ||
+    $categorySlug == "" ||
+    count(categories[@->slug.current == $categorySlug]) > 0
+  )
+] | order(${GROQ_ORDER_MANUAL_SORT_THEN_NEWEST}) {
 ${GROQ_PRODUCT_CARD_FIELDS}
 }`
 
@@ -43,7 +50,7 @@ export const PRODUCTS_HOME_TEASER_QUERY = `*[_type == "product"] | order(${GROQ_
     weight,
     ${GROQ_PRODUCT_PRIMARY_CATEGORY_TITLE},
     "slug": slug.current,
-    image,
+    "image": coalesce(image, images[0]),
     stock
 }`
 
@@ -59,7 +66,7 @@ export const PRODUCT_BY_SLUG_QUERY = `*[_type == "product" && slug.current == $s
   origin,
   stock,
   description,
-  image,
+  "image": coalesce(image, images[0]),
   sku,
   brand,
   weight
@@ -77,11 +84,11 @@ export const PRODUCTS_BY_CATEGORY_REFS_QUERY = `*[_type == "product" && count(ca
       ${GROQ_PRODUCT_PRIMARY_CATEGORY_TITLE},
       origin,
       stock,
-      image
+      "image": coalesce(image, images[0])
     }`
 
 export const GROQ_PRODUCT_CART_ELIGIBLE =
-    '!(_id match "drafts.*") && defined(slug.current) && length(slug.current) > 0 && coalesce(price, 0) > 0 && defined(image.asset._ref)'
+    '!(_id match "drafts.*") && defined(slug.current) && length(slug.current) > 0 && coalesce(price, 0) > 0 && (defined(image.asset._ref) || defined(images[0].asset._ref))'
 
 export const GROQ_CART_RECOMMENDATION_FIELDS = `
     _id,
@@ -96,7 +103,7 @@ export const GROQ_CART_RECOMMENDATION_FIELDS = `
     origin,
     stock,
     "slug": slug.current,
-    image
+    "image": coalesce(image, images[0])
 `
 
 export const CART_RECOMMENDATIONS_BY_CATEGORY_TITLES_QUERY = `*[ _type == "product" && ${GROQ_PRODUCT_CART_ELIGIBLE} && count(categories[@._ref in *[_type in ["category","subcategory"] && title in $categoryTitles && !(_id match "drafts.*")]._id]) > 0 && !(_id in $excludeIds)] | order(${GROQ_ORDER_MANUAL_SORT_THEN_NEWEST}) [0...2] {
@@ -162,7 +169,7 @@ export type ProductDetail = {
     category?: string | null
     origin?: string | null
     stock?: number | null
-    description?: string | null
+    description?: unknown[] | string | null
     image?: SanityImageField
     sku?: string | null
     brand?: string | null

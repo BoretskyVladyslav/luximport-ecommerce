@@ -11,10 +11,14 @@ import { ClientCatalog } from './ClientCatalog'
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-async function CatalogPageInner() {
+async function CatalogPageInner({ categorySlug }: { categorySlug?: string }) {
     let products: CatalogProduct[] = []
     try {
-        products = await client.fetch<CatalogProduct[]>(PRODUCTS_CATALOG_QUERY, {}, { cache: 'no-store' })
+        products = await client.fetch<CatalogProduct[]>(
+            PRODUCTS_CATALOG_QUERY,
+            { categorySlug: typeof categorySlug === 'string' ? categorySlug : '' },
+            { cache: 'no-store' }
+        )
     } catch (e) {
         console.error('CatalogPage: failed to fetch products', e)
     }
@@ -50,10 +54,15 @@ async function CatalogPageInner() {
     )
 }
 
-export default function CatalogPage() {
+export default function CatalogPage({
+    searchParams,
+}: {
+    searchParams?: { category?: string }
+}) {
+    const categorySlug = typeof searchParams?.category === 'string' ? searchParams.category.trim() : ''
     return (
         <Suspense fallback={<CatalogPageSkeleton />}>
-            <CatalogPageInner />
+            <CatalogPageInner categorySlug={categorySlug} />
         </Suspense>
     )
 }

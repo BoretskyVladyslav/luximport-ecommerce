@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { getToken } from 'next-auth/jwt'
 import { sanityServer as client } from '@/lib/sanityServer'
-import { getSessionUserIdFromRequestCookie } from '@/lib/auth/session'
 import { buildWayforpayPurchasePayload, WAYFORPAY_GOOGLE_PAY } from '@/lib/wayforpay-purchase'
 
 export const dynamic = 'force-dynamic'
@@ -59,8 +58,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Missing payment environment variables' }, { status: 500 })
         }
 
-        const cookieValue = cookies().get('li_session')?.value
-        const userId = getSessionUserIdFromRequestCookie(cookieValue)
+        const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
+        if (!secret) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+        }
+        const token = await getToken({ req: req as any, secret })
+        const userIdRaw = (token as any)?.id ?? (token as any)?.sub
+        const userId = typeof userIdRaw === 'string' && userIdRaw.trim() ? userIdRaw.trim() : null
         if (!userId) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }

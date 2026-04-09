@@ -126,9 +126,11 @@ export async function POST(req: Request) {
             }
 
             try {
-                const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
-                const host = process.env.NEXT_PUBLIC_DOMAIN || req.headers.get('host')
-                if (host) {
+                const baseUrl = process.env.NEXT_PUBLIC_DOMAIN
+                if (!baseUrl) {
+                    throw new Error('NEXT_PUBLIC_DOMAIN is not set')
+                }
+                if (baseUrl) {
                     const rawItems = orderDoc.items
                     const emailItems = Array.isArray(rawItems)
                         ? rawItems.map((raw, i) => {
@@ -154,7 +156,7 @@ export async function POST(req: Request) {
                           })
                         : []
 
-                    const emailRes = await fetch(`${protocol}://${host}/api/checkout/email`, {
+                    const emailRes = await fetch(`${baseUrl}/api/checkout/email`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
@@ -172,8 +174,6 @@ export async function POST(req: Request) {
                         const text = await emailRes.text().catch(() => '')
                         console.error('Email API returned', emailRes.status, text)
                     }
-                } else {
-                    console.error('Cannot trigger email: no host / NEXT_PUBLIC_DOMAIN')
                 }
             } catch (emailErr) {
                 console.error('Webhook email trigger error:', emailErr)

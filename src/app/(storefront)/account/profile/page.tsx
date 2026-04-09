@@ -1,10 +1,9 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense, lazy } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import Script from 'next/script'
-import { signOut } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 import { useUser } from '@/hooks/useUser'
@@ -18,9 +17,11 @@ import { PhoneInput } from '@/components/ui/phone-input'
 import { OrdersListSkeleton, Skeleton } from '@/components/ui/skeletons'
 import type { OrderFulfillmentStatus, OrderPaymentStatus } from '@/types'
 import type { Order as LocalOrder } from '@/store/orderStore'
-import { ProfileOrderCard, type ProfileOrderLine } from './ProfileOrderCard'
+import type { ProfileOrderLine } from './ProfileOrderCard'
 import { normalizeMerchantDomainName, WAYFORPAY_GOOGLE_PAY } from '@/lib/wayforpay-purchase'
 import styles from './page.module.scss'
+
+const OrdersListClient = lazy(() => import('./OrdersListClient'))
 
 const premiumEase = [0.25, 0.1, 0.25, 1]
 
@@ -226,6 +227,7 @@ function widgetClientNames(user: { firstName?: string; lastName?: string; name?:
 export default function ProfilePage() {
     const router = useRouter()
     const { user, isAuthenticated, refresh, updateUser, destroySession } = useUser()
+    const { update: updateSession } = useSession()
     const { orders } = useOrderStore()
     const isHydrated = useHydration()
 
@@ -234,10 +236,38 @@ export default function ProfilePage() {
 
     const [email, setEmail] = useState('')
     const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+    const [isLoadingOrders, setIsLoadingOrders] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [serverOrders, setServerOrders] = useState<OrderListEntry[]>([])
     const [wayforpayScriptReady, setWayforpayScriptReady] = useState(false)
     const [paymentLoadingOrderId, setPaymentLoadingOrderId] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+        if (window.Wayforpay) {
+            setWayforpayScriptReady(true)
+            return
+        }
+        let cancelled = false
+        let attempts = 0
+        const maxAttempts = 200
+        const timer = window.setInterval(() => {
+            if (cancelled) return
+            if (window.Wayforpay) {
+                window.clearInterval(timer)
+                setWayforpayScriptReady(true)
+                return
+            }
+            attempts += 1
+            if (attempts >= maxAttempts) {
+                window.clearInterval(timer)
+            }
+        }, 50)
+        return () => {
+            cancelled = true
+            window.clearInterval(timer)
+        }
+    }, [])
 
     const {
         register,
@@ -282,9 +312,6 @@ export default function ProfilePage() {
                     setValue('phone', nextUser.phone || '', { shouldValidate: false })
                     setValue('address', nextUser.address || '', { shouldValidate: false })
                 }
-
-                const mapped = await fetchServerOrders()
-                if (!cancelled) setServerOrders(mapped)
             } catch (error) {
                 console.error('[PROFILE_CRASH]:', error)
                 if (!cancelled) setError('Не вдалося завантажити профіль')
@@ -296,7 +323,28 @@ export default function ProfilePage() {
         return () => {
             cancelled = true
         }
-    }, [isHydrated, refresh, setValue, fetchServerOrders])
+    }, [isHydrated, refresh, setValue])
+
+    useEffect(() => {
+        if (!isHydrated || isLoadingProfile) return
+        if (!isAuthenticated || !user) return
+        let cancelled = false
+        setIsLoadingOrders(true)
+        void fetchServerOrders()
+            .then((mapped) => {
+                if (!cancelled) setServerOrders(mapped)
+            })
+            .catch((error: unknown) => {
+                console.error('[PROFILE_ORDERS]:', error)
+                if (!cancelled) toast.error('Не вдалося завантажити замовлення')
+            })
+            .finally(() => {
+                if (!cancelled) setIsLoadingOrders(false)
+            })
+        return () => {
+            cancelled = true
+        }
+    }, [isHydrated, isLoadingProfile, isAuthenticated, user, fetchServerOrders])
 
     useEffect(() => {
         if (!isHydrated || isLoadingProfile) return
@@ -335,11 +383,12 @@ export default function ProfilePage() {
                 const pubDomain = process.env.NEXT_PUBLIC_DOMAIN?.trim()
                 const merchantAccount =
                     pubMerchant || (typeof details.merchantAccount === 'string' ? details.merchantAccount : '')
-                const merchantDomainName = pubDomain
-                    ? normalizeMerchantDomainName(pubDomain)
-                    : typeof details.merchantDomainName === 'string'
-                      ? details.merchantDomainName
-                      : ''
+                const rawDomain =
+                    pubDomain ||
+                    (typeof details.merchantDomainName === 'string' ? details.merchantDomainName : '') ||
+                    ''
+                const merchantDomainName =
+                    process.env.NODE_ENV === 'production' ? 'luximport.org' : normalizeMerchantDomainName(rawDomain)
                 if (!merchantAccount || !merchantDomainName) {
                     toast.error('Налаштування оплати неповні. Зверніться до підтримки.')
                     return
@@ -455,6 +504,24 @@ export default function ProfilePage() {
             ? sourceOrders
             : sourceOrders.filter((o) => o.status === orderFilter)
 
+    const orderCardItems = filteredOrders.map((order) => {
+        const { canPay, isPaid, isCancelled } = orderPaymentUiFlags(order)
+        return {
+            id: order.id,
+            date: order.date,
+            total: order.total,
+            itemsCount: itemsCountForOrder(order),
+            fulfillment: fulfillmentForDisplay(order),
+            payment: paymentForDisplay(order),
+            canPay,
+            isPaidDisplay: isPaid,
+            isCancelled,
+            trackingNumber: order.trackingNumber,
+            lines: buildDetailLines(order),
+            sanityDocumentId: order.sanityDocumentId,
+        }
+    })
+
     const handleLogout = async () => {
         toast.success('Ви вийшли з акаунта')
         await destroySession()
@@ -500,6 +567,9 @@ export default function ProfilePage() {
                 phone: typeof u.phone === 'string' ? u.phone : values.phone?.trim() ?? '',
                 address: typeof u.address === 'string' ? u.address : values.address?.trim() ?? '',
             })
+            if (typeof u?.name === 'string') {
+                await updateSession({ name: u.name })
+            }
             toast.success('Дані збережено')
         } catch (error) {
             console.error('[PROFILE_CRASH]:', error)
@@ -511,11 +581,6 @@ export default function ProfilePage() {
 
     return (
         <>
-            <Script
-                src="https://secure.wayforpay.com/server/pay-widget.js"
-                strategy="afterInteractive"
-                onLoad={() => setWayforpayScriptReady(true)}
-            />
             <LoadingOverlay show={isSubmitting} />
         <div className={styles.container}>
             <div className={styles.dashboardHero}>
@@ -646,59 +711,78 @@ export default function ProfilePage() {
                                             Немає замовлень у цій категорії.
                                         </motion.p>
                                     ) : (
-                                        <motion.div
-                                            key={`orders-${orderFilter}`}
-                                            className={styles.orderList}
-                                            initial="hidden"
-                                            animate="visible"
-                                            variants={orderListVariants}
-                                            layout
-                                        >
-                                            {filteredOrders.map((order) => {
-                                                const { canPay, isPaid, isCancelled } =
-                                                    orderPaymentUiFlags(order)
-                                                return (
-                                                    <motion.div
-                                                        key={order.id}
-                                                        className={styles.orderItem}
-                                                        variants={orderRowVariants}
-                                                        layout
-                                                        exit={{
-                                                            opacity: 0,
-                                                            y: 12,
-                                                            transition: { duration: 0.25, ease: 'easeOut' },
-                                                        }}
+                                        isLoadingOrders ? (
+                                            <div className="flex flex-col gap-4">
+                                                {Array.from({ length: 4 }).map((_, i) => (
+                                                    <div
+                                                        key={i}
+                                                        className="animate-pulse rounded-lg border border-stone-200 bg-white px-6 py-6"
                                                     >
-                                                        <ProfileOrderCard
-                                                            id={order.id}
-                                                            date={order.date}
-                                                            total={order.total}
-                                                            itemsCount={itemsCountForOrder(order)}
-                                                            fulfillment={fulfillmentForDisplay(order)}
-                                                            payment={paymentForDisplay(order)}
-                                                            canPay={canPay}
-                                                            isPaidDisplay={isPaid}
-                                                            isCancelled={isCancelled}
-                                                            trackingNumber={order.trackingNumber}
-                                                            lines={buildDetailLines(order)}
-                                                            sanityDocumentId={order.sanityDocumentId}
-                                                            onOrdersInvalidate={() => {
-                                                                void fetchServerOrders().then(
-                                                                    setServerOrders
-                                                                )
-                                                            }}
-                                                            onProfilePay={startProfilePayment}
-                                                            profilePayInProgress={
-                                                                paymentLoadingOrderId !== null &&
-                                                                paymentLoadingOrderId ===
-                                                                    order.sanityDocumentId
-                                                            }
-                                                            wayforpayReady={wayforpayScriptReady}
-                                                        />
-                                                    </motion.div>
-                                                )
-                                            })}
-                                        </motion.div>
+                                                        <div className="flex flex-wrap items-start justify-between gap-4">
+                                                            <div className="min-w-[12rem] flex-1">
+                                                                <div className="h-4 w-40 rounded bg-stone-200" />
+                                                                <div className="mt-3 h-3 w-28 rounded bg-stone-200" />
+                                                            </div>
+                                                            <div className="flex w-44 flex-col items-end gap-3">
+                                                                <div className="h-5 w-28 rounded bg-stone-200" />
+                                                                <div className="h-3 w-24 rounded bg-stone-200" />
+                                                            </div>
+                                                        </div>
+                                                        <div className="mt-5 h-3 w-full rounded bg-stone-200" />
+                                                        <div className="mt-2 h-3 w-11/12 rounded bg-stone-200" />
+                                                        <div className="mt-2 h-3 w-10/12 rounded bg-stone-200" />
+                                                        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-stone-200 pt-4">
+                                                            <div className="h-9 w-40 rounded bg-stone-200" />
+                                                            <div className="h-9 w-32 rounded bg-stone-200" />
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <motion.div
+                                                key={`orders-${orderFilter}`}
+                                                className={styles.orderList}
+                                                initial="hidden"
+                                                animate="visible"
+                                                variants={orderListVariants}
+                                                layout
+                                            >
+                                                <Suspense
+                                                    fallback={
+                                                        <div className="flex flex-col gap-4">
+                                                            {Array.from({ length: 3 }).map((_, i) => (
+                                                                <div
+                                                                    key={i}
+                                                                    className="animate-pulse rounded-lg border border-stone-200 bg-white px-6 py-6"
+                                                                >
+                                                                    <div className="h-4 w-40 rounded bg-stone-200" />
+                                                                    <div className="mt-3 h-3 w-28 rounded bg-stone-200" />
+                                                                    <div className="mt-6 h-3 w-full rounded bg-stone-200" />
+                                                                    <div className="mt-2 h-3 w-10/12 rounded bg-stone-200" />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    }
+                                                >
+                                                    <OrdersListClient
+                                                        items={orderCardItems}
+                                                        onOrdersInvalidate={() => {
+                                                            setIsLoadingOrders(true)
+                                                            void fetchServerOrders()
+                                                                .then((mapped) => {
+                                                                    setServerOrders(mapped)
+                                                                })
+                                                                .finally(() => {
+                                                                    setIsLoadingOrders(false)
+                                                                })
+                                                        }}
+                                                        onProfilePay={startProfilePayment}
+                                                        paymentLoadingOrderId={paymentLoadingOrderId}
+                                                        wayforpayReady={wayforpayScriptReady}
+                                                    />
+                                                </Suspense>
+                                            </motion.div>
+                                        )
                                     )}
                                 </AnimatePresence>
                         </motion.div>
@@ -770,6 +854,7 @@ export default function ProfilePage() {
                             )}
                             <div>
                                 <button type='submit' className={styles.saveBtn} disabled={isSubmitting}>
+                                    {isSubmitting ? <span className={styles.spinner} aria-hidden="true" /> : null}
                                     {isSubmitting ? 'ОБРОБКА...' : 'ЗБЕРЕГТИ ЗМІНИ'}
                                 </button>
                             </div>

@@ -5,12 +5,11 @@ import { createClient } from 'next-sanity'
 import { parseCartItems, parseTotalAmount } from '@/lib/order-payload'
 import { validateCartAgainstSanityWithClient } from '@/lib/cart/validate'
 import { fromCents, toCents } from '@/lib/money'
-import { getSessionUserId } from '@/lib/auth/session'
+import { getToken } from 'next-auth/jwt'
 import { sendOrderEmails } from '@/lib/send-order-emails'
 
 export async function POST(req: Request) {
     try {
-        console.log("[DEBUG_ENV] TOKEN EXISTS:", !!process.env.SANITY_API_TOKEN, "LENGTH:", process.env.SANITY_API_TOKEN?.length);
         if (!process.env.SANITY_API_TOKEN) {
             return NextResponse.json({ message: 'Сервіс тимчасово недоступний. Спробуйте пізніше.' }, { status: 400 })
         }
@@ -138,8 +137,10 @@ export async function POST(req: Request) {
             )
         }
 
-        const sessionUserIdRaw = getSessionUserId()
-        const sessionUserId = typeof sessionUserIdRaw === 'string' && sessionUserIdRaw.trim() ? sessionUserIdRaw.trim() : null
+        const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
+        const token = secret ? await getToken({ req: req as any, secret }) : null
+        const userIdRaw = (token as any)?.id ?? (token as any)?.sub
+        const sessionUserId = typeof userIdRaw === 'string' && userIdRaw.trim() ? userIdRaw.trim() : null
         const sanityOrder = {
             _type: 'order' as const,
             orderId: orderId.trim(),

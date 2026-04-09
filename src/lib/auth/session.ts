@@ -1,7 +1,4 @@
 import { createHmac, timingSafeEqual } from 'crypto'
-import { cookies } from 'next/headers'
-
-const COOKIE_NAME = 'li_session'
 
 type SessionPayload = {
     userId: string
@@ -51,39 +48,19 @@ export function verifySessionToken(token: string, secret: string): SessionPayloa
 }
 
 export function setSessionCookie(userId: string) {
-    const secret = process.env.AUTH_SECRET
-    if (!secret) throw new Error('AUTH_SECRET is required')
-    const exp = Date.now() + 1000 * 60 * 60 * 24 * 14
-    const token = createSessionToken({ userId, exp }, secret)
-    cookies().set(COOKIE_NAME, token, {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: true,
-        path: '/',
-        expires: new Date(exp),
-    })
+    void userId
 }
 
 export function clearSessionCookie() {
-    cookies().set(COOKIE_NAME, '', {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: true,
-        path: '/',
-        expires: new Date(0),
-    })
+    return
 }
 
 export function getSessionUserIdFromRequestCookie(cookieValue: string | undefined) {
-    const secret = process.env.AUTH_SECRET
-    if (!secret) return null
-    if (!cookieValue) return null
-    const payload = verifySessionToken(cookieValue, secret)
-    return payload?.userId ?? null
+    void cookieValue
+    return null
 }
 
 export function getSessionUserId() {
-    const cookieValue = cookies().get(COOKIE_NAME)?.value
-    return getSessionUserIdFromRequestCookie(cookieValue)
+    return null
 }
 

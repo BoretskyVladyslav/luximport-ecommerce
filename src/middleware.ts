@@ -20,7 +20,7 @@ function hasValidSessionToken(token: unknown): boolean {
 
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
-    const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
+    const secret = process.env.AUTH_SECRET
     if (!secret) {
         return nextWithPathname(request, pathname)
     }

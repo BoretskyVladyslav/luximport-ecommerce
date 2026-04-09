@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { verifyCredentials } from '@/lib/auth/verifyCredentials'
-import { setSessionCookie } from '@/lib/auth/session'
 
 const LoginSchema = z.object({
     email: z.string().trim().email(),
@@ -31,8 +30,6 @@ export async function POST(req: Request) {
         if (!row) {
             return NextResponse.json({ message: 'Невірний email або пароль' }, { status: 400 })
         }
-
-        setSessionCookie(row.id)
 
         return NextResponse.json({
             user: {

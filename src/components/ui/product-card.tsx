@@ -101,7 +101,7 @@ export function ProductCard({ id, index, title, slug, price, wholesalePrice, who
 
     return (
         <motion.div
-            className={styles.card}
+            className={`${styles.card} min-w-0`}
             variants={itemVariants}
             layout
             style={{ willChange: 'transform, opacity' }}
@@ -136,19 +136,21 @@ export function ProductCard({ id, index, title, slug, price, wholesalePrice, who
                 )}
                 <button
                     type="button"
-                    className={`${styles.likeBtn} ${isLiked ? styles.likeBtnActive : ''}`}
+                    className={`${styles.likeBtn} ${isLiked ? styles.likeBtnActive : ''} top-3 right-3 sm:top-4 sm:right-4`}
                     onClick={handleToggleWishlist}
                 >
                     <Heart size={16} fill={isLiked ? 'currentColor' : 'none'} />
                 </button>
             </div>
-            <div className={styles.content}>
-                <div className={styles.category}>
+            <div className={`${styles.content} px-3 pb-3 sm:px-6 sm:pb-6`}>
+                <div className={`${styles.category} max-w-full truncate`}>
                     {productCategory}{weight && <span className={styles.weight}> • {weight}</span>}
                 </div>
-                <h3 className={`${styles.title} ${isOutOfStock ? 'opacity-60' : ''}`}>{productTitle}</h3>
+                <h3 className={`${styles.title} ${isOutOfStock ? 'opacity-60' : ''} max-w-full break-words text-[0.82rem] leading-snug sm:text-sm`}>
+                    {productTitle}
+                </h3>
                 {piecesPerBox !== undefined && (
-                    <div className={styles.boxQty}>В ящику: {piecesPerBox} шт.</div>
+                    <div className={`${styles.boxQty} text-[0.55rem] sm:text-[0.6rem]`}>В ящику: {piecesPerBox} шт.</div>
                 )}
                 {hasWholesale && (
                     <>
@@ -166,8 +168,8 @@ export function ProductCard({ id, index, title, slug, price, wholesalePrice, who
                 {stock !== undefined && stock < 5 && (
                     <div className={styles.stockWarning}>Залишилось лише {stock} шт.</div>
                 )}
-                <div className={styles.footer}>
-                    <span className={`${styles.price} ${isOutOfStock ? 'opacity-60' : ''}`}>
+                <div className={`${styles.footer} gap-2`}>
+                    <span className={`${styles.price} ${isOutOfStock ? 'opacity-60' : ''} min-w-0 truncate text-[1.05rem] sm:text-[1.2rem]`}>
                         {typeof price === 'string' && price.trim() !== ''
                             ? price
                             : Number.isFinite(productPrice) && productPrice > 0
@@ -176,7 +178,7 @@ export function ProductCard({ id, index, title, slug, price, wholesalePrice, who
                     </span>
                     <button
                         type="button"
-                        className={`${styles.addButton} ${isOutOfStock ? 'opacity-80' : ''}`}
+                        className={`${styles.addButton} ${isOutOfStock ? 'opacity-80' : ''} shrink-0 whitespace-nowrap px-2 py-2 text-[0.65rem] sm:px-4 sm:py-2 sm:text-[0.7rem]`}
                         onClick={handleAddToCart}
                         disabled={isOutOfStock}
                     >

@@ -1,6 +1,7 @@
 import '@/styles/globals.scss'
 import type { Metadata } from 'next'
 import { GoogleTagManager } from '@next/third-parties/google'
+import Script from 'next/script'
 import { getMetadataBase } from '@/lib/site-url'
 import { ToastProvider } from '@/components/providers/toast-provider'
 import { AuthProvider } from '@/components/providers/auth-provider'
@@ -22,10 +23,12 @@ export default function RootLayout({
 }: {
     children: React.ReactNode
 }) {
+    const gtmId = process.env.NEXT_PUBLIC_GTM_ID
     return (
         <html lang="uk" suppressHydrationWarning>
             <body suppressHydrationWarning>
-                <GoogleTagManager gtmId={process.env.NEXT_PUBLIC_GTM_ID || 'GTM-KCB7NCH8'} />
+                {gtmId ? <GoogleTagManager gtmId={gtmId} /> : null}
+                <Script src="https://secure.wayforpay.com/server/pay-widget.js" strategy="beforeInteractive" />
                 <AuthProvider>
                     <ToastProvider>{children}</ToastProvider>
                 </AuthProvider>

@@ -37,7 +37,8 @@ export function buildWayforpayPurchasePayload(input: WayforpayPurchaseInput) {
         throw new Error('productNames, productCounts, and productPrices length mismatch')
     }
 
-    const merchantDomainName = normalizeMerchantDomainName(input.domain)
+    const merchantDomainName =
+        process.env.NODE_ENV === 'production' ? 'luximport.org' : normalizeMerchantDomainName(input.domain)
     const orderDate = Math.floor(Date.now() / 1000)
     const amountStr = formatWayforpayAmount(input.amount)
 

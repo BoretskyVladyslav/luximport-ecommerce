@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { getToken } from 'next-auth/jwt'
 import { z } from 'zod'
-import { sanityServer } from '@/lib/sanityServer'
-import { getSessionUserIdFromRequestCookie } from '@/lib/auth/session'
+import { createClient } from 'next-sanity'
 
 const UpdateSchema = z.object({
     firstName: z.string().trim().min(1).max(120).optional(),
@@ -13,12 +12,17 @@ const UpdateSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        if (!process.env.SANITY_API_TOKEN) {
-            console.error('[SERVER_DEBUG]: missing env SANITY_API_TOKEN')
+        if (!process.env.SANITY_API_WRITE_TOKEN) {
+            console.error('[SERVER_DEBUG]: missing env SANITY_API_WRITE_TOKEN')
             return NextResponse.json({ message: 'Сервіс тимчасово недоступний. Спробуйте пізніше.' }, { status: 400 })
         }
-        const cookieValue = cookies().get('li_session')?.value
-        const userId = getSessionUserIdFromRequestCookie(cookieValue)
+        const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
+        if (!secret) {
+            return NextResponse.json({ message: 'Будь ласка, увійдіть у акаунт' }, { status: 401 })
+        }
+        const token = await getToken({ req: req as any, secret })
+        const userIdRaw = (token as any)?.id ?? (token as any)?.sub
+        const userId = typeof userIdRaw === 'string' && userIdRaw.trim() ? userIdRaw.trim() : null
         if (!userId) {
             return NextResponse.json({ message: 'Будь ласка, увійдіть у акаунт' }, { status: 401 })
         }
@@ -45,7 +49,15 @@ export async function POST(req: Request) {
         if (address !== undefined) patch.address = address
         if (name !== undefined) patch.name = name
 
-        const updated = await sanityServer
+        const sanityWrite = createClient({
+            projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
+            dataset: process.env.NEXT_PUBLIC_SANITY_DATASET,
+            apiVersion: process.env.NEXT_PUBLIC_SANITY_API_VERSION || '2024-02-17',
+            token: process.env.SANITY_API_WRITE_TOKEN,
+            useCdn: false,
+        })
+
+        const updated = await sanityWrite
             .patch(userId)
             .set(patch)
             .commit<{ _id: string; email?: string | null; name?: string | null; firstName?: string | null; lastName?: string | null; phone?: string | null; address?: string | null }>()

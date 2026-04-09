@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from 'next-sanity'
 import { client } from '@/lib/sanity'
-import { getSessionUserId } from '@/lib/auth/session'
+import { getToken } from 'next-auth/jwt'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +11,13 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Сервіс тимчасово недоступний.' }, { status: 503 })
         }
 
-        const userId = getSessionUserId()
+        const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
+        if (!secret) {
+            return NextResponse.json({ message: 'Необхідна авторизація.' }, { status: 401 })
+        }
+        const token = await getToken({ req: req as any, secret })
+        const userIdRaw = (token as any)?.id ?? (token as any)?.sub
+        const userId = typeof userIdRaw === 'string' && userIdRaw.trim() ? userIdRaw.trim() : null
         if (!userId) {
             return NextResponse.json({ message: 'Необхідна авторизація.' }, { status: 401 })
         }

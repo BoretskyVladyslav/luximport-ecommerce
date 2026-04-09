@@ -132,13 +132,13 @@ export function ClientCatalog({
                     transition={{ duration: 0.8, ease: premiumEase, delay: 0.3 }}
                 >
                     <div
-                        className={`${styles.mainCategory} ${!activeCategoryId ? styles.mainCategoryActive : ''}`}
+                        className={`${styles.mainCategory} ${!activeCategoryId ? styles.mainCategoryActive : ''} ${!activeCategoryId ? 'text-stone-900 font-semibold underline decoration-2 underline-offset-8 decoration-stone-900' : 'text-stone-500 hover:text-stone-900 transition-colors'}`}
                         onClick={() => {
                             setActiveCategoryId(null)
                             setVisibleCount(20)
                         }}
                     >
-                        <span>Всі товари</span>
+                        <span className="inline-flex items-center gap-2 px-0 py-0">Всі товари</span>
                     </div>
 
                     {roots.map((main) => {
@@ -159,9 +159,10 @@ export function ClientCatalog({
                         return (
                             <div key={main._id} className={styles.categoryGroup}>
                                 <div
-                                    className={`${styles.mainCategory} ${isActive ? styles.mainCategoryActive : ''}`}
+                                    className={`${styles.mainCategory} ${isActive ? styles.mainCategoryActive : ''} ${isActive ? 'text-stone-900 font-semibold underline decoration-2 underline-offset-8 decoration-stone-900' : 'text-stone-500 hover:text-stone-900 transition-colors'}`}
                                 >
                                     <span
+                                        className="inline-flex items-center gap-2 px-0 py-0"
                                         onClick={() => {
                                             setActiveCategoryId(main._id)
                                             setVisibleCount(20)
@@ -171,7 +172,7 @@ export function ClientCatalog({
                                     </span>
                                     {nested.length > 0 && (
                                         <button
-                                            className={`${styles.toggleBtn} ${isExpanded ? styles.toggleBtnOpen : ''}`}
+                                            className={`${styles.toggleBtn} ${isExpanded ? styles.toggleBtnOpen : ''} text-stone-400 hover:text-stone-900 transition-colors`}
                                             onClick={(e) => {
                                                 e.stopPropagation()
                                                 toggleMainCat(main._id)
@@ -195,7 +196,7 @@ export function ClientCatalog({
                                             {nested.map(({ node: child, depth }) => (
                                                 <li
                                                     key={child._id}
-                                                    className={`${styles.subItem} ${activeCategoryId === child._id ? styles.subItemActive : ''}`}
+                                                    className={`${styles.subItem} ${activeCategoryId === child._id ? styles.subItemActive : ''} ${activeCategoryId === child._id ? 'text-stone-900 font-semibold underline decoration-2 underline-offset-8 decoration-stone-900' : 'text-stone-400 hover:text-stone-900 transition-colors'}`}
                                                     style={{ paddingLeft: `${0.5 + depth * 0.65}rem` }}
                                                     onClick={() => {
                                                         setActiveCategoryId(child._id)
@@ -215,7 +216,7 @@ export function ClientCatalog({
 
                 <div className={styles.catalogContent}>
                     <motion.div
-                        className={styles.grid}
+                        className={`${styles.grid} grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4`}
                         variants={{
                             hidden: {},
                             visible: { transition: { staggerChildren: 0.1 } },
@@ -249,7 +250,7 @@ export function ClientCatalog({
                     {visibleCount < filteredData.length && (
                         <div className={styles.loadMoreContainer}>
                             <button
-                                className={styles.loadMoreButton}
+                                className={`${styles.loadMoreButton} max-w-full px-5 py-3 text-xs sm:text-sm`}
                                 onClick={() =>
                                     setVisibleCount((prev) =>
                                         Math.min(prev + 20, filteredData.length)
