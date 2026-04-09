@@ -37,7 +37,7 @@ export function useUser() {
     const logout = useAuthStore((s) => s.logout)
 
     const refresh = useCallback(async () => {
-        const res = await fetch('/api/user/me', { method: 'GET' })
+        const res = await fetch('/api/user/me', { method: 'GET', cache: 'no-store' })
         const data = await res.json().catch(() => null)
         const next = parseUser(data?.user)
         setUser(next)

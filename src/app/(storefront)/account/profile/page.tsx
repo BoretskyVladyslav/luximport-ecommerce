@@ -11,6 +11,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { profileUpdateSchema, type ProfileUpdateFormData } from '@/lib/validations/profile'
 import { useOrderStore } from '@/store/orderStore'
+import { useWishlistStore } from '@/store/wishlistStore'
 import { useHydration } from '@/hooks/useHydration'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
 import { PhoneInput } from '@/components/ui/phone-input'
@@ -229,6 +230,7 @@ export default function ProfilePage() {
     const { user, isAuthenticated, refresh, updateUser, destroySession } = useUser()
     const { data: session, status: sessionStatus, update: updateSession } = useSession()
     const { orders } = useOrderStore()
+    const wishlistCount = useWishlistStore((s) => (Array.isArray(s.items) ? s.items.length : 0))
     const isHydrated = useHydration()
 
     const [activeTab, setActiveTab] = useState('orders')
@@ -272,6 +274,7 @@ export default function ProfilePage() {
     const {
         register,
         handleSubmit,
+        reset,
         setValue,
         formState: { errors, isSubmitting },
     } = useForm<ProfileUpdateFormData>({
@@ -295,6 +298,10 @@ export default function ProfilePage() {
 
     useEffect(() => {
         if (!isHydrated) return
+        reset({ firstName: '', lastName: '', phone: '', address: '' })
+        setEmail('')
+        setServerOrders([])
+        setIsLoadingOrders(true)
         let cancelled = false
         async function run() {
             setIsLoadingProfile(true)
@@ -323,7 +330,7 @@ export default function ProfilePage() {
         return () => {
             cancelled = true
         }
-    }, [isHydrated, refresh, setValue])
+    }, [isHydrated, sessionUserId, refresh, reset, setValue])
 
     useEffect(() => {
         if (!isHydrated || isLoadingProfile) return
@@ -603,16 +610,16 @@ export default function ProfilePage() {
                     transition={{ duration: 0.6, ease: premiumEase, delay: 0.1 }}
                 >
                     <div className={styles.statCard}>
-                        <span className={styles.statValue}>{orders.length}</span>
+                        <span className={styles.statValue}>
+                            {isLoadingOrders ? <Skeleton className="h-8 w-10 rounded-sm" /> : sourceOrders.length}
+                        </span>
                         <span className={styles.statLabel}>ЗАМОВЛЕННЯ</span>
                     </div>
                     <div className={styles.statCard}>
-                        <span className={styles.statValue}>4</span>
+                        <span className={styles.statValue}>
+                            {!isHydrated ? <Skeleton className="h-8 w-10 rounded-sm" /> : wishlistCount}
+                        </span>
                         <span className={styles.statLabel}>ОБРАНЕ</span>
-                    </div>
-                    <div className={styles.statCard}>
-                        <span className={styles.statValue}>PREMIUM</span>
-                        <span className={styles.statLabel}>СТАТУС КЛІЄНТА</span>
                     </div>
                 </motion.div>
             </div>
