@@ -502,7 +502,7 @@ export default function ProfilePage() {
     if (sessionStatus !== 'authenticated') return null
     if (!isAuthenticated || !user) return null
 
-    const sourceOrders = serverOrders.length > 0 ? serverOrders : orders
+    const sourceOrders = serverOrders
     const filteredOrders =
         orderFilter === 'all'
             ? sourceOrders
