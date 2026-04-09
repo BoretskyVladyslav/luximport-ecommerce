@@ -1,9 +1,9 @@
-import { NextResponse } from 'next/server'
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 import { getToken } from 'next-auth/jwt'
 import { sanityServer } from '@/lib/sanityServer'
 import { GROQ_USER_ORDERS_BY_USER_REF } from '@/lib/sanity-queries'
-
-export const dynamic = 'force-dynamic'
 
 type OrderLineRow = {
     productId?: string
@@ -34,33 +34,37 @@ export async function GET(req: Request) {
     try {
         const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
         if (!secret) {
-            return NextResponse.json(
-                { orders: [] },
-                { status: 200, headers: { 'Cache-Control': 'no-store, max-age=0' } }
-            )
+            return new Response(JSON.stringify([]), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' },
+            })
         }
         const token = await getToken({ req: req as any, secret })
         const userIdRaw = (token as any)?.id ?? (token as any)?.sub
         const userId = typeof userIdRaw === 'string' && userIdRaw.trim() ? userIdRaw.trim() : null
         if (!userId) {
-            return NextResponse.json(
-                { orders: [] },
-                { status: 200, headers: { 'Cache-Control': 'no-store, max-age=0' } }
-            )
+            return new Response(JSON.stringify([]), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' },
+            })
         }
 
-        const orders = await sanityServer.fetch<OrderRow[]>(GROQ_USER_ORDERS_BY_USER_REF, { userId })
-
-        return NextResponse.json(
-            { orders },
-            { status: 200, headers: { 'Cache-Control': 'no-store, max-age=0' } }
+        const orders = await sanityServer.fetch<OrderRow[]>(
+            GROQ_USER_ORDERS_BY_USER_REF,
+            { userId },
+            { cache: 'no-store', next: { revalidate: 0 } }
         )
+
+        return new Response(JSON.stringify({ orders }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' },
+        })
     } catch (error) {
         console.error('[SERVER_DEBUG]:', error)
-        return NextResponse.json(
-            { orders: [] },
-            { status: 200, headers: { 'Cache-Control': 'no-store, max-age=0' } }
-        )
+        return new Response(JSON.stringify([]), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store, max-age=0' },
+        })
     }
 }
 

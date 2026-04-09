@@ -227,7 +227,7 @@ function widgetClientNames(user: { firstName?: string; lastName?: string; name?:
 export default function ProfilePage() {
     const router = useRouter()
     const { user, isAuthenticated, refresh, updateUser, destroySession } = useUser()
-    const { update: updateSession } = useSession()
+    const { data: session, status: sessionStatus, update: updateSession } = useSession()
     const { orders } = useOrderStore()
     const isHydrated = useHydration()
 
@@ -281,7 +281,7 @@ export default function ProfilePage() {
     })
 
     const fetchServerOrders = useCallback(async (): Promise<OrderListEntry[]> => {
-        const res = await fetch('/api/orders/me', { method: 'GET' })
+        const res = await fetch('/api/orders/me', { method: 'GET', cache: 'no-store' })
         const data = await res.json().catch(() => null)
         const raw = Array.isArray(data?.orders) ? data.orders : []
         return raw
@@ -462,7 +462,9 @@ export default function ProfilePage() {
         [user, wayforpayScriptReady]
     )
 
-    if (!isHydrated || isLoadingProfile) {
+    const sessionUserId = typeof session?.user?.id === 'string' ? session.user.id.trim() : ''
+
+    if (sessionStatus === 'loading' || !sessionUserId || !isHydrated || isLoadingProfile) {
         return (
             <div className={styles.container}>
                 <div className={styles.dashboardHero}>
@@ -496,6 +498,7 @@ export default function ProfilePage() {
             </div>
         )
     }
+    if (sessionStatus !== 'authenticated') return null
     if (!isAuthenticated || !user) return null
 
     const sourceOrders = serverOrders.length > 0 ? serverOrders : orders
