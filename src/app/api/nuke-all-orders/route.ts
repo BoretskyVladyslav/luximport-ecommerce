@@ -31,7 +31,9 @@ export async function GET() {
         { cache: 'no-store', next: { revalidate: 0 } }
     )
 
-    const uniqueIds = Array.from(new Set((Array.isArray(ids) ? ids : []).filter((x): x is string => typeof x === 'string' && x)))
+    const uniqueIds = Array.from(
+        new Set((Array.isArray(ids) ? ids : []).filter((x): x is string => typeof x === 'string' && x.length > 0))
+    )
 
     let deleted = 0
     for (const id of uniqueIds) {
