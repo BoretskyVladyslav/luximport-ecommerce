@@ -229,6 +229,7 @@ export default function ProfilePage() {
     const router = useRouter()
     const { user, isAuthenticated, refresh, updateUser, destroySession } = useUser()
     const { data: session, status: sessionStatus, update: updateSession } = useSession()
+    const sessionUserId = typeof session?.user?.id === 'string' ? session.user.id.trim() : ''
     const { orders } = useOrderStore()
     const wishlistCount = useWishlistStore((s) => (Array.isArray(s.items) ? s.items.length : 0))
     const isHydrated = useHydration()
@@ -469,8 +470,6 @@ export default function ProfilePage() {
         },
         [user, wayforpayScriptReady]
     )
-
-    const sessionUserId = typeof session?.user?.id === 'string' ? session.user.id.trim() : ''
 
     if (sessionStatus === 'loading' || !sessionUserId || !isHydrated || isLoadingProfile) {
         return (
