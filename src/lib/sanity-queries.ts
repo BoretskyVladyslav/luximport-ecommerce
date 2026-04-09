@@ -169,7 +169,7 @@ export type ProductDetail = {
     category?: string | null
     origin?: string | null
     stock?: number | null
-    description?: unknown[] | string | null
+    description?: any
     image?: SanityImageField
     sku?: string | null
     brand?: string | null

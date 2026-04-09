@@ -124,7 +124,7 @@ export default async function ProductPage({
                         <p className="text-sm leading-relaxed text-stone-500">{product.description}</p>
                     ) : Array.isArray(product.description) && product.description.length ? (
                         <div className="prose prose-stone max-w-none text-sm leading-relaxed">
-                            <PortableText value={product.description} />
+                            <PortableText value={product.description as any} />
                         </div>
                     ) : null}
 
