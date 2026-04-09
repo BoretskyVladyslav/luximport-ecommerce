@@ -330,6 +330,7 @@ export default function ProfilePage() {
         if (!isAuthenticated || !user) return
         let cancelled = false
         setIsLoadingOrders(true)
+        setServerOrders([])
         void fetchServerOrders()
             .then((mapped) => {
                 if (!cancelled) setServerOrders(mapped)
