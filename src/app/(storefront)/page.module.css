@@ -1,0 +1,371 @@
+.hero {
+  min-height: 85vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #e5e5e5;
+  background: #fff;
+}
+@media (max-width: 768px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+}
+
+.heroText {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6rem 4rem;
+  border-right: 1px solid #e5e5e5;
+}
+@media (max-width: 768px) {
+  .heroText {
+    border-right: none;
+    border-bottom: 1px solid #e5e5e5;
+    padding: 4rem 1.5rem;
+  }
+}
+
+.metaLabel {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #888;
+  margin-bottom: 2rem;
+}
+
+.heroTitle {
+  font-family: var(--font-heading);
+  font-size: 4rem;
+  font-weight: 400;
+  line-height: 1.1;
+  color: #111;
+  margin-bottom: 3rem;
+}
+@media (max-width: 768px) {
+  .heroTitle {
+    font-size: 2.5rem;
+  }
+}
+
+.heroSubtitle {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.8;
+  max-width: 400px;
+  margin-bottom: 3rem;
+}
+
+.ctaButton {
+  align-self: flex-start;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: 1rem 2.5rem;
+  background: #111;
+  color: #fff;
+  border: none;
+  transition: background 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+  cursor: pointer;
+}
+.ctaButton:hover {
+  background: #333;
+}
+
+.heroVisual {
+  background: #f7f7f7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ccc;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+}
+@media (max-width: 768px) {
+  .heroVisual {
+    min-height: 300px;
+  }
+}
+
+.categoriesSection {
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.sectionHeader {
+  padding: 6rem 4rem 3rem 4rem;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+@media (max-width: 768px) {
+  .sectionHeader {
+    padding: 4rem 1.5rem 2rem;
+  }
+}
+
+.sectionTitle {
+  font-family: var(--font-heading);
+  font-size: 2rem;
+  font-weight: 400;
+  color: #111;
+}
+
+.sectionMeta {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #888;
+}
+
+.categoriesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.categoryCard {
+  aspect-ratio: 3/4;
+  border-right: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: column;
+  padding: 3rem;
+  transition: background 0.3s ease;
+}
+.categoryCard:last-child {
+  border-right: none;
+}
+.categoryCard:hover {
+  background: #fafafa;
+}
+
+.imagePlaceholder {
+  flex-grow: 1;
+  background: #f2f2f2;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ddd;
+  font-size: 0.7rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.categoryInfo {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.categoryName {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #111;
+}
+
+.categoryCount {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  color: #888;
+}
+
+.advantagesSection {
+  background: #fff;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.advantagesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid #e5e5e5;
+}
+@media (max-width: 768px) {
+  .advantagesGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.advantageEditorial {
+  padding: 4rem;
+  border-right: 1px solid #e5e5e5;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  flex-direction: column;
+}
+.advantageEditorial:last-child {
+  border-right: none;
+}
+@media (max-width: 768px) {
+  .advantageEditorial {
+    border-right: none;
+    padding: 4rem 1.5rem;
+  }
+}
+
+.advantageNumber {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  color: #888;
+  margin-bottom: 2rem;
+  line-height: 1;
+}
+
+.advantageTitle {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #111;
+  margin-bottom: 1rem;
+}
+
+.advantageText {
+  font-family: var(--font-body);
+  color: #555;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.productImage {
+  width: 100%;
+  aspect-ratio: 1;
+  background-color: #f0f0f0;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #999;
+  font-size: 0.875rem;
+}
+
+.productTitle {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.productPrice {
+  font-weight: 700;
+  color: #000;
+}
+
+.bestSellersSection {
+  padding: 6rem 1rem;
+  background: #f9f9f9;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.bestSellersHeader {
+  text-align: center;
+  margin-bottom: 4rem;
+}
+
+.bestSellersMeta {
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+.bestSellersTitle {
+  font-family: var(--font-heading);
+  font-size: 3.5rem;
+  font-weight: 400;
+  color: #111;
+}
+
+.bestSellersGrid {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2rem;
+}
+@media (max-width: 1024px) {
+  .bestSellersGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 768px) {
+  .bestSellersGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.bestSellerCard {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: transform 0.3s ease;
+}
+.bestSellerCard:hover {
+  transform: translateY(-5px);
+}
+
+.bestSellerBadge {
+  position: absolute;
+  top: 1.5rem;
+  left: 1.5rem;
+  background: #111;
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  z-index: 10;
+}
+
+.bestSellerImage {
+  width: 100%;
+  aspect-ratio: 3/4;
+  background-color: #f2f2f2;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  color: #ddd;
+  letter-spacing: 2px;
+}
+
+.bestSellerName {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  letter-spacing: 1px;
+  color: #111;
+}
+
+.bestSellerPrice {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #111;
+}
+
+/** Server page wrapper: binds route CSS to the segment (avoids dev 404 on `page.css`). */
+.pageRouteRoot {
+  display: contents;
+}/*# sourceMappingURL=page.module.css.map */
