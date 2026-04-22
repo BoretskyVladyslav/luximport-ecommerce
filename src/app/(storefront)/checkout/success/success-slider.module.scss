@@ -4,7 +4,7 @@
 .sliderSection {
     position: relative;
     width: 100%;
-    overflow: hidden;
+    overflow: hidden; 
     background: #fff;
     border-bottom: 1px solid var(--border-light, #e5e5e5);
 }
@@ -13,7 +13,7 @@
     display: flex;
     cursor: grab;
 
-    &:active {
+    &:active { 
         cursor: grabbing;
     }
 }

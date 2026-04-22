@@ -1,10 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
-
-const HERO_IMAGE_SRC = '/images/hero-bg.jpg'
 
 const heroCopy = {
     title: 'Елітні продукти з самого серця Європи',
@@ -14,51 +10,58 @@ const heroCopy = {
 } as const
 
 export function HeroSlider() {
-    const [heroImageOk, setHeroImageOk] = useState(false)
-
-    useEffect(() => {
-        let mounted = true
-        fetch(HERO_IMAGE_SRC, { method: 'HEAD' })
-            .then((r) => {
-                if (mounted) setHeroImageOk(r.ok)
-            })
-            .catch(() => {
-                if (mounted) setHeroImageOk(false)
-            })
-        return () => {
-            mounted = false
-        }
-    }, [])
-
     return (
-        <section className="relative w-full overflow-hidden bg-stone-100 min-h-[500px] md:min-h-[70vh]">
-            {heroImageOk && (
-                <Image
-                    src={HERO_IMAGE_SRC}
-                    alt="Європейські продукти Lux Import"
-                    fill
-                    className="object-cover object-right"
-                    sizes="100vw"
-                    priority
+        <section className="relative w-full overflow-hidden flex flex-col bg-[#011B44]">
+            {/* Base Layer: Inline Picture that dictates aspect ratio and height */}
+            <picture className="w-full h-auto block select-none">
+                <source media="(max-width: 767px)" srcSet="/images/hero-bg-mobile.jpg" />
+                <img 
+                    src="/images/hero-bg-desktop.jpg" 
+                    alt="Європейські продукти Lux Import Hero" 
+                    className="w-full h-auto block"
+                    loading="eager"
+                    width={1920}
+                    height={1080}
                 />
-            )}
+            </picture>
 
-            <div className="absolute inset-0 z-10 mx-auto flex h-full w-full max-w-7xl flex-col items-start justify-center px-5 sm:px-8 lg:px-12">
-                <div className="w-full max-w-xl md:w-1/2">
-                    <h1 className="mb-5 text-3xl font-bold leading-tight text-[#FFFFFF] font-heading sm:text-4xl md:text-5xl lg:text-6xl">
-                        {heroCopy.title}
-                    </h1>
-                    <p className="text-base font-medium leading-relaxed text-[#FFFFFF] sm:text-lg">
+            {/* Premium Editorial Overlay */}
+            <div className="absolute inset-0 z-10 w-full h-full flex flex-col justify-start items-center pt-12 px-6 text-center md:justify-center md:items-start md:pt-0 md:px-16 lg:px-20 md:text-left">
+                <div className="w-full flex flex-col items-center gap-10 md:items-start md:gap-8 md:w-[60%] lg:w-[45%]">
+                    
+                    {/* Heading: Sophisticated Serif */}
+                    <div className="flex flex-col gap-4 items-center md:items-start">
+                        <span className="text-[10px] md:text-[11px] font-bold tracking-[0.4em] text-white/80 uppercase mb-2">
+                            Premium Selection
+                        </span>
+                        <h1 className="text-4xl sm:text-5xl md:text-5xl lg:text-6xl font-heading font-bold leading-[1.1] text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] max-w-[15ch]">
+                            {heroCopy.title}
+                        </h1>
+                    </div>
+                    
+                    {/* Subheader: Refined Sans-Serif */}
+                    <p className="text-lg sm:text-xl md:text-lg lg:text-xl font-semibold leading-relaxed text-white max-w-[45ch] tracking-wide drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]">
                         {heroCopy.description}
                     </p>
+
+                    {/* Button: High-Conversion Premium Action */}
                     <Link
                         href={heroCopy.href}
-                        className="inline-block mt-6 w-max rounded-full bg-neutral-900 px-8 py-3 text-sm font-semibold uppercase tracking-wider text-white transition-all duration-300 hover:scale-105 hover:bg-neutral-800"
+                        className="group relative inline-flex items-center justify-center px-12 py-5 overflow-hidden rounded-md bg-[#C5A059] transition-all duration-300 ease-in-out hover:scale-105 active:scale-95 shadow-[0_10px_30px_rgba(197,160,89,0.3)] hover:shadow-[0_15px_40px_rgba(197,160,89,0.4)]"
                     >
-                        {heroCopy.buttonText}
+                        {/* Button Text */}
+                        <span className="relative z-10 text-[10px] md:text-xs font-black uppercase tracking-[0.4em] text-white transition-colors duration-300">
+                            {heroCopy.buttonText}
+                        </span>
+                        
+                        {/* Shine Effect */}
+                        <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
                     </Link>
                 </div>
             </div>
+
+            {/* Atmospheric Gradient for Depth */}
+            <div className="absolute inset-0 z-[1] pointer-events-none bg-gradient-to-b from-black/30 via-transparent to-black/10 md:bg-gradient-to-r md:from-black/40 md:via-transparent md:to-transparent" />
         </section>
     )
 }
