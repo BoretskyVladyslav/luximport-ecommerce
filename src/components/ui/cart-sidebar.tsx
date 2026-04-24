@@ -203,8 +203,8 @@ export function CartSidebar() {
                                             const max =
                                                 typeof item.countInStock === 'number' && Number.isFinite(item.countInStock)
                                                     ? Math.max(0, Math.trunc(item.countInStock))
-                                                    : 0
-                                            const canInc = max > 0 ? item.quantity < max : false
+                                                    : null
+                                            const canInc = max === null ? true : item.quantity < max
                                             return (
                                                 <motion.li
                                                     key={item.id}

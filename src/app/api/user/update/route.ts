@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { revalidatePath } from 'next/cache'
 import { getToken } from 'next-auth/jwt'
 import { z } from 'zod'
 import { createClient } from 'next-sanity'
@@ -12,9 +13,10 @@ const UpdateSchema = z.object({
 
 export async function POST(req: Request) {
     try {
-        if (!process.env.SANITY_API_WRITE_TOKEN) {
-            console.error('[SERVER_DEBUG]: missing env SANITY_API_WRITE_TOKEN')
-            return NextResponse.json({ message: 'Сервіс тимчасово недоступний. Спробуйте пізніше.' }, { status: 400 })
+        const writeToken = process.env.SANITY_API_WRITE_TOKEN
+        if (!writeToken) {
+            console.error('[USER_UPDATE] missing env SANITY_API_WRITE_TOKEN')
+            return NextResponse.json({ message: 'Сервіс тимчасово недоступний. Спробуйте пізніше.' }, { status: 503 })
         }
         const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
         if (!secret) {
@@ -48,12 +50,18 @@ export async function POST(req: Request) {
         if (phone !== undefined) patch.phone = phone
         if (address !== undefined) patch.address = address
         if (name !== undefined) patch.name = name
+        console.log('[USER_UPDATE] incoming payload', {
+            userId,
+            patchKeys: Object.keys(patch),
+            phoneLength: typeof phone === 'string' ? phone.length : 0,
+            addressLength: typeof address === 'string' ? address.length : 0,
+        })
 
         const sanityWrite = createClient({
             projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
             dataset: process.env.NEXT_PUBLIC_SANITY_DATASET,
             apiVersion: process.env.NEXT_PUBLIC_SANITY_API_VERSION || '2024-02-17',
-            token: process.env.SANITY_API_WRITE_TOKEN,
+            token: writeToken,
             useCdn: false,
         })
 
@@ -61,6 +69,14 @@ export async function POST(req: Request) {
             .patch(userId)
             .set(patch)
             .commit<{ _id: string; email?: string | null; name?: string | null; firstName?: string | null; lastName?: string | null; phone?: string | null; address?: string | null }>()
+        console.log('[USER_UPDATE] sanity commit response', {
+            id: updated?._id,
+            hasPhone: typeof updated?.phone === 'string' ? updated.phone.length > 0 : false,
+            hasAddress: typeof updated?.address === 'string' ? updated.address.length > 0 : false,
+        })
+
+        revalidatePath('/account/profile')
+        revalidatePath('/checkout')
 
         return NextResponse.json({
             user: {
@@ -73,9 +89,13 @@ export async function POST(req: Request) {
                 address: updated.address ?? '',
             },
         })
-    } catch (error) {
-        console.error('[SERVER_DEBUG]:', error)
-        return NextResponse.json({ message: 'Виникла помилка. Перевірте дані та спробуйте ще раз.' }, { status: 400 })
+    } catch (error: any) {
+        console.error('[USER_UPDATE] mutation failed', {
+            message: error?.message,
+            details: error?.details,
+            statusCode: error?.statusCode,
+        })
+        return NextResponse.json({ message: 'Виникла помилка. Перевірте дані та спробуйте ще раз.' }, { status: 500 })
     }
 }
 

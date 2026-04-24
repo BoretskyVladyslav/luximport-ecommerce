@@ -31,6 +31,7 @@ async function successRedirect(request: Request) {
     url.searchParams.set('from', 'wfp')
     const orderRef = await parseOrderReference(request)
     if (orderRef) url.searchParams.set('order', orderRef)
+    url.searchParams.set('source', 'return')
     return NextResponse.redirect(url, 303)
 }
 

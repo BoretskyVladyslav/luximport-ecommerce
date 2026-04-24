@@ -7,11 +7,20 @@ import { validateCartAgainstSanityWithClient } from '@/lib/cart/validate'
 import { fromCents, toCents } from '@/lib/money'
 import { getToken } from 'next-auth/jwt'
 import { sendOrderEmails } from '@/lib/send-order-emails'
+import { errorResponse, getCorrelationId } from '@/lib/api-errors'
+import { ORDER_STATE_PENDING } from '@/lib/order-lifecycle'
+import { revalidateUserOrders } from '@/lib/order-revalidation'
 
 export async function POST(req: Request) {
+    const correlationId = getCorrelationId(req)
     try {
         if (!process.env.SANITY_API_TOKEN) {
-            return NextResponse.json({ message: 'Сервіс тимчасово недоступний. Спробуйте пізніше.' }, { status: 400 })
+            return errorResponse(
+                'Сервіс тимчасово недоступний. Спробуйте пізніше.',
+                503,
+                'SANITY_UNAVAILABLE',
+                correlationId
+            )
         }
         const writeClient = createClient({
             projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
@@ -24,11 +33,21 @@ export async function POST(req: Request) {
         try {
             body = await req.json()
         } catch {
-            return NextResponse.json({ message: 'Некоректні дані. Перевірте форму та спробуйте ще раз.' }, { status: 400 })
+            return errorResponse(
+                'Некоректні дані. Перевірте форму та спробуйте ще раз.',
+                400,
+                'CHECKOUT_INVALID_JSON',
+                correlationId
+            )
         }
 
         if (!body || typeof body !== 'object') {
-            return NextResponse.json({ message: 'Некоректні дані. Перевірте форму та спробуйте ще раз.' }, { status: 400 })
+            return errorResponse(
+                'Некоректні дані. Перевірте форму та спробуйте ще раз.',
+                400,
+                'CHECKOUT_INVALID_BODY',
+                correlationId
+            )
         }
 
         const b = body as Record<string, unknown>
@@ -43,7 +62,7 @@ export async function POST(req: Request) {
         } = b
 
         if (!isNonEmptyString(orderId)) {
-            return NextResponse.json({ message: 'Некоректні дані замовлення. Спробуйте ще раз.' }, { status: 400 })
+            return errorResponse('Некоректні дані замовлення. Спробуйте ще раз.', 400, 'CHECKOUT_INVALID_ORDER_ID', correlationId)
         }
         if (!isNonEmptyString(customerName)) {
             return NextResponse.json({ message: 'Некоректні дані. Перевірте імʼя та спробуйте ще раз.' }, { status: 400 })
@@ -57,12 +76,12 @@ export async function POST(req: Request) {
 
         const itemsResult = parseCartItems(rawItems)
         if (itemsResult.ok === false) {
-            return NextResponse.json({ message: itemsResult.error }, { status: 400 })
+            return errorResponse(itemsResult.error, 400, 'CHECKOUT_INVALID_ITEMS', correlationId)
         }
 
         const totalResult = parseTotalAmount(rawTotal)
         if (totalResult.ok === false) {
-            return NextResponse.json({ message: totalResult.error }, { status: 400 })
+            return errorResponse(totalResult.error, 400, 'CHECKOUT_INVALID_TOTAL', correlationId)
         }
 
         const requestedById = new Map<string, number>()
@@ -97,9 +116,11 @@ export async function POST(req: Request) {
                 const safeTitle = row.title || 'Товар'
                 return NextResponse.json(
                     {
+                        code: 'CART_STOCK_CONFLICT',
                         message: `На жаль, товару '${safeTitle}' залишилося лише ${row.stock}. Будь ласка, оновіть кошик.`,
+                        correlationId,
                     },
-                    { status: 400 }
+                    { status: 409 }
                 )
             }
         }
@@ -119,8 +140,10 @@ export async function POST(req: Request) {
         if (!validation.ok) {
             return NextResponse.json(
                 {
+                    code: 'CART_STALE',
                     message: 'Перевірка кошика не пройдена. Оновіть сторінку та спробуйте ще раз.',
                     issues: validation.issues,
+                    correlationId,
                 },
                 { status: 409 }
             )
@@ -130,8 +153,10 @@ export async function POST(req: Request) {
         if (validation.totalCents !== clientTotalCents) {
             return NextResponse.json(
                 {
+                    code: 'CART_TOTAL_MISMATCH',
                     message: 'Сума в кошику змінилася. Оновіть сторінку та спробуйте ще раз.',
                     serverTotal: fromCents(validation.totalCents),
+                    correlationId,
                 },
                 { status: 409 }
             )
@@ -144,9 +169,9 @@ export async function POST(req: Request) {
         const sanityOrder = {
             _type: 'order' as const,
             orderId: orderId.trim(),
-            status: 'pending' as const,
-            isPaid: false,
-            paymentStatus: 'pending' as const,
+            status: ORDER_STATE_PENDING.status,
+            isPaid: ORDER_STATE_PENDING.isPaid,
+            paymentStatus: ORDER_STATE_PENDING.paymentStatus,
             inventoryDecremented: true,
             ...(sessionUserId
                 ? {
@@ -181,7 +206,7 @@ export async function POST(req: Request) {
             const createdOrder = await writeClient.create(sanityOrder as any)
             const createdId = typeof (createdOrder as any)?._id === 'string' ? String((createdOrder as any)._id) : ''
             if (!createdId) {
-                return NextResponse.json({ success: false, message: 'Sanity Error: Empty result from create()' }, { status: 400 })
+                return errorResponse('Sanity Error: Empty result from create()', 400, 'SANITY_CREATE_EMPTY_RESULT', correlationId)
             }
             createdDocument = { _id: createdId }
         } catch (error: any) {
@@ -196,7 +221,7 @@ export async function POST(req: Request) {
                     }
                 })()
             console.error('[RAW_SANITY_ERROR]:', errorMessage)
-            return NextResponse.json({ success: false, message: `Sanity Error: ${errorMessage}` }, { status: 400 })
+            return errorResponse(`Sanity Error: ${errorMessage}`, 400, 'SANITY_CREATE_FAILED', correlationId)
         }
 
         try {
@@ -205,7 +230,21 @@ export async function POST(req: Request) {
                     const productId = typeof item?.productId === 'string' ? item.productId.trim() : ''
                     const quantity = typeof item?.quantity === 'number' && Number.isFinite(item.quantity) ? Math.max(0, Math.trunc(item.quantity)) : 0
                     if (!productId || quantity <= 0) return
-                    await writeClient.patch(productId).dec({ stock: quantity }).commit()
+                    try {
+                        await writeClient.patch(productId).setIfMissing({ stock: 0 }).dec({ stock: quantity }).commit()
+                    } catch (stockError: any) {
+                        const stockErrorMessage =
+                            stockError?.details?.description ||
+                            stockError?.message ||
+                            (() => {
+                                try {
+                                    return JSON.stringify(stockError)
+                                } catch {
+                                    return String(stockError)
+                                }
+                            })()
+                        console.error('[RAW_SANITY_STOCK_ERROR_NON_BLOCKING]:', { correlationId, productId, stockErrorMessage })
+                    }
                 })
             )
         } catch (error: any) {
@@ -219,8 +258,8 @@ export async function POST(req: Request) {
                         return String(error)
                     }
                 })()
-            console.error('[RAW_SANITY_ERROR]:', errorMessage)
-            return NextResponse.json({ success: false, message: `Sanity Error: ${errorMessage}` }, { status: 400 })
+            console.error('[RAW_SANITY_ERROR_NON_BLOCKING_BATCH]:', { correlationId, errorMessage })
+            // Do not block checkout if inventory math fails
         }
 
         const dateFormatted = new Date().toLocaleDateString('uk-UA', { dateStyle: 'long' })
@@ -279,13 +318,17 @@ export async function POST(req: Request) {
             }
         }
 
+        revalidateUserOrders(sessionUserId)
         revalidatePath('/account/profile')
-        return NextResponse.json({ success: true, sanityDocumentId: createdDocument._id })
+        return NextResponse.json({ success: true, sanityDocumentId: createdDocument._id, correlationId })
     } catch (error) {
         const msg = typeof (error as any)?.message === 'string' ? (error as any).message : ''
-        return NextResponse.json(
-            { success: false, message: msg || 'Виникла помилка. Перевірте дані та спробуйте ще раз.' },
-            { status: 400 }
+        console.error('[CHECKOUT_CREATE_ORDER_FAILED]', { correlationId, error })
+        return errorResponse(
+            msg || 'Виникла помилка. Перевірте дані та спробуйте ще раз.',
+            400,
+            'CHECKOUT_CREATE_ORDER_FAILED',
+            correlationId
         )
     }
 }

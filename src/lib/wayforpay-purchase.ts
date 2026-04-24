@@ -14,6 +14,7 @@ export function normalizeMerchantDomainName(input: string): string {
 }
 
 export const WAYFORPAY_GOOGLE_PAY = '1'
+export const WAYFORPAY_MERCHANT_TRANSACTION_TYPE = 'AUTH'
 
 export function formatWayforpayAmount(amount: number): string {
     return amount.toFixed(2)
@@ -37,8 +38,9 @@ export function buildWayforpayPurchasePayload(input: WayforpayPurchaseInput) {
         throw new Error('productNames, productCounts, and productPrices length mismatch')
     }
 
+    const explicitProdDomain = process.env.WAYFORPAY_MERCHANT_DOMAIN?.trim() || 'luximport.com.ua'
     const merchantDomainName =
-        process.env.NODE_ENV === 'production' ? 'luximport.org' : normalizeMerchantDomainName(input.domain)
+        process.env.NODE_ENV === 'production' ? normalizeMerchantDomainName(explicitProdDomain) : normalizeMerchantDomainName(input.domain)
     const orderDate = Math.floor(Date.now() / 1000)
     const amountStr = formatWayforpayAmount(input.amount)
 
@@ -68,5 +70,6 @@ export function buildWayforpayPurchasePayload(input: WayforpayPurchaseInput) {
         productPrice: input.productPrices,
         merchantSignature,
         googlePay: WAYFORPAY_GOOGLE_PAY,
+        merchantTransactionType: WAYFORPAY_MERCHANT_TRANSACTION_TYPE,
     }
 }

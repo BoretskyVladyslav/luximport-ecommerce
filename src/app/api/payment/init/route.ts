@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { buildWayforpayPurchasePayload } from '@/lib/wayforpay-purchase'
+import { errorResponse, getCorrelationId } from '@/lib/api-errors'
 
 function toNumberArray(label: string, v: unknown): { ok: true; arr: number[] } | { ok: false; error: string } {
     if (Array.isArray(v)) {
@@ -38,57 +39,60 @@ function toStringArray(label: string, v: unknown): { ok: true; arr: string[] } |
 }
 
 export async function POST(req: Request) {
+    const correlationId = getCorrelationId(req)
     try {
         let body: unknown
         try {
             body = await req.json()
         } catch {
-            return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+            return errorResponse('Invalid JSON body', 400, 'PAYMENT_INVALID_JSON', correlationId)
         }
 
         if (!body || typeof body !== 'object' || Array.isArray(body)) {
-            return NextResponse.json({ error: 'Body must be a JSON object' }, { status: 400 })
+            return errorResponse('Body must be a JSON object', 400, 'PAYMENT_INVALID_BODY', correlationId)
         }
 
         const b = body as Record<string, unknown>
-        const merchantAccount = process.env.WAYFORPAY_MERCHANT_ACCOUNT
-        const secretKey = process.env.WAYFORPAY_SECRET_KEY
-        const domain = process.env.NEXT_PUBLIC_DOMAIN
+        const merchantAccount = process.env.WAYFORPAY_MERCHANT_ACCOUNT?.trim()
+        const secretKey = process.env.WAYFORPAY_SECRET_KEY?.trim()
+        const domain = process.env.NEXT_PUBLIC_DOMAIN?.trim()
 
         if (!merchantAccount || !secretKey || !domain) {
-            return NextResponse.json({ error: 'Missing payment environment variables' }, { status: 500 })
+            return errorResponse('Missing payment environment variables', 500, 'PAYMENT_ENV_INVALID', correlationId)
         }
 
         const { orderReference, amount, currency = 'UAH', productName, productCount, productPrice } = b
 
         if (typeof orderReference !== 'string' || !orderReference.trim()) {
-            return NextResponse.json({ error: 'Invalid orderReference' }, { status: 400 })
+            return errorResponse('Invalid orderReference', 400, 'PAYMENT_INVALID_ORDER_REFERENCE', correlationId)
         }
         if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
-            return NextResponse.json({ error: 'amount must be a finite number > 0' }, { status: 400 })
+            return errorResponse('amount must be a finite number > 0', 400, 'PAYMENT_INVALID_AMOUNT', correlationId)
         }
         if (typeof currency !== 'string' || !currency.trim()) {
-            return NextResponse.json({ error: 'Invalid currency' }, { status: 400 })
+            return errorResponse('Invalid currency', 400, 'PAYMENT_INVALID_CURRENCY', correlationId)
         }
 
         const names = toStringArray('productName', productName)
         if (names.ok === false) {
-            return NextResponse.json({ error: names.error }, { status: 400 })
+            return errorResponse(names.error, 400, 'PAYMENT_INVALID_PRODUCT_NAME', correlationId)
         }
         const counts = toNumberArray('productCount', productCount)
         if (counts.ok === false) {
-            return NextResponse.json({ error: counts.error }, { status: 400 })
+            return errorResponse(counts.error, 400, 'PAYMENT_INVALID_PRODUCT_COUNT', correlationId)
         }
         const prices = toNumberArray('productPrice', productPrice)
         if (prices.ok === false) {
-            return NextResponse.json({ error: prices.error }, { status: 400 })
+            return errorResponse(prices.error, 400, 'PAYMENT_INVALID_PRODUCT_PRICE', correlationId)
         }
 
         const n = names.arr.length
         if (counts.arr.length !== n || prices.arr.length !== n) {
-            return NextResponse.json(
-                { error: 'productName, productCount, and productPrice must have the same length' },
-                { status: 400 }
+            return errorResponse(
+                'productName, productCount, and productPrice must have the same length',
+                400,
+                'PAYMENT_ITEMS_LENGTH_MISMATCH',
+                correlationId
             )
         }
 
@@ -103,17 +107,28 @@ export async function POST(req: Request) {
             productCounts: counts.arr,
             productPrices: prices.arr,
         })
+        console.info('[PAYMENT_INIT_PAYLOAD]', {
+            correlationId,
+            orderReference: payload.orderReference,
+            merchantAccount: payload.merchantAccount,
+            merchantDomainName: payload.merchantDomainName,
+            merchantTransactionType: (payload as any).merchantTransactionType,
+            hasGooglePay: payload.googlePay === '1',
+        })
 
         return NextResponse.json({
             ...payload,
+            correlationId,
             returnUrl: `${domain}/api/wayforpay/return`,
             serviceUrl: `${domain}/api/payment/webhook`,
         })
     } catch (error) {
-        console.error('payment/init error:', error)
-        return NextResponse.json(
-            { error: 'Internal server error during payment initialization' },
-            { status: 500 }
+        console.error('[PAYMENT_INIT_FAILED]', { correlationId, error })
+        return errorResponse(
+            'Internal server error during payment initialization',
+            500,
+            'PAYMENT_INIT_FAILED',
+            correlationId
         )
     }
 }

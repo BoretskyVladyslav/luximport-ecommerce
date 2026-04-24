@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { createClient } from 'next-sanity'
 import { client } from '@/lib/sanity'
 import { getToken } from 'next-auth/jwt'
+import { ORDER_STATE_PAID } from '@/lib/order-lifecycle'
+import { revalidateUserOrders } from '@/lib/order-revalidation'
+import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
 
@@ -64,12 +67,49 @@ export async function POST(req: Request) {
         }
 
         try {
-            await writeClient.patch(orderId).set({ isPaid: true, status: 'processing' }).commit()
+            const txRefRaw = (body as Record<string, unknown>).transactionReference
+            const transactionReference = typeof txRefRaw === 'string' ? txRefRaw.trim() : ''
+            if (transactionReference) {
+                const merchantAccount = process.env.WAYFORPAY_MERCHANT_ACCOUNT?.trim()
+                const secretKey = process.env.WAYFORPAY_SECRET_KEY?.trim()
+                if (merchantAccount && secretKey) {
+                    const reqTime = Math.floor(Date.now() / 1000)
+                    const signBase = [merchantAccount, transactionReference, String(reqTime)].join(';')
+                    const merchantSignature = crypto.createHmac('md5', secretKey).update(signBase).digest('hex')
+                    const statusRes = await fetch('https://api.wayforpay.com/api', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            transactionType: 'CHECK_STATUS',
+                            merchantAccount,
+                            orderReference: transactionReference,
+                            apiVersion: 1,
+                            time: reqTime,
+                            merchantSignature,
+                        }),
+                    }).catch(() => null)
+                    const statusData = await statusRes?.json().catch(() => null)
+                    const txStatus = typeof statusData?.transactionStatus === 'string' ? statusData.transactionStatus : ''
+                    const approved = txStatus === 'Approved'
+                    if (!approved) {
+                        return NextResponse.json({ message: 'Оплата ще не підтверджена.' }, { status: 409 })
+                    }
+                }
+            }
+            await writeClient
+                .patch(orderId)
+                .set({
+                    isPaid: ORDER_STATE_PAID.isPaid,
+                    status: ORDER_STATE_PAID.status,
+                    paymentStatus: ORDER_STATE_PAID.paymentStatus,
+                })
+                .commit()
         } catch (e) {
             console.error('[orders/sync-payment] Sanity error:', e)
             return NextResponse.json({ message: 'Не вдалося оновити замовлення.' }, { status: 500 })
         }
 
+        revalidateUserOrders(userId)
         return NextResponse.json({ success: true })
     } catch (e) {
         console.error('[orders/sync-payment]', e)

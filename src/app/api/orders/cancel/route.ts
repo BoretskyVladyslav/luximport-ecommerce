@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { getToken } from 'next-auth/jwt'
 import { createClient } from 'next-sanity'
+import { revalidateUserOrders } from '@/lib/order-revalidation'
 
 export const dynamic = 'force-dynamic'
 
@@ -72,7 +73,7 @@ export async function POST(req: Request) {
         const lines: OrderLine[] = Array.isArray(rawItems) ? (rawItems as OrderLine[]) : []
 
         try {
-            await writeClient.patch(orderId).set({ status: 'cancelled' }).commit()
+            await writeClient.patch(orderId).set({ status: 'cancelled', paymentStatus: 'cancelled' }).commit()
         } catch {
             return NextResponse.json({ message: 'Не вдалося скасувати замовлення.' }, { status: 500 })
         }
@@ -88,7 +89,7 @@ export async function POST(req: Request) {
                     if (!pid || qty <= 0) {
                         return Promise.resolve()
                     }
-                    return writeClient.patch(pid).inc({ stock: qty }).commit()
+                    return writeClient.patch(pid).setIfMissing({ stock: 0 }).inc({ stock: qty }).commit()
                 })
             )
         } catch (e) {
@@ -96,6 +97,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: 'Не вдалося повернути товари на склад.' }, { status: 500 })
         }
 
+        revalidateUserOrders(userId)
         return NextResponse.json({ success: true })
     } catch (e) {
         console.error('[orders/cancel]', e)

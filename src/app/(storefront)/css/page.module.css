@@ -175,33 +175,37 @@
   font-size: 0.8rem;
   letter-spacing: 4px;
   text-transform: uppercase;
-}tton {
-  font-family: var(--font-body);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  padding: 1.25rem 3rem;
-  width: 50%;
-  background: transparent;
-  border: 1px solid #111;
-  color: #111;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.loadMoreButton:hover {
-  background: #111;
-  color: #fff;
-  transform: translateY(-2px);
+}ursor: not-allowed;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
-  align-content: start;
-  margin-top: 2rem;
+.confirmBtnInner {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
 }
-@media (max-width: 1200px) {
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #ffffff;
+  animation: spin 0.85s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.fieldError {
+  margin-top: 0.4rem;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  color: #b91c1c;
+  letter-spacing: 0.3px;
+}dia (max-width: 1200px) {
   .grid {
     grid-template-columns: repeat(3, 1fr);
   }

@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion'
 import { HeroSlider } from '@/components/ui/hero-slider'
+import { BrandSlider } from '@/components/ui/BrandSlider'
 import { Marquee } from '@/components/ui/marquee'
 import { ProductCard } from '@/components/ui/product-card'
 import type { HomeTeaserProduct } from '@/lib/sanity-queries'
@@ -13,6 +14,7 @@ export function HomePageFrame({ children }: { children: React.ReactNode }) {
     return (
         <main>
             <HeroSlider />
+            <BrandSlider />
 
             <Marquee />
 

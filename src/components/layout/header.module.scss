@@ -40,8 +40,8 @@
     }
 }
 
-.nav {
-    display: none;
+.nav { 
+    display: none; 
 
     @include desktop {
         display: flex;
@@ -51,7 +51,7 @@
         justify-self: start; 
     }
 
-    a {
+    a { 
         font-family: $font-primary;
         font-size: 0.75rem;
         font-weight: 500;

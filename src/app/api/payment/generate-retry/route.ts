@@ -136,6 +136,14 @@ export async function POST(req: Request) {
             productCounts,
             productPrices,
         })
+        console.info('[PAYMENT_RETRY_PAYLOAD]', {
+            orderId,
+            retryReference: payload.orderReference,
+            merchantAccount: payload.merchantAccount,
+            merchantDomainName: payload.merchantDomainName,
+            merchantTransactionType: (payload as any).merchantTransactionType,
+            hasGooglePay: payload.googlePay === '1',
+        })
 
         return NextResponse.json({
             success: true,
@@ -153,6 +161,7 @@ export async function POST(req: Request) {
                 returnUrl: `${domain}/api/wayforpay/return`,
                 serviceUrl: `${domain}/api/payment/webhook`,
                 googlePay: WAYFORPAY_GOOGLE_PAY,
+                merchantTransactionType: payload.merchantTransactionType,
             },
         })
     } catch (e) {

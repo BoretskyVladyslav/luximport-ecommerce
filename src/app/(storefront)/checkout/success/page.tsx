@@ -49,6 +49,7 @@ export default function CheckoutSuccessPage() {
     const searchParams = useSearchParams()
     const { refresh } = useUser()
     const [isCheckingSession, setIsCheckingSession] = useState(true)
+    const [resolvedPaymentState, setResolvedPaymentState] = useState<'loading' | 'paid' | 'pending' | 'failed'>('loading')
     const didPostPurchaseCleanup = useRef(false)
 
     const orderFromUrl = searchParams.get('order')?.trim() ?? ''
@@ -98,6 +99,56 @@ export default function CheckoutSuccessPage() {
 
     useEffect(() => {
         if (!isHydrated) return
+        if (!orderFromUrl) {
+            setResolvedPaymentState(lastOrder?.isPaid ? 'paid' : 'pending')
+            return
+        }
+        let cancelled = false
+        let attempts = 0
+        const maxAttempts = 8
+        let timer: number | null = null
+        const runCheck = async () => {
+            const res = await fetch(`/api/orders/by-reference?order=${encodeURIComponent(orderFromUrl)}`, {
+                method: 'GET',
+                cache: 'no-store',
+            }).catch(() => null)
+            const data = await res?.json().catch(() => null)
+            const order = data?.order
+            if (cancelled) return
+            if (!order) {
+                setResolvedPaymentState('pending')
+                return false
+            }
+            if (order.isPaid === true || order.paymentStatus === 'paid' || order.status === 'processing' || order.status === 'shipped') {
+                setResolvedPaymentState('paid')
+                return true
+            }
+            if (order.paymentStatus === 'failed' || order.paymentStatus === 'cancelled') {
+                setResolvedPaymentState('failed')
+                return true
+            }
+            setResolvedPaymentState('pending')
+            return false
+        }
+        void (async () => {
+            const done = await runCheck()
+            if (done || cancelled) return
+            timer = window.setInterval(async () => {
+                attempts += 1
+                const complete = await runCheck()
+                if (complete || attempts >= maxAttempts) {
+                    if (timer !== null) window.clearInterval(timer)
+                }
+            }, 2500)
+        })()
+        return () => {
+            cancelled = true
+            if (timer !== null) window.clearInterval(timer)
+        }
+    }, [isHydrated, orderFromUrl, lastOrder?.isPaid])
+
+    useEffect(() => {
+        if (!isHydrated) return
         void revalidateProfilePath()
     }, [isHydrated])
 
@@ -131,6 +182,16 @@ export default function CheckoutSuccessPage() {
         )
     }
 
+    if (resolvedPaymentState === 'loading') {
+        return (
+            <div className={styles.shell}>
+                <div className={styles.inner}>
+                    <p className={styles.loadingText}>Перевіряємо статус оплати...</p>
+                </div>
+            </div>
+        )
+    }
+
     if (!hasOrderContext) {
         return (
             <div className={styles.shell}>
@@ -145,6 +206,21 @@ export default function CheckoutSuccessPage() {
                     <Link href="/" className={styles.btnPrimary}>
                         НА ГОЛОВНУ
                     </Link>
+                </motion.div>
+            </div>
+        )
+    }
+
+    if (resolvedPaymentState === 'failed') {
+        return (
+            <div className={styles.shell}>
+                <motion.div className={styles.inner} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+                    <h1 className={styles.fallbackTitle}>Оплату не підтверджено</h1>
+                    <p className={styles.fallbackSub}>Спробуйте оплатити замовлення повторно в кабінеті.</p>
+                    <div className={styles.actions}>
+                        <Link href="/account/profile" className={styles.btnPrimary}>ПЕРЕЙТИ ДО ЗАМОВЛЕНЬ</Link>
+                        <Link href="/checkout" className={styles.btnSecondary}>СПРОБУВАТИ ЩЕ РАЗ</Link>
+                    </div>
                 </motion.div>
             </div>
         )
@@ -179,7 +255,9 @@ export default function CheckoutSuccessPage() {
                 </motion.h1>
 
                 <motion.p variants={itemVariants} className={styles.subheading}>
-                    Ваше замовлення успішно прийнято в обробку. Лист із деталями вже надіслано на вашу пошту.
+                    {resolvedPaymentState === 'paid'
+                        ? 'Ваше замовлення успішно прийнято в обробку. Лист із деталями вже надіслано на вашу пошту.'
+                        : 'Платіж обробляється. Ми оновимо статус замовлення автоматично протягом кількох хвилин.'}
                 </motion.p>
 
                 <motion.p variants={itemVariants} className={styles.orderLine}>

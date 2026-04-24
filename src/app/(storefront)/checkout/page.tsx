@@ -14,11 +14,13 @@ import { checkoutSchema, CheckoutFormData } from '@/lib/validations/checkout'
 import { LoadingOverlay } from '@/components/ui/loading-overlay'
 import { PhoneInput } from '@/components/ui/phone-input'
 import { Skeleton } from '@/components/ui/skeletons'
+import { CheckoutErrorPanel } from '@/components/features/checkout/CheckoutErrorPanel'
 import toast from 'react-hot-toast'
 import styles from './page.module.scss'
 import type { FieldErrors } from 'react-hook-form'
 
 type NpOption = { description: string; ref: string }
+type SubmitPhase = 'idle' | 'creatingOrder' | 'initializingPayment' | 'redirecting' | 'failed'
 
 function isRecord(v: unknown): v is Record<string, unknown> {
     return typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -30,6 +32,17 @@ function normalizeEmail(input: string) {
 
 function isValidEmail(email: string) {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+}
+
+function createCorrelationId() {
+    try {
+        if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+            return crypto.randomUUID()
+        }
+    } catch {
+        void 0
+    }
+    return `checkout-${Date.now()}-${Math.random().toString(16).slice(2)}`
 }
 
 function toNpOptions(input: unknown): NpOption[] {
@@ -44,6 +57,14 @@ function toNpOptions(input: unknown): NpOption[] {
         }
     }
     return out
+}
+
+function splitAddress(address: string): { city: string; postOffice: string } {
+    const trimmed = address.trim()
+    if (!trimmed) return { city: '', postOffice: '' }
+    const parts = trimmed.split(',').map((p) => p.trim()).filter(Boolean)
+    if (parts.length <= 1) return { city: trimmed, postOffice: '' }
+    return { city: parts[0] ?? '', postOffice: parts.slice(1).join(', ') }
 }
 
 export default function CheckoutPage() {
@@ -78,14 +99,23 @@ export default function CheckoutPage() {
     const [npError, setNpError] = useState<string | null>(null)
     const [manualDelivery, setManualDelivery] = useState(false)
     const [profileLoaded, setProfileLoaded] = useState(false)
+    const [submitPhase, setSubmitPhase] = useState<SubmitPhase>('idle')
 
     const checkoutFailureMessage =
         'Помилка при створенні замовлення. Спробуйте ще раз.'
+    const phaseMessage: Record<SubmitPhase, string> = {
+        idle: 'ПІДТВЕРДИТИ ЗАМОВЛЕННЯ',
+        creatingOrder: 'Створюємо замовлення...',
+        initializingPayment: 'Ініціалізуємо оплату...',
+        redirecting: 'Переходимо на оплату...',
+        failed: 'Спробувати ще раз',
+    }
 
     const {
         register,
         handleSubmit,
         setValue,
+        reset,
         setError,
         watch,
         formState: { errors, isSubmitting },
@@ -93,9 +123,9 @@ export default function CheckoutPage() {
         resolver: zodResolver(checkoutSchema),
         shouldFocusError: true,
         defaultValues: {
-            name: '',
-            email: '',
-            phone: '',
+            name: user?.name ?? '',
+            email: user?.email ?? '',
+            phone: user?.phone ?? '',
             city: '',
             postOffice: '',
         },
@@ -124,11 +154,18 @@ export default function CheckoutPage() {
                             : ''
                 const email = typeof u.email === 'string' ? u.email : ''
                 const phone = typeof u.phone === 'string' ? u.phone : ''
+                const shippingAddress = typeof u.address === 'string' ? u.address : ''
+                const parsedAddress = splitAddress(shippingAddress)
                 const draft = useCheckoutDraftStore.getState()
                 if (!cancelled) {
-                    setValue('name', draft.name.trim() ? draft.name : name, { shouldValidate: false })
-                    setValue('email', email, { shouldValidate: false })
-                    setValue('phone', draft.phone.trim() ? draft.phone : phone, { shouldValidate: false })
+                    const nextDefaults = {
+                        name: draft.name.trim() ? draft.name : name,
+                        email,
+                        phone: draft.phone.trim() ? draft.phone : phone,
+                        city: draft.city.trim() ? draft.city : parsedAddress.city,
+                        postOffice: draft.postOffice.trim() ? draft.postOffice : parsedAddress.postOffice,
+                    }
+                    reset(nextDefaults, { keepErrors: true, keepDirty: false })
                     setProfileLoaded(true)
                 }
             } catch {
@@ -139,13 +176,13 @@ export default function CheckoutPage() {
         return () => {
             cancelled = true
         }
-    }, [pageReady, router, setValue])
+    }, [pageReady, reset, router])
 
     useEffect(() => {
         if (!pageReady) return
         const d = useCheckoutDraftStore.getState()
-        setValue('city', d.city, { shouldValidate: false })
-        setValue('postOffice', d.postOffice, { shouldValidate: false })
+        if (d.city.trim()) setValue('city', d.city, { shouldValidate: false })
+        if (d.postOffice.trim()) setValue('postOffice', d.postOffice, { shouldValidate: false })
         setCityRef(d.cityRef)
         setManualDelivery(d.manualDelivery)
     }, [pageReady, setValue])
@@ -244,14 +281,17 @@ export default function CheckoutPage() {
         if (items.length === 0) {
             const msg = 'Ваш кошик порожній'
             setCheckoutError(msg)
+            setSubmitPhase('failed')
             toast.error(msg)
             return
         }
 
         setCheckoutError(null)
+        setSubmitPhase('creatingOrder')
         const normalizedEmail = normalizeEmail(data.email)
         if (!isValidEmail(normalizedEmail)) {
             setError('email', { type: 'validate', message: 'Будь ласка, введіть коректний email' })
+            setSubmitPhase('failed')
             return
         }
         const sanitizedPhone = data.phone
@@ -262,13 +302,15 @@ export default function CheckoutPage() {
         const totalFormatted = `${total.toLocaleString('uk-UA')} ₴`
 
         try {
+            const correlationId = createCorrelationId()
             const slowTimer = setTimeout(() => {
                 toast('З\'єднання повільне, але ми працюємо. Будь ласка, зачекайте.')
             }, 10000)
+            console.info('[CHECKOUT_FLOW]', { correlationId, phase: 'creatingOrder' })
 
-            const createOrderRes = await fetch('/api/checkout/create-order', {
+            const checkoutSessionRes = await fetch('/api/checkout/session', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-correlation-id': correlationId },
                 body: JSON.stringify({
                     orderId: randomId,
                     customerName: data.name,
@@ -280,57 +322,40 @@ export default function CheckoutPage() {
                 }),
             })
 
-            const createdOrder = await createOrderRes.json().catch(() => null)
+            const sessionData = await checkoutSessionRes.json().catch(() => null)
 
-            if (!createOrderRes.ok) {
-                const msg = typeof createdOrder?.message === 'string' ? createdOrder.message : checkoutFailureMessage
+            if (!checkoutSessionRes.ok) {
+                const msg = typeof sessionData?.message === 'string' ? sessionData.message : checkoutFailureMessage
                 setCheckoutError(msg)
+                setSubmitPhase('failed')
                 toast.error(msg || 'Невідома помилка')
                 clearTimeout(slowTimer)
                 return
             }
 
-            const sanityOrderId = typeof createdOrder?.sanityDocumentId === 'string' ? createdOrder.sanityDocumentId : ''
+            const sanityOrderId = typeof sessionData?.sanityDocumentId === 'string' ? sessionData.sanityDocumentId : ''
             if (!sanityOrderId) {
                 const msg = checkoutFailureMessage
                 setCheckoutError(msg)
+                setSubmitPhase('failed')
                 toast.error(msg)
                 clearTimeout(slowTimer)
                 return
             }
 
-            const productNames = items.map(item => item.title)
-            const productCounts = items.map(item => item.quantity)
-            const productPrices = items.map(item => {
-                const threshold = item.piecesPerBox ?? item.wholesaleMinQuantity
-                const isWholesale = threshold && item.quantity >= threshold
-                const applyPrice = isWholesale ? item.wholesalePrice : item.price
-                return applyPrice || 0
-            })
-
-            const paymentRes = await fetch('/api/payment/init', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    orderReference: sanityOrderId,
-                    amount: total,
-                    productName: productNames,
-                    productCount: productCounts,
-                    productPrice: productPrices,
-                }),
-            })
-
-            const paymentData = await paymentRes.json()
-
-            if (!paymentRes.ok) {
-                console.error('Payment Init Error:', paymentData)
+            setSubmitPhase('initializingPayment')
+            const paymentData = sessionData?.paymentData
+            if (!paymentData || typeof paymentData !== 'object') {
                 setCheckoutError(checkoutFailureMessage)
+                setSubmitPhase('failed')
+                toast.error('Не вдалося ініціалізувати оплату. Спробуйте ще раз.')
                 clearTimeout(slowTimer)
                 return
             }
 
             clearTimeout(slowTimer)
 
+            setSubmitPhase('redirecting')
             const newOrder = {
                 id: randomId,
                 date: formattedDate,
@@ -384,18 +409,23 @@ export default function CheckoutPage() {
             document.body.appendChild(form)
             try {
                 sessionStorage.setItem('luximport_checkout_expect_success', '1')
+                sessionStorage.setItem('luximport_checkout_correlation_id', correlationId)
             } catch {
                 void 0
             }
+            console.info('[CHECKOUT_FLOW]', { correlationId, phase: 'redirecting' })
             form.submit()
         } catch (error) {
             console.error('Checkout error:', error)
             setCheckoutError(checkoutFailureMessage)
+            setSubmitPhase('failed')
+            toast.error(checkoutFailureMessage)
         }
     }
 
     const onInvalid = (errs: FieldErrors<CheckoutFormData>) => {
         setCheckoutError('Перевірте, будь ласка, виділені поля')
+        setSubmitPhase('failed')
         const keys = Object.keys(errs) as Array<keyof CheckoutFormData>
         const firstKey = keys[0]
         if (!firstKey) return
@@ -452,9 +482,13 @@ export default function CheckoutPage() {
                 <h1 className={styles.sectionTitle}>ОФОРМЛЕННЯ ЗАМОВЛЕННЯ</h1>
 
                 {checkoutError && (
-                    <p className={styles.checkoutError} role="alert">
-                        {checkoutError}
-                    </p>
+                    <CheckoutErrorPanel
+                        message={checkoutError}
+                        onRetry={() => {
+                            setCheckoutError(null)
+                            setSubmitPhase('idle')
+                        }}
+                    />
                 )}
 
                 <form id="checkout-form" onSubmit={handleSubmit(onSubmit, onInvalid)} noValidate>
@@ -613,11 +647,11 @@ export default function CheckoutPage() {
                     type="submit"
                     form="checkout-form"
                     className={styles.confirmBtn}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || submitPhase === 'redirecting'}
                 >
                     <span className={styles.confirmBtnInner}>
                         {isSubmitting && <span className={styles.spinner} aria-hidden="true" />}
-                        {isSubmitting ? 'Обробка замовлення...' : 'ПІДТВЕРДИТИ ЗАМОВЛЕННЯ'}
+                        {isSubmitting ? phaseMessage[submitPhase] : phaseMessage[submitPhase]}
                     </span>
                 </button>
             </div>

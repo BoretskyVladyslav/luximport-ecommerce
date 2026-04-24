@@ -93,13 +93,13 @@ export const useCartStore = create<CartState>()(
                             const stock = line?.stock
                             if (typeof pid !== 'string' || !pid) continue
                             const normalizedStock =
-                                typeof stock === 'number' && Number.isFinite(stock) ? Math.max(0, Math.trunc(stock)) : 0
+                                typeof stock === 'number' && Number.isFinite(stock) ? Math.max(0, Math.trunc(stock)) : null
                             byId.set(pid, { stock: normalizedStock })
                         }
 
                         for (const item of nextItems) {
-                            const s = byId.get(item.id)?.stock ?? 0
-                            item.countInStock = s
+                            const s = byId.get(item.id)?.stock
+                            item.countInStock = typeof s === 'number' ? s : undefined
                             if (typeof s === 'number' && s <= 0) {
                                 removedOutOfStock = true
                             }
@@ -159,14 +159,21 @@ export const useCartStore = create<CartState>()(
                 const normalizedCountInStock =
                     typeof product.countInStock === 'number' && Number.isFinite(product.countInStock)
                         ? Math.max(0, Math.trunc(product.countInStock))
-                        : 999999
-                if (normalizedCountInStock <= 0) return
+                        : null
+                if (normalizedCountInStock !== null && normalizedCountInStock <= 0) return
                 if (existingItem) {
-                    if (existingItem.quantity >= normalizedCountInStock) return
+                    if (normalizedCountInStock !== null && existingItem.quantity >= normalizedCountInStock) return
                     set({
                         items: currentItems.map((item) =>
                             item.id === product.id
-                                ? { ...item, quantity: item.quantity + 1, countInStock: normalizedCountInStock }
+                                ? {
+                                      ...item,
+                                      quantity: item.quantity + 1,
+                                      countInStock:
+                                          normalizedCountInStock !== null
+                                              ? normalizedCountInStock
+                                              : item.countInStock ?? undefined,
+                                  }
                                 : item
                         ),
                         isOpen: true,
@@ -177,7 +184,7 @@ export const useCartStore = create<CartState>()(
                             ...currentItems,
                             {
                                 ...product,
-                                countInStock: normalizedCountInStock,
+                                countInStock: normalizedCountInStock ?? undefined,
                                 piecesPerBox:
                                     typeof product.piecesPerBox === 'number' && Number.isFinite(product.piecesPerBox) && product.piecesPerBox > 0
                                         ? Math.trunc(product.piecesPerBox)
@@ -193,14 +200,18 @@ export const useCartStore = create<CartState>()(
                 set({ items: get().items.filter((item) => item.id !== id) })
             },
             updateQuantity: (id, quantity) => {
-                if (quantity < 1) return
                 const item = get().items.find((i) => i.id === id)
+                if (!item) return
+                if (quantity < 1) {
+                    set({ items: get().items.filter((i) => i.id !== id) })
+                    return
+                }
                 const max =
-                    item && typeof item.countInStock === 'number' && Number.isFinite(item.countInStock)
+                    typeof item.countInStock === 'number' && Number.isFinite(item.countInStock)
                         ? Math.max(0, Math.trunc(item.countInStock))
-                        : 0
-                if (max <= 0) return
-                if (quantity > max) return
+                        : null
+                const isIncrement = quantity > item.quantity
+                if (isIncrement && max !== null && quantity > max) return
                 set({
                     items: get().items.map((item) =>
                         item.id === id ? { ...item, quantity } : item
@@ -240,7 +251,7 @@ export const useCartStore = create<CartState>()(
                               const price = typeof i.price === 'number' && Number.isFinite(i.price) ? i.price : 0
                               const quantity = typeof i.quantity === 'number' && Number.isFinite(i.quantity) ? Math.max(1, Math.trunc(i.quantity)) : 1
                               const countInStock =
-                                  typeof i.countInStock === 'number' && Number.isFinite(i.countInStock) ? Math.max(0, Math.trunc(i.countInStock)) : 0
+                                  typeof i.countInStock === 'number' && Number.isFinite(i.countInStock) ? Math.max(0, Math.trunc(i.countInStock)) : undefined
                               const piecesPerBox =
                                   typeof i.piecesPerBox === 'number' && Number.isFinite(i.piecesPerBox) && i.piecesPerBox > 0
                                       ? Math.trunc(i.piecesPerBox)

@@ -31,7 +31,7 @@ export async function GET(req: Request) {
         const user = await sanityServer.fetch<UserRow | null>(
             '*[_type == "user" && _id == $id][0]{ _id, email, name, firstName, lastName, phone, address }',
             { id: userId },
-            { cache: 'no-store', next: { revalidate: 0 } }
+            { cache: 'no-store' }
         )
 
         if (!user?._id) {

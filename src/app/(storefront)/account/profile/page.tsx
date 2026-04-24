@@ -293,6 +293,16 @@ export default function ProfilePage() {
             .filter((x): x is OrderListEntry => x !== null)
     }, [])
 
+    const refreshOrders = useCallback(async () => {
+        setIsLoadingOrders(true)
+        try {
+            const mapped = await fetchServerOrders()
+            setServerOrders(mapped)
+        } finally {
+            setIsLoadingOrders(false)
+        }
+    }, [fetchServerOrders])
+
     useEffect(() => {
         void router.refresh()
     }, [router])
@@ -337,11 +347,27 @@ export default function ProfilePage() {
         if (!isHydrated || isLoadingProfile) return
         if (!isAuthenticated || !user) return
         let cancelled = false
-        setIsLoadingOrders(true)
         setServerOrders([])
         void fetchServerOrders()
             .then((mapped) => {
                 if (!cancelled) setServerOrders(mapped)
+                const hasPending = mapped.some((o) => (o.payment ?? 'pending') === 'pending')
+                if (hasPending && !cancelled) {
+                    let attempts = 0
+                    const timer = window.setInterval(() => {
+                        attempts += 1
+                        void fetchServerOrders()
+                            .then((next) => {
+                                if (!cancelled) setServerOrders(next)
+                                if (next.every((o) => (o.payment ?? 'pending') !== 'pending') || attempts >= 5) {
+                                    window.clearInterval(timer)
+                                }
+                            })
+                            .catch(() => {
+                                if (attempts >= 5) window.clearInterval(timer)
+                            })
+                    }, 3000)
+                }
             })
             .catch((error: unknown) => {
                 console.error('[PROFILE_ORDERS]:', error)
@@ -388,16 +414,11 @@ export default function ProfilePage() {
                     return
                 }
                 const details = od as Record<string, unknown>
-                const pubMerchant = process.env.NEXT_PUBLIC_WAYFORPAY_MERCHANT_ACCOUNT?.trim()
-                const pubDomain = process.env.NEXT_PUBLIC_DOMAIN?.trim()
                 const merchantAccount =
-                    pubMerchant || (typeof details.merchantAccount === 'string' ? details.merchantAccount : '')
+                    typeof details.merchantAccount === 'string' ? details.merchantAccount.trim() : ''
                 const rawDomain =
-                    pubDomain ||
-                    (typeof details.merchantDomainName === 'string' ? details.merchantDomainName : '') ||
-                    ''
-                const merchantDomainName =
-                    process.env.NODE_ENV === 'production' ? 'luximport.org' : normalizeMerchantDomainName(rawDomain)
+                    typeof details.merchantDomainName === 'string' ? details.merchantDomainName : ''
+                const merchantDomainName = normalizeMerchantDomainName(rawDomain)
                 if (!merchantAccount || !merchantDomainName) {
                     toast.error('Налаштування оплати неповні. Зверніться до підтримки.')
                     return
@@ -425,6 +446,9 @@ export default function ProfilePage() {
                         productName,
                         productPrice,
                         productCount,
+                        ...(typeof details.merchantTransactionType === 'string'
+                            ? { merchantTransactionType: details.merchantTransactionType }
+                            : {}),
                         clientFirstName: firstName,
                         clientLastName: lastName,
                         clientPhone,
@@ -441,14 +465,14 @@ export default function ProfilePage() {
                         void fetch('/api/orders/sync-payment', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ orderId: sanityDocumentId }),
+                            body: JSON.stringify({ orderId: sanityDocumentId, transactionReference: String(data.retryReference) }),
                         })
                             .then((res) => {
                                 if (!res.ok) {
                                     throw new Error(String(res.status))
                                 }
                                 toast.success('Оплату успішно підтверджено!')
-                                window.location.reload()
+                                void refreshOrders()
                             })
                             .catch((error: unknown) => {
                                 console.error('Sync error:', error)
@@ -468,7 +492,7 @@ export default function ProfilePage() {
                 setPaymentLoadingOrderId(null)
             }
         },
-        [user, wayforpayScriptReady]
+        [user, wayforpayScriptReady, refreshOrders]
     )
 
     if (sessionStatus === 'loading' || !sessionUserId || !isHydrated || isLoadingProfile) {
@@ -777,14 +801,7 @@ export default function ProfilePage() {
                                                     <OrdersListClient
                                                         items={orderCardItems}
                                                         onOrdersInvalidate={() => {
-                                                            setIsLoadingOrders(true)
-                                                            void fetchServerOrders()
-                                                                .then((mapped) => {
-                                                                    setServerOrders(mapped)
-                                                                })
-                                                                .finally(() => {
-                                                                    setIsLoadingOrders(false)
-                                                                })
+                                                            void refreshOrders()
                                                         }}
                                                         onProfilePay={startProfilePayment}
                                                         paymentLoadingOrderId={paymentLoadingOrderId}
