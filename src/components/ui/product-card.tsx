@@ -165,8 +165,16 @@ export function ProductCard({ id, index, title, slug, price, wholesalePrice, who
                         )}
                     </>
                 )}
-                {stock !== undefined && stock < 5 && (
-                    <div className={styles.stockWarning}>Залишилось лише {stock} шт.</div>
+                {stock !== undefined && stock !== null ? (
+                    stock > 0 ? (
+                        <div className="text-[0.65rem] sm:text-[0.7rem] text-stone-500 uppercase tracking-wider mb-2">
+                            В наявності: {stock} шт.
+                        </div>
+                    ) : (
+                        <div className="text-[0.65rem] sm:text-[0.7rem] text-red-500 uppercase tracking-wider mb-2">Немає в наявності</div>
+                    )
+                ) : (
+                    <div className="text-[0.65rem] sm:text-[0.7rem] text-stone-500 uppercase tracking-wider mb-2">В наявності</div>
                 )}
                 <div className={`${styles.footer} gap-2`}>
                     <span className={`${styles.price} ${isOutOfStock ? 'opacity-60' : ''} min-w-0 truncate text-[1.05rem] sm:text-[1.2rem]`}>

@@ -135,7 +135,7 @@ export default function ContactsPage() {
                     >
                         <div className={styles.label}>Соцмережі</div>
                         <div className={styles.socialRow}>
-                            <a href="https://www.instagram.com/iryna_luximport?igsh=OXlrZWpmaXVzZG95" target="_blank" rel="noopener noreferrer" className={styles.socialLink} title="Instagram">
+                            <a href="https://www.instagram.com/lux_import_ua?igsh=OXlrZWpmaXVzZG95" target="_blank" rel="noopener noreferrer" className={styles.socialLink} title="Instagram">
                                 <InstagramIcon />
                             </a>
                             <a href="https://www.facebook.com/share/14RHhHNs66Y/" target="_blank" rel="noopener noreferrer" className={styles.socialLink} title="Facebook">

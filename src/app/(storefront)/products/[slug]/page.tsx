@@ -142,14 +142,16 @@ export default async function ProductPage({
                             )}
                     </div>
 
-                    {product.stock !== undefined && product.stock < 5 && product.stock > 0 && (
-                        <p className="text-xs text-amber-600 uppercase tracking-widest">
-                            Залишилось лише {product.stock} шт.
-                        </p>
-                    )}
-
-                    {product.stock === 0 && (
-                        <p className="text-xs text-red-500 uppercase tracking-widest">Немає в наявності</p>
+                    {product.stock !== undefined && product.stock !== null ? (
+                        product.stock > 0 ? (
+                            <p className="text-xs text-stone-600 uppercase tracking-widest">
+                                В наявності: {product.stock} шт.
+                            </p>
+                        ) : (
+                            <p className="text-xs text-red-500 uppercase tracking-widest">Немає в наявності</p>
+                        )
+                    ) : (
+                        <p className="text-xs text-stone-600 uppercase tracking-widest">В наявності</p>
                     )}
 
                     <AddToCartButton

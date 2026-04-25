@@ -35,7 +35,7 @@ export function Footer() {
                     <a href="mailto:oljacenuk88@gmail.com" className={styles.link}>oljacenuk88@gmail.com</a>
                     <p className={styles.text}>Пн-Пт, 9:00 - 18:00</p>
                     <div className={styles.social}>
-                        <a href="https://www.instagram.com/iryna_luximport?igsh=OXlrZWpmaXVzZG95" target="_blank" rel="noopener noreferrer" className={styles.link} title="Instagram">
+                        <a href="https://www.instagram.com/lux_import_ua?igsh=OXlrZWpmaXVzZG95" target="_blank" rel="noopener noreferrer" className={styles.link} title="Instagram">
                             <InstagramIcon />
                         </a>
                         <a href="https://www.facebook.com/share/14RHhHNs66Y/" target="_blank" rel="noopener noreferrer" className={styles.link} title="Facebook">

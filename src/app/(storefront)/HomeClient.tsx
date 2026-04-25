@@ -3,7 +3,6 @@
 import { motion } from 'framer-motion'
 import { HeroSlider } from '@/components/ui/hero-slider'
 import { BrandSlider } from '@/components/ui/BrandSlider'
-import { Marquee } from '@/components/ui/marquee'
 import { ProductCard } from '@/components/ui/product-card'
 import type { HomeTeaserProduct } from '@/lib/sanity-queries'
 import styles from './page.module.scss'
@@ -16,7 +15,7 @@ export function HomePageFrame({ children }: { children: React.ReactNode }) {
             <HeroSlider />
             <BrandSlider />
 
-            <Marquee />
+
 
             <section className={styles.advantagesSection}>
                 <div className={styles.advantagesGrid}>
