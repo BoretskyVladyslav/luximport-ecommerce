@@ -2,6 +2,9 @@
 const path = require('path')
 
 const nextConfig = {
+    experimental: {
+        serverComponentsExternalPackages: ['xlsx'],
+    },
     sassOptions: {
         includePaths: [path.join(__dirname, 'src/styles')],
     },

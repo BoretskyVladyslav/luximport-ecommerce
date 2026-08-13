@@ -155,13 +155,15 @@ async function run() {
                 stock,
                 sku,
                 ...(imageAssetId && {
-                    image: {
+                    // schema field is `images` (array), not `image`
+                    images: [{
                         _type: 'image',
+                        _key: `img-${slug || Date.now()}`,
                         asset: {
                             _type: 'reference',
                             _ref: imageAssetId,
                         }
-                    }
+                    }]
                 })
             };
 
