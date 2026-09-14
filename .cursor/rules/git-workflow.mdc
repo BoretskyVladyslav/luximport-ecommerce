@@ -1,0 +1,13 @@
+---
+description: Git commit and push conventions for major changes and milestones
+globs: "**/*"
+alwaysApply: true
+---
+# Git Workflow Conventions
+- For any major change, completed feature, file import milestone, or component update:
+  1. Ensure typechecks and linters pass.
+  2. Stage only intentional files (never commit temporary build artifacts, .env files, or scratch logs).
+  3. Create a clear, conventional commit (e.g., feat:, fix:, chore:).
+  4. Immediately push the branch to remote (`git push origin <current-branch>`).
+- If working tree contains uncommitted experimental noise, keep it unstaged or stash it before pushing.
+- Always report the commit SHA and push status back to the user upon completion.
