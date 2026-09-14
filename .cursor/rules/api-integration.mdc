@@ -1,0 +1,19 @@
+---
+description: Zod parsing, structured errors, and strict runtime checks for App Router API routes including catalog/1C sync.
+globs: src/app/api/**/*.ts
+alwaysApply: false
+---
+
+# API routes
+
+- Parse every JSON/form body with Zod `.safeParse`. Reject on failure; never trust `as` casts.
+- Return errors via `errorResponse()` + `getCorrelationId()` from `@/lib/api-errors`. Shape: `{ code, message, correlationId, details? }`. Never leak stacks, env, or tokens.
+
+# External / catalog / 1C writes
+
+- Check required env at runtime. Use `runtime = 'nodejs'`, size/timeout caps, and `?dryRun=1` before writes.
+- Import auth: `Authorization: Bearer` or `x-import-token` vs `SANITY_API_WRITE_TOKEN` / `SANITY_API_TOKEN`.
+
+# Token budget
+
+- On sync failure, return the structured error and stop. Do not retry-loop in chat. Send traces to `debugger`.

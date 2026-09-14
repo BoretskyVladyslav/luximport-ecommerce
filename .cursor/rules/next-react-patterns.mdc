@@ -1,0 +1,17 @@
+---
+description: Next.js App Router, TypeScript rigor, concise diffs. Applies to TS/TSX storefront and lib code.
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# Next.js / React
+
+- Routes live under `src/app/`. Server Components by default. `'use client'` only for interactive islands.
+- Use `next/image` and `next/link`. Colocate styles in `*.module.scss`. Import via `@/*`.
+- New code: no `any`. Reuse existing lib types. Do not flip `tsconfig.json` `strict: false` unless asked.
+
+# Token budget
+
+- Output the diff only. Do not restate the request, write tutorials, or dump full files.
+- Do not format in-chat. The `afterFileEdit` hook owns formatting.
+- Delegate verbose logs to `debugger`. Delegate pass/fail checks to `verifier`.
