@@ -40,7 +40,7 @@ export default function Home() {
       <link
         rel="preload"
         as="image"
-        href="/images/hero/dr-gerard/mobile.jpg"
+        href="/images/hero/dr-gerard/mobile.webp"
         media="(max-width: 767px)"
         fetchPriority="high"
       />

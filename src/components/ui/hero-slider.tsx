@@ -24,7 +24,7 @@ const slides = [
     label: "Оригінальна європейська якість",
     highlight: "Опт від 1 ящика • Швидка доставка по всій Україні",
     bg: "/images/hero/dr-gerard/desktop.jpg",
-    bgMobile: "/images/hero/dr-gerard/mobile.jpg",
+    bgMobile: "/images/hero/dr-gerard/mobile.webp",
     tone: "light" as const,
   },
   {
@@ -138,7 +138,7 @@ export function HeroSlider() {
       onMouseEnter={() => onHoverPause(true)}
       onMouseLeave={() => onHoverPause(false)}
     >
-      <div className="pointer-events-none relative h-[600px] w-full select-none md:h-[85vh]">
+      <div className="pointer-events-none relative h-[88vh] min-h-[640px] w-full select-none md:h-[85vh] md:min-h-0">
         {slides.map((item, index) => {
           const isLcp = index === 0;
           const showImage = mountedSlides.has(index);
@@ -167,11 +167,7 @@ export function HeroSlider() {
                   priority={isLcp}
                   fetchPriority={isLcp ? "high" : "low"}
                   loading={isLcp ? "eager" : "lazy"}
-                  className={
-                    item.tone === "light"
-                      ? "object-cover object-top"
-                      : "object-cover"
-                  }
+                  className="object-cover object-center"
                   sizes={isLcp ? "100vw" : "(max-width: 767px) 100vw, 0px"}
                 />
               </div>
@@ -318,7 +314,7 @@ export function HeroSlider() {
       <div
         role="tablist"
         aria-label="Кампанії"
-        className="absolute bottom-4 left-1/2 z-20 flex w-[min(100%-2rem,720px)] -translate-x-1/2 items-end gap-2 md:bottom-7 md:gap-6"
+        className="absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 z-20 flex w-[min(100%-2rem,720px)] -translate-x-1/2 items-end gap-2 pb-3 md:bottom-7 md:pb-0 md:gap-6"
       >
         {slides.map((item, index) => {
           const active = index === currentIndex;
