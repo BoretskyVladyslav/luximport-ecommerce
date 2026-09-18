@@ -133,130 +133,132 @@ export default async function ProductPage({
     : "/catalog";
 
   return (
-    <div className={styles.page}>
-      <JsonLd
-        data={productJsonLd({
-          name: displayTitle,
-          description: portableTextToPlainText(product.description),
-          sku: product.sku,
-          brand: product.brand,
-          images: galleryUrls,
-          price: Number.isFinite(product.price) ? product.price : 0,
-          availability: isOutOfStock ? "OutOfStock" : "InStock",
-          path: `/products/${product.slug.current}`,
-        })}
-      />
-      <JsonLd
-        data={breadcrumbJsonLd([
-          { name: "Головна", path: "/" },
-          { name: "Каталог", path: "/catalog" },
-          ...(product.category
-            ? [
-                {
-                  name: product.category,
-                  path: categoryHref,
-                },
-              ]
-            : []),
-          {
+    <div className={styles.pageRouteRoot}>
+      <div className={styles.page}>
+        <JsonLd
+          data={productJsonLd({
             name: displayTitle,
+            description: portableTextToPlainText(product.description),
+            sku: product.sku,
+            brand: product.brand,
+            images: galleryUrls,
+            price: Number.isFinite(product.price) ? product.price : 0,
+            availability: isOutOfStock ? "OutOfStock" : "InStock",
             path: `/products/${product.slug.current}`,
-          },
-        ])}
-      />
-      <nav className={styles.crumbs} aria-label="Навігація">
-        <Link href="/" className={styles.crumbLink}>
-          Головна
-        </Link>
-        <span className={styles.crumbSep} aria-hidden>
-          /
-        </span>
-        <Link href="/catalog" className={styles.crumbLink}>
-          Каталог
-        </Link>
-        {product.category ? (
-          <>
-            <span className={styles.crumbSep} aria-hidden>
-              /
-            </span>
-            <Link href={categoryHref} className={styles.crumbLink}>
-              {product.category}
-            </Link>
-          </>
-        ) : null}
-        <span className={styles.crumbSep} aria-hidden>
-          /
-        </span>
-        <span className={styles.crumbCurrent}>{displayTitle}</span>
-      </nav>
-
-      <div className={styles.layout}>
-        <ProductGallery
-          images={galleryUrls}
-          title={displayTitle}
-          isOutOfStock={isOutOfStock}
+          })}
         />
+        <JsonLd
+          data={breadcrumbJsonLd([
+            { name: "Головна", path: "/" },
+            { name: "Каталог", path: "/catalog" },
+            ...(product.category
+              ? [
+                  {
+                    name: product.category,
+                    path: categoryHref,
+                  },
+                ]
+              : []),
+            {
+              name: displayTitle,
+              path: `/products/${product.slug.current}`,
+            },
+          ])}
+        />
+        <nav className={styles.crumbs} aria-label="Навігація">
+          <Link href="/" className={styles.crumbLink}>
+            Головна
+          </Link>
+          <span className={styles.crumbSep} aria-hidden>
+            /
+          </span>
+          <Link href="/catalog" className={styles.crumbLink}>
+            Каталог
+          </Link>
+          {product.category ? (
+            <>
+              <span className={styles.crumbSep} aria-hidden>
+                /
+              </span>
+              <Link href={categoryHref} className={styles.crumbLink}>
+                {product.category}
+              </Link>
+            </>
+          ) : null}
+          <span className={styles.crumbSep} aria-hidden>
+            /
+          </span>
+          <span className={styles.crumbCurrent}>{displayTitle}</span>
+        </nav>
 
-        <div className={styles.info}>
-          {product.brand ? (
-            <p className={styles.brand}>{product.brand}</p>
-          ) : null}
-          <h1 className={styles.title}>{displayTitle}</h1>
-          {product.origin ? (
-            <span className={styles.origin}>{product.origin}</span>
-          ) : null}
-          {typeof product.description === "string" &&
-          product.description.trim() ? (
-            <p className={styles.description}>{product.description}</p>
-          ) : Array.isArray(product.description) &&
-            product.description.length ? (
-            <div className={styles.prose}>
-              <PortableText value={product.description as any} />
-            </div>
-          ) : null}
-
-          <AddToCartButton
-            id={product._id}
+        <div className={styles.pdpGrid}>
+          <ProductGallery
+            images={galleryUrls}
             title={displayTitle}
-            slug={product.slug.current}
-            price={Number.isFinite(product.price) ? product.price : 0}
-            wholesalePrice={
-              typeof product.wholesalePrice === "number" &&
-              Number.isFinite(product.wholesalePrice)
-                ? product.wholesalePrice
-                : undefined
-            }
-            wholesaleMinQuantity={
-              typeof product.wholesaleMinQuantity === "number" &&
-              Number.isFinite(product.wholesaleMinQuantity) &&
-              product.wholesaleMinQuantity > 0
-                ? Math.trunc(product.wholesaleMinQuantity)
-                : undefined
-            }
-            piecesPerBox={
-              typeof product.piecesPerBox === "number" &&
-              Number.isFinite(product.piecesPerBox) &&
-              product.piecesPerBox > 0
-                ? Math.trunc(product.piecesPerBox)
-                : undefined
-            }
-            countInStock={
-              typeof product.stock === "number" &&
-              Number.isFinite(product.stock)
-                ? Math.max(0, Math.trunc(product.stock))
-                : null
-            }
-            category={product.category ?? undefined}
-            imageUrl={galleryUrls[0]}
-            image={product.image ?? undefined}
+            isOutOfStock={isOutOfStock}
           />
 
-          <div className={styles.specs}>
-            {product.sku ? <p>Артикул: {product.sku}</p> : null}
-            {product.weight ? <p>Вага/Об&apos;єм: {product.weight}</p> : null}
-            {product.piecesPerBox ? (
-              <p>В ящику: {product.piecesPerBox} шт.</p>
+          <div className={styles.info}>
+            {product.brand ? (
+              <p className={styles.brand}>{product.brand}</p>
             ) : null}
+            <h1 className={styles.title}>{displayTitle}</h1>
+            {product.origin ? (
+              <span className={styles.origin}>{product.origin}</span>
+            ) : null}
+            {typeof product.description === "string" &&
+            product.description.trim() ? (
+              <p className={styles.description}>{product.description}</p>
+            ) : Array.isArray(product.description) &&
+              product.description.length ? (
+              <div className={styles.prose}>
+                <PortableText value={product.description as any} />
+              </div>
+            ) : null}
+
+            <AddToCartButton
+              id={product._id}
+              title={displayTitle}
+              slug={product.slug.current}
+              price={Number.isFinite(product.price) ? product.price : 0}
+              wholesalePrice={
+                typeof product.wholesalePrice === "number" &&
+                Number.isFinite(product.wholesalePrice)
+                  ? product.wholesalePrice
+                  : undefined
+              }
+              wholesaleMinQuantity={
+                typeof product.wholesaleMinQuantity === "number" &&
+                Number.isFinite(product.wholesaleMinQuantity) &&
+                product.wholesaleMinQuantity > 0
+                  ? Math.trunc(product.wholesaleMinQuantity)
+                  : undefined
+              }
+              piecesPerBox={
+                typeof product.piecesPerBox === "number" &&
+                Number.isFinite(product.piecesPerBox) &&
+                product.piecesPerBox > 0
+                  ? Math.trunc(product.piecesPerBox)
+                  : undefined
+              }
+              countInStock={
+                typeof product.stock === "number" &&
+                Number.isFinite(product.stock)
+                  ? Math.max(0, Math.trunc(product.stock))
+                  : null
+              }
+              category={product.category ?? undefined}
+              imageUrl={galleryUrls[0]}
+              image={product.image ?? undefined}
+            />
+
+            <div className={styles.specs}>
+              {product.sku ? <p>Артикул: {product.sku}</p> : null}
+              {product.weight ? <p>Вага/Об&apos;єм: {product.weight}</p> : null}
+              {product.piecesPerBox ? (
+                <p>В ящику: {product.piecesPerBox} шт.</p>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import "@/styles/globals.scss";
 import type { Metadata } from "next";
-import { GoogleTagManager } from "@next/third-parties/google";
+import { DelayedGtm } from "@/components/analytics/delayed-gtm";
 import { getMetadataBase } from "@/lib/site-url";
 import { ToastProvider } from "@/components/providers/toast-provider";
 import { AuthProvider } from "@/components/providers/auth-provider";
@@ -10,6 +10,7 @@ import {
   DEFAULT_TITLE,
   SITE_NAME,
 } from "@/lib/seo";
+import styles from "./layout.module.scss";
 
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),
@@ -44,10 +45,12 @@ export default function RootLayout({
   return (
     <html lang="uk" suppressHydrationWarning>
       <body suppressHydrationWarning>
-        {gtmId ? <GoogleTagManager gtmId={gtmId} /> : null}
-        <AuthProvider>
-          <ToastProvider>{children}</ToastProvider>
-        </AuthProvider>
+        <div className={styles.root}>
+          {gtmId ? <DelayedGtm gtmId={gtmId} /> : null}
+          <AuthProvider>
+            <ToastProvider>{children}</ToastProvider>
+          </AuthProvider>
+        </div>
       </body>
     </html>
   );

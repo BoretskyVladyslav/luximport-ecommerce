@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import styles from "./hero-slider.module.scss";
 
 const AUTOPLAY_MS = 5000;
+const FIRST_SLIDE_MS = 10000;
 const SWIPE_THRESHOLD = 50;
 const PREMIUM_EASE = [0.25, 0.1, 0.25, 1] as const;
 
@@ -48,7 +49,7 @@ export function HeroSlider() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cycle, setCycle] = useState(0);
   const [paused, setPaused] = useState(false);
-  const remainingRef = useRef(AUTOPLAY_MS);
+  const remainingRef = useRef(FIRST_SLIDE_MS);
   const timerGen = useRef(0);
   const slide = slides[currentIndex];
   const isLight = slide.tone === "light";
@@ -146,7 +147,10 @@ export function HeroSlider() {
               key={item.id}
               initial={false}
               animate={{ opacity: currentIndex === index ? 1 : 0 }}
-              transition={{ duration: 1.2, ease: PREMIUM_EASE }}
+              transition={{
+                duration: cycle === 0 && index === 0 ? 0 : 1.2,
+                ease: PREMIUM_EASE,
+              }}
               className="absolute inset-0 h-full w-full"
             >
               {showImage ? (
@@ -157,8 +161,9 @@ export function HeroSlider() {
                       alt={item.title}
                       fill
                       quality={75}
-                      loading="lazy"
-                      fetchPriority="low"
+                      unoptimized={isLcp}
+                      fetchPriority={isLcp ? "high" : "low"}
+                      loading={isLcp ? "eager" : "lazy"}
                       className="object-cover"
                       sizes="(min-width: 768px) 100vw, 0px"
                     />
@@ -169,9 +174,9 @@ export function HeroSlider() {
                       alt={item.title}
                       fill
                       quality={75}
-                      priority={isLcp}
+                      unoptimized={isLcp}
                       fetchPriority={isLcp ? "high" : "low"}
-                      loading={isLcp ? undefined : "lazy"}
+                      loading={isLcp ? "eager" : "lazy"}
                       className={
                         item.tone === "light"
                           ? "object-cover object-top"
@@ -206,13 +211,17 @@ export function HeroSlider() {
           <AnimatePresence mode="wait">
             <motion.div
               key={currentIndex}
-              initial={{ opacity: 0, y: 20 }}
+              initial={
+                currentIndex === 0 && cycle === 0
+                  ? false
+                  : { opacity: 0, y: 20 }
+              }
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{
                 duration: 0.8,
                 ease: PREMIUM_EASE,
-                delay: 0.2,
+                delay: currentIndex === 0 && cycle === 0 ? 0 : 0.2,
               }}
               className={`flex w-full flex-col items-center md:items-start ${
                 isLight
@@ -263,7 +272,7 @@ export function HeroSlider() {
                 href={slide.href}
                 className="pointer-events-auto group/cta relative mt-3 inline-flex items-center justify-center overflow-hidden rounded-md bg-[#C5A059] px-6 py-3 shadow-[0_10px_30px_rgba(197,160,89,0.3)] transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-[0_15px_40px_rgba(197,160,89,0.4)] active:scale-95 md:mt-10 md:px-12 md:py-5"
               >
-                <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.2em] text-white md:text-xs md:tracking-[0.28em]">
+                <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.2em] text-[#111] md:text-xs md:tracking-[0.28em]">
                   {slide.buttonText}
                 </span>
                 <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover/cta:translate-x-full" />

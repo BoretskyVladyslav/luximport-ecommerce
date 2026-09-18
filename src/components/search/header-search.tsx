@@ -318,8 +318,6 @@ export function HeaderSearch({
           autoComplete="off"
           maxLength={SEARCH_MAX_QUERY_LENGTH}
           aria-label="Пошук товарів"
-          aria-expanded={open}
-          aria-controls={panelId}
           onFocus={openPanel}
           onChange={(e) => onQueryChange(e.target.value)}
           onKeyDown={(e) => {

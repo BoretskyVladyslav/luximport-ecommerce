@@ -5,6 +5,7 @@ import { StorefrontDrawers } from "@/components/layout/storefront-drawers";
 import { JsonLd } from "@/components/seo/json-ld";
 import { organizationJsonLd } from "@/lib/seo";
 import { cn } from "@/lib/utils";
+import styles from "./layout.module.scss";
 
 const playfair = Playfair_Display({
   subsets: ["latin", "cyrillic"],
@@ -25,6 +26,7 @@ export default function StorefrontLayout({
   return (
     <div
       className={cn(
+        styles.root,
         playfair.variable,
         inter.variable,
         "flex min-h-full flex-col antialiased font-body lining-nums tabular-nums flex-1",

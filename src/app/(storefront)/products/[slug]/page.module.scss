@@ -1,4 +1,8 @@
-@use "../../../../styles/variables" as *;
+@use "variables" as *;
+
+.pageRouteRoot {
+  display: contents;
+}
 
 .page {
   width: 100%;
@@ -52,7 +56,7 @@
   letter-spacing: 0.04em;
 }
 
-.layout {
+.pdpGrid {
   display: grid;
   grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
   gap: 4.5rem;

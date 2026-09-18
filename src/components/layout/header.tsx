@@ -38,11 +38,19 @@ export function Header() {
   const wishlistCount = wishlistItems.length;
 
   useEffect(() => {
-    const handleScroll = () => {
+    const syncScrolled = () => {
       setIsScrolled(window.scrollY > 0);
     };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) syncScrolled();
+    };
+    syncScrolled();
+    window.addEventListener("scroll", syncScrolled);
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      window.removeEventListener("scroll", syncScrolled);
+      window.removeEventListener("pageshow", onPageShow);
+    };
   }, []);
 
   return (

@@ -37,6 +37,20 @@ async function HomeBestSellersLoader() {
 export default function Home() {
   return (
     <div className={styles.pageRouteRoot}>
+      <link
+        rel="preload"
+        as="image"
+        href="/images/hero/default/mobile.jpg"
+        media="(max-width: 767px)"
+        fetchPriority="high"
+      />
+      <link
+        rel="preload"
+        as="image"
+        href="/images/hero/default/desktop.jpg"
+        media="(min-width: 768px)"
+        fetchPriority="high"
+      />
       <HomePageFrame>
         <Suspense fallback={<HomeBestSellersSkeleton count={4} />}>
           <HomeBestSellersLoader />
