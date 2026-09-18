@@ -40,14 +40,14 @@ export default function Home() {
       <link
         rel="preload"
         as="image"
-        href="/images/hero/default/mobile.jpg"
+        href="/images/hero/dr-gerard/mobile.jpg"
         media="(max-width: 767px)"
         fetchPriority="high"
       />
       <link
         rel="preload"
         as="image"
-        href="/images/hero/default/desktop.jpg"
+        href="/images/hero/dr-gerard/desktop.jpg"
         media="(min-width: 768px)"
         fetchPriority="high"
       />

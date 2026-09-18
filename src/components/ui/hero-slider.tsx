@@ -8,23 +8,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import styles from "./hero-slider.module.scss";
 
 const AUTOPLAY_MS = 5000;
-const FIRST_SLIDE_MS = 10000;
+const FIRST_SLIDE_MS = 15000;
 const SWIPE_THRESHOLD = 50;
 const PREMIUM_EASE = [0.25, 0.1, 0.25, 1] as const;
 
 const slides = [
-  {
-    id: "premium",
-    tab: "Європейський імпорт",
-    title: "Елітні продукти з самого серця Європи",
-    description: "Тільки оригінальна якість та перевірені бренди.",
-    buttonText: "Перейти до каталогу",
-    href: "/catalog",
-    label: "Premium Selection",
-    bg: "/images/hero/default/desktop.jpg",
-    bgMobile: "/images/hero/default/mobile.jpg",
-    tone: "dark" as const,
-  },
   {
     id: "gerard",
     tab: "Dr. Gerard",
@@ -38,6 +26,18 @@ const slides = [
     bg: "/images/hero/dr-gerard/desktop.jpg",
     bgMobile: "/images/hero/dr-gerard/mobile.jpg",
     tone: "light" as const,
+  },
+  {
+    id: "premium",
+    tab: "Європейський імпорт",
+    title: "Елітні продукти з самого серця Європи",
+    description: "Тільки оригінальна якість та перевірені бренди.",
+    buttonText: "Перейти до каталогу",
+    href: "/catalog",
+    label: "Premium Selection",
+    bg: "/images/hero/default/desktop.jpg",
+    bgMobile: "/images/hero/default/mobile.jpg",
+    tone: "dark" as const,
   },
 ];
 
@@ -142,51 +142,63 @@ export function HeroSlider() {
         {slides.map((item, index) => {
           const isLcp = index === 0;
           const showImage = mountedSlides.has(index);
+          const visible = currentIndex === index;
+          const frame = showImage ? (
+            <>
+              <div className="relative hidden h-full w-full md:block">
+                <Image
+                  src={item.bg}
+                  alt={item.title}
+                  fill
+                  quality={75}
+                  fetchPriority={isLcp ? "high" : "low"}
+                  loading={isLcp ? "eager" : "lazy"}
+                  className="object-cover"
+                  sizes="(min-width: 768px) 100vw, 0px"
+                />
+              </div>
+              <div className="relative block h-full w-full md:hidden">
+                <Image
+                  src={item.bgMobile}
+                  alt={item.title}
+                  fill
+                  quality={75}
+                  unoptimized={isLcp}
+                  priority={isLcp}
+                  fetchPriority={isLcp ? "high" : "low"}
+                  loading={isLcp ? "eager" : "lazy"}
+                  className={
+                    item.tone === "light"
+                      ? "object-cover object-top"
+                      : "object-cover"
+                  }
+                  sizes={isLcp ? "100vw" : "(max-width: 767px) 100vw, 0px"}
+                />
+              </div>
+            </>
+          ) : null;
+
+          if (isLcp) {
+            return (
+              <div
+                key={item.id}
+                className="absolute inset-0 h-full w-full"
+                style={{ opacity: visible ? 1 : 0 }}
+              >
+                {frame}
+              </div>
+            );
+          }
+
           return (
             <motion.div
               key={item.id}
               initial={false}
-              animate={{ opacity: currentIndex === index ? 1 : 0 }}
-              transition={{
-                duration: cycle === 0 && index === 0 ? 0 : 1.2,
-                ease: PREMIUM_EASE,
-              }}
+              animate={{ opacity: visible ? 1 : 0 }}
+              transition={{ duration: 1.2, ease: PREMIUM_EASE }}
               className="absolute inset-0 h-full w-full"
             >
-              {showImage ? (
-                <>
-                  <div className="relative hidden h-full w-full md:block">
-                    <Image
-                      src={item.bg}
-                      alt={item.title}
-                      fill
-                      quality={75}
-                      unoptimized={isLcp}
-                      fetchPriority={isLcp ? "high" : "low"}
-                      loading={isLcp ? "eager" : "lazy"}
-                      className="object-cover"
-                      sizes="(min-width: 768px) 100vw, 0px"
-                    />
-                  </div>
-                  <div className="relative block h-full w-full md:hidden">
-                    <Image
-                      src={item.bgMobile}
-                      alt={item.title}
-                      fill
-                      quality={75}
-                      unoptimized={isLcp}
-                      fetchPriority={isLcp ? "high" : "low"}
-                      loading={isLcp ? "eager" : "lazy"}
-                      className={
-                        item.tone === "light"
-                          ? "object-cover object-top"
-                          : "object-cover"
-                      }
-                      sizes="(max-width: 767px) 100vw, 0px"
-                    />
-                  </div>
-                </>
-              ) : null}
+              {frame}
             </motion.div>
           );
         })}
@@ -211,17 +223,13 @@ export function HeroSlider() {
           <AnimatePresence mode="wait">
             <motion.div
               key={currentIndex}
-              initial={
-                currentIndex === 0 && cycle === 0
-                  ? false
-                  : { opacity: 0, y: 20 }
-              }
+              initial={cycle === 0 ? false : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
+              exit={cycle === 0 ? undefined : { opacity: 0, y: -20 }}
               transition={{
-                duration: 0.8,
+                duration: cycle === 0 ? 0 : 0.8,
                 ease: PREMIUM_EASE,
-                delay: currentIndex === 0 && cycle === 0 ? 0 : 0.2,
+                delay: 0,
               }}
               className={`flex w-full flex-col items-center md:items-start ${
                 isLight
@@ -270,7 +278,7 @@ export function HeroSlider() {
 
               <Link
                 href={slide.href}
-                className="pointer-events-auto group/cta relative mt-3 inline-flex items-center justify-center overflow-hidden rounded-md bg-[#C5A059] px-6 py-3 shadow-[0_10px_30px_rgba(197,160,89,0.3)] transition-all duration-300 ease-in-out hover:scale-105 hover:shadow-[0_15px_40px_rgba(197,160,89,0.4)] active:scale-95 md:mt-10 md:px-12 md:py-5"
+                className="pointer-events-auto group/cta relative mt-3 inline-flex items-center justify-center overflow-hidden rounded-md bg-[#C5A059] px-6 py-3 shadow-[0_10px_30px_rgba(197,160,89,0.3)] transition-shadow duration-300 ease-in-out hover:shadow-[0_15px_40px_rgba(197,160,89,0.4)] md:mt-10 md:px-12 md:py-5"
               >
                 <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.2em] text-[#111] md:text-xs md:tracking-[0.28em]">
                   {slide.buttonText}
@@ -344,7 +352,7 @@ export function HeroSlider() {
                     key={`${item.id}-${cycle}`}
                     className={styles.progressFill}
                     style={{
-                      animationDuration: `${AUTOPLAY_MS}ms`,
+                      animationDuration: `${cycle === 0 ? FIRST_SLIDE_MS : AUTOPLAY_MS}ms`,
                       animationPlayState: paused ? "paused" : "running",
                     }}
                   />
