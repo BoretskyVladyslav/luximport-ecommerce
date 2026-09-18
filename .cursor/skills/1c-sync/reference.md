@@ -32,3 +32,4 @@
 - piecesPerBox `0`: шт в ящиу, шт в ящику
 - price `1`: Сайт
 - wholesalePrice `1`: оптова, Оптова
+- stock `0`: Залишок, Залишок на складі, stock

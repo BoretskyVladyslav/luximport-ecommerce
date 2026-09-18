@@ -13,4 +13,4 @@ def get_pixel_color(image_path):
         return str(e)
 
 if __name__ == "__main__":
-    print(get_pixel_color('public/images/hero-bg-mobile.jpg'))
+    print(get_pixel_color('public/images/hero/default/mobile.jpg'))

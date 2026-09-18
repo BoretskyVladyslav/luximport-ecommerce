@@ -1,378 +1,491 @@
-import { NextResponse } from 'next/server'
-import { revalidatePath } from 'next/cache'
-import { randomUUID } from 'crypto'
-import { createClient } from 'next-sanity'
-import { parseCartItems, parseTotalAmount } from '@/lib/order-payload'
-import { validateCartAgainstSanityWithClient } from '@/lib/cart/validate'
-import { fromCents, toCents } from '@/lib/money'
-import { getToken } from 'next-auth/jwt'
-import { sendOrderEmails } from '@/lib/send-order-emails'
-import { errorResponse, getCorrelationId } from '@/lib/api-errors'
-import { ORDER_STATE_PENDING } from '@/lib/order-lifecycle'
-import { revalidateUserOrders } from '@/lib/order-revalidation'
+import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
+import { randomUUID } from "crypto";
+import { createClient } from "next-sanity";
+import { parseCartItems, parseTotalAmount } from "@/lib/order-payload";
+import { validateCartAgainstSanityWithClient } from "@/lib/cart/validate";
+import { unitPriceForQuantity } from "@/lib/cart/pricing";
+import { fromCents, toCents } from "@/lib/money";
+import { getToken } from "next-auth/jwt";
+import { sendOrderEmails } from "@/lib/send-order-emails";
+import { errorResponse, getCorrelationId } from "@/lib/api-errors";
+import { ORDER_STATE_PENDING } from "@/lib/order-lifecycle";
+import { revalidateUserOrders } from "@/lib/order-revalidation";
 
 export async function POST(req: Request) {
-    const correlationId = getCorrelationId(req)
+  const correlationId = getCorrelationId(req);
+  try {
+    if (!process.env.SANITY_API_TOKEN) {
+      return errorResponse(
+        "Сервіс тимчасово недоступний. Спробуйте пізніше.",
+        503,
+        "SANITY_UNAVAILABLE",
+        correlationId,
+      );
+    }
+    const writeClient = createClient({
+      projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
+      dataset: process.env.NEXT_PUBLIC_SANITY_DATASET,
+      apiVersion: process.env.NEXT_PUBLIC_SANITY_API_VERSION || "2024-02-17",
+      token: process.env.SANITY_API_TOKEN,
+      useCdn: false,
+    });
+    let body: unknown;
     try {
-        if (!process.env.SANITY_API_TOKEN) {
-            return errorResponse(
-                'Сервіс тимчасово недоступний. Спробуйте пізніше.',
-                503,
-                'SANITY_UNAVAILABLE',
-                correlationId
-            )
-        }
-        const writeClient = createClient({
-            projectId: process.env.NEXT_PUBLIC_SANITY_PROJECT_ID,
-            dataset: process.env.NEXT_PUBLIC_SANITY_DATASET,
-            apiVersion: process.env.NEXT_PUBLIC_SANITY_API_VERSION || '2024-02-17',
-            token: process.env.SANITY_API_TOKEN,
-            useCdn: false,
-        })
-        let body: unknown
-        try {
-            body = await req.json()
-        } catch {
-            return errorResponse(
-                'Некоректні дані. Перевірте форму та спробуйте ще раз.',
-                400,
-                'CHECKOUT_INVALID_JSON',
-                correlationId
-            )
-        }
+      body = await req.json();
+    } catch {
+      return errorResponse(
+        "Некоректні дані. Перевірте форму та спробуйте ще раз.",
+        400,
+        "CHECKOUT_INVALID_JSON",
+        correlationId,
+      );
+    }
 
-        if (!body || typeof body !== 'object') {
-            return errorResponse(
-                'Некоректні дані. Перевірте форму та спробуйте ще раз.',
-                400,
-                'CHECKOUT_INVALID_BODY',
-                correlationId
-            )
-        }
+    if (!body || typeof body !== "object") {
+      return errorResponse(
+        "Некоректні дані. Перевірте форму та спробуйте ще раз.",
+        400,
+        "CHECKOUT_INVALID_BODY",
+        correlationId,
+      );
+    }
 
-        const b = body as Record<string, unknown>
-        const {
-            orderId,
-            customerName,
-            customerEmail,
-            customerPhone,
-            shippingAddress,
-            items: rawItems,
-            totalAmount: rawTotal,
-        } = b
+    const b = body as Record<string, unknown>;
+    const {
+      orderId,
+      customerName,
+      customerEmail,
+      customerPhone,
+      shippingAddress,
+      items: rawItems,
+      totalAmount: rawTotal,
+    } = b;
 
-        if (!isNonEmptyString(orderId)) {
-            return errorResponse('Некоректні дані замовлення. Спробуйте ще раз.', 400, 'CHECKOUT_INVALID_ORDER_ID', correlationId)
-        }
-        if (!isNonEmptyString(customerName)) {
-            return NextResponse.json({ message: 'Некоректні дані. Перевірте імʼя та спробуйте ще раз.' }, { status: 400 })
-        }
-        if (!isNonEmptyString(customerPhone)) {
-            return NextResponse.json({ message: 'Некоректний номер телефону. Перевірте та спробуйте ще раз.' }, { status: 400 })
-        }
-        if (shippingAddress !== undefined && shippingAddress !== null && typeof shippingAddress !== 'string') {
-            return NextResponse.json({ message: 'Некоректна адреса доставки. Перевірте та спробуйте ще раз.' }, { status: 400 })
-        }
+    if (!isNonEmptyString(orderId)) {
+      return errorResponse(
+        "Некоректні дані замовлення. Спробуйте ще раз.",
+        400,
+        "CHECKOUT_INVALID_ORDER_ID",
+        correlationId,
+      );
+    }
+    if (!isNonEmptyString(customerName)) {
+      return NextResponse.json(
+        { message: "Некоректні дані. Перевірте імʼя та спробуйте ще раз." },
+        { status: 400 },
+      );
+    }
+    if (!isNonEmptyString(customerPhone)) {
+      return NextResponse.json(
+        {
+          message: "Некоректний номер телефону. Перевірте та спробуйте ще раз.",
+        },
+        { status: 400 },
+      );
+    }
+    if (
+      shippingAddress !== undefined &&
+      shippingAddress !== null &&
+      typeof shippingAddress !== "string"
+    ) {
+      return NextResponse.json(
+        {
+          message: "Некоректна адреса доставки. Перевірте та спробуйте ще раз.",
+        },
+        { status: 400 },
+      );
+    }
 
-        const itemsResult = parseCartItems(rawItems)
-        if (itemsResult.ok === false) {
-            return errorResponse(itemsResult.error, 400, 'CHECKOUT_INVALID_ITEMS', correlationId)
-        }
+    const itemsResult = parseCartItems(rawItems);
+    if (itemsResult.ok === false) {
+      return errorResponse(
+        itemsResult.error,
+        400,
+        "CHECKOUT_INVALID_ITEMS",
+        correlationId,
+      );
+    }
 
-        const totalResult = parseTotalAmount(rawTotal)
-        if (totalResult.ok === false) {
-            return errorResponse(totalResult.error, 400, 'CHECKOUT_INVALID_TOTAL', correlationId)
-        }
+    const totalResult = parseTotalAmount(rawTotal);
+    if (totalResult.ok === false) {
+      return errorResponse(
+        totalResult.error,
+        400,
+        "CHECKOUT_INVALID_TOTAL",
+        correlationId,
+      );
+    }
 
-        const requestedById = new Map<string, number>()
-        for (const i of itemsResult.items) {
-            requestedById.set(i.productId, (requestedById.get(i.productId) ?? 0) + i.quantity)
-        }
+    const requestedById = new Map<string, number>();
+    for (const i of itemsResult.items) {
+      requestedById.set(
+        i.productId,
+        (requestedById.get(i.productId) ?? 0) + i.quantity,
+      );
+    }
 
-        const ids = Array.from(requestedById.keys())
-        const stockRows = await writeClient.fetch<Array<{ _id: string; title: string | null; stock: number | null }>>(
-            `*[_type == "product" && _id in $ids && !(_id match "drafts.*")]{
+    const ids = Array.from(requestedById.keys());
+    const stockRows = await writeClient.fetch<
+      Array<{ _id: string; title: string | null; stock: number | null }>
+    >(
+      `*[_type == "product" && _id in $ids && !(_id match "drafts.*")]{
                 _id,
                 title,
                 stock
             }`,
-            { ids }
-        )
+      { ids },
+    );
 
-        const stockById = new Map(
-            stockRows.map((p) => [
-                p._id,
-                {
-                    title: typeof p.title === 'string' ? p.title : '',
-                    stock: typeof p.stock === 'number' && Number.isFinite(p.stock) ? Math.max(0, Math.trunc(p.stock)) : null,
-                },
-            ])
-        )
+    const stockById = new Map(
+      stockRows.map((p) => [
+        p._id,
+        {
+          title: typeof p.title === "string" ? p.title : "",
+          stock:
+            typeof p.stock === "number" && Number.isFinite(p.stock)
+              ? Math.max(0, Math.trunc(p.stock))
+              : null,
+        },
+      ]),
+    );
 
-        for (const [productId, requestedQuantity] of Array.from(requestedById.entries())) {
-            const row = stockById.get(productId)
-            if (!row) continue
-            if (typeof row.stock === 'number' && requestedQuantity > row.stock) {
-                const safeTitle = row.title || 'Товар'
-                return NextResponse.json(
-                    {
-                        code: 'CART_STOCK_CONFLICT',
-                        message: `На жаль, товару '${safeTitle}' залишилося лише ${row.stock}. Будь ласка, оновіть кошик.`,
-                        correlationId,
-                    },
-                    { status: 409 }
-                )
-            }
-        }
-
-        const validation = await validateCartAgainstSanityWithClient(
-            itemsResult.items.map((i) => ({
-                productId: i.productId,
-                quantity: i.quantity,
-                clientUnitPrice: i.price,
-                clientWholesalePrice: i.wholesalePrice,
-                clientWholesaleMinQuantity: i.wholesaleMinQuantity,
-                clientPiecesPerBox: i.piecesPerBox,
-            })),
-            writeClient
-        )
-
-        if (!validation.ok) {
-            return NextResponse.json(
-                {
-                    code: 'CART_STALE',
-                    message: 'Перевірка кошика не пройдена. Оновіть сторінку та спробуйте ще раз.',
-                    issues: validation.issues,
-                    correlationId,
-                },
-                { status: 409 }
-            )
-        }
-
-        const clientTotalCents = toCents(totalResult.total)
-        if (validation.totalCents !== clientTotalCents) {
-            return NextResponse.json(
-                {
-                    code: 'CART_TOTAL_MISMATCH',
-                    message: 'Сума в кошику змінилася. Оновіть сторінку та спробуйте ще раз.',
-                    serverTotal: fromCents(validation.totalCents),
-                    correlationId,
-                },
-                { status: 409 }
-            )
-        }
-
-        const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET
-        const token = secret ? await getToken({ req: req as any, secret }) : null
-        const userIdRaw = (token as any)?.id ?? (token as any)?.sub
-        const sessionUserId = typeof userIdRaw === 'string' && userIdRaw.trim() ? userIdRaw.trim() : null
-        const sanityOrder = {
-            _type: 'order' as const,
-            orderId: orderId.trim(),
-            status: ORDER_STATE_PENDING.status,
-            isPaid: ORDER_STATE_PENDING.isPaid,
-            paymentStatus: ORDER_STATE_PENDING.paymentStatus,
-            inventoryDecremented: true,
-            ...(sessionUserId
-                ? {
-                      user: {
-                          _type: 'reference' as const,
-                          _ref: sessionUserId,
-                      },
-                  }
-                : {}),
-            customerName: customerName.trim(),
-            customerEmail: typeof customerEmail === 'string' ? customerEmail.trim() : '',
-            customerPhone: customerPhone.trim(),
-            shippingAddress: typeof shippingAddress === 'string' ? shippingAddress : '',
-            totalAmount: fromCents(validation.totalCents),
-            items: validation.lines.map((line) => ({
-                _key: randomUUID(),
-                productId: line.productId,
-                title: line.title,
-                quantity: line.quantity,
-                price: fromCents(line.unitPriceCents),
-            })),
-        }
-
-        for (const row of sanityOrder.items) {
-            if (!row || typeof row.productId !== 'string' || !row.productId.trim()) {
-                throw new Error('Один із товарів має некоректний ID. Оновіть кошик.')
-            }
-        }
-
-        let createdDocument: { _id: string }
-        try {
-            const createdOrder = await writeClient.create(sanityOrder as any)
-            const createdId = typeof (createdOrder as any)?._id === 'string' ? String((createdOrder as any)._id) : ''
-            if (!createdId) {
-                return errorResponse('Sanity Error: Empty result from create()', 400, 'SANITY_CREATE_EMPTY_RESULT', correlationId)
-            }
-            createdDocument = { _id: createdId }
-        } catch (error: any) {
-            const errorMessage =
-                error?.details?.description ||
-                error?.message ||
-                (() => {
-                    try {
-                        return JSON.stringify(error)
-                    } catch {
-                        return String(error)
-                    }
-                })()
-            console.error('[RAW_SANITY_ERROR]:', errorMessage)
-            return errorResponse(`Sanity Error: ${errorMessage}`, 400, 'SANITY_CREATE_FAILED', correlationId)
-        }
-
-        try {
-            await Promise.all(
-                sanityOrder.items.map(async (item: any) => {
-                    const productId = typeof item?.productId === 'string' ? item.productId.trim() : ''
-                    const quantity = typeof item?.quantity === 'number' && Number.isFinite(item.quantity) ? Math.max(0, Math.trunc(item.quantity)) : 0
-                    if (!productId || quantity <= 0) return
-                    try {
-                        await writeClient.patch(productId).setIfMissing({ stock: 0 }).dec({ stock: quantity }).commit()
-                    } catch (stockError: any) {
-                        const stockErrorMessage =
-                            stockError?.details?.description ||
-                            stockError?.message ||
-                            (() => {
-                                try {
-                                    return JSON.stringify(stockError)
-                                } catch {
-                                    return String(stockError)
-                                }
-                            })()
-                        console.error('[RAW_SANITY_STOCK_ERROR_NON_BLOCKING]:', { correlationId, productId, stockErrorMessage })
-                    }
-                })
-            )
-        } catch (error: any) {
-            const errorMessage =
-                error?.details?.description ||
-                error?.message ||
-                (() => {
-                    try {
-                        return JSON.stringify(error)
-                    } catch {
-                        return String(error)
-                    }
-                })()
-            console.error('[RAW_SANITY_ERROR_NON_BLOCKING_BATCH]:', { correlationId, errorMessage })
-            // Do not block checkout if inventory math fails
-        }
-
-        const dateFormatted = new Date().toLocaleDateString('uk-UA', { dateStyle: 'long' })
-        const emailItems = sanityOrder.items.map((item) => ({
-            id: String(item.productId),
-            title: typeof item.title === 'string' ? item.title : '',
-            price: typeof item.price === 'number' && Number.isFinite(item.price) ? item.price : 0,
-            quantity:
-                typeof item.quantity === 'number' && Number.isFinite(item.quantity)
-                    ? Math.max(0, Math.trunc(item.quantity))
-                    : 0,
-        }))
-        const totalFormatted = `${fromCents(validation.totalCents).toLocaleString('uk-UA', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-        })} ₴`
-        void (async () => {
-            try {
-                await sendOrderEmails({
-                    orderId: sanityOrder.orderId,
-                    customerName: sanityOrder.customerName,
-                    customerEmail: sanityOrder.customerEmail,
-                    customerPhone: sanityOrder.customerPhone,
-                    shippingAddress: sanityOrder.shippingAddress,
-                    items: emailItems,
-                    totalFormatted,
-                    dateFormatted,
-                })
-            } catch (err) {
-                console.error('[ORDER_EMAIL]', err)
-            }
-        })()
-
-        if (sessionUserId) {
-            const incomingPhone = customerPhone.trim()
-            const incomingAddress = typeof shippingAddress === 'string' ? shippingAddress.trim() : ''
-            const incomingName = customerName.trim()
-            const existing = await writeClient.fetch<{
-                _id: string
-                name: string | null
-                phone: string | null
-                address: string | null
-                firstName?: string | null
-                lastName?: string | null
-            } | null>('*[_type == "user" && _id == $id][0]{ _id, name, phone, address, firstName, lastName }', { id: sessionUserId })
-
-            if (existing?._id) {
-                const patch: Record<string, unknown> = {}
-                if ((!existing.phone || !existing.phone.trim()) && incomingPhone) patch.phone = incomingPhone
-                if ((!existing.address || !existing.address.trim()) && incomingAddress) patch.address = incomingAddress
-                if ((!existing.name || !existing.name.trim()) && incomingName) patch.name = incomingName
-                const hasUpdates = Object.keys(patch).length > 0
-                if (hasUpdates) {
-                    await writeClient.patch(sessionUserId).set(patch).commit()
-                }
-            }
-        }
-
-        revalidateUserOrders(sessionUserId)
-        revalidatePath('/account/profile')
-        return NextResponse.json({ success: true, sanityDocumentId: createdDocument._id, correlationId })
-    } catch (error) {
-        const msg = typeof (error as any)?.message === 'string' ? (error as any).message : ''
-        console.error('[CHECKOUT_CREATE_ORDER_FAILED]', { correlationId, error })
-        return errorResponse(
-            msg || 'Виникла помилка. Перевірте дані та спробуйте ще раз.',
-            400,
-            'CHECKOUT_CREATE_ORDER_FAILED',
-            correlationId
-        )
+    for (const [productId, requestedQuantity] of Array.from(
+      requestedById.entries(),
+    )) {
+      const row = stockById.get(productId);
+      if (!row) continue;
+      if (typeof row.stock === "number" && requestedQuantity > row.stock) {
+        const safeTitle = row.title || "Товар";
+        return NextResponse.json(
+          {
+            code: "CART_STOCK_CONFLICT",
+            message: `На жаль, товару '${safeTitle}' залишилося лише ${row.stock}. Будь ласка, оновіть кошик.`,
+            correlationId,
+          },
+          { status: 409 },
+        );
+      }
     }
+
+    const validation = await validateCartAgainstSanityWithClient(
+      itemsResult.items.map((i) => ({
+        productId: i.productId,
+        quantity: i.quantity,
+        clientUnitPrice: unitPriceForQuantity({
+          price: i.price,
+          wholesalePrice: i.wholesalePrice ?? null,
+          wholesaleMinQuantity: i.wholesaleMinQuantity ?? null,
+          piecesPerBox: i.piecesPerBox ?? null,
+          quantity: i.quantity,
+        }),
+        clientWholesalePrice: i.wholesalePrice,
+        clientWholesaleMinQuantity: i.wholesaleMinQuantity,
+        clientPiecesPerBox: i.piecesPerBox,
+      })),
+      writeClient,
+    );
+
+    if (!validation.ok) {
+      return NextResponse.json(
+        {
+          code: "CART_STALE",
+          message:
+            "Перевірка кошика не пройдена. Оновіть сторінку та спробуйте ще раз.",
+          issues: validation.issues,
+          correlationId,
+        },
+        { status: 409 },
+      );
+    }
+
+    const clientTotalCents = toCents(totalResult.total);
+    if (validation.totalCents !== clientTotalCents) {
+      return NextResponse.json(
+        {
+          code: "CART_TOTAL_MISMATCH",
+          message:
+            "Сума в кошику змінилася. Оновіть сторінку та спробуйте ще раз.",
+          serverTotal: fromCents(validation.totalCents),
+          correlationId,
+        },
+        { status: 409 },
+      );
+    }
+
+    const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
+    const token = secret ? await getToken({ req: req as any, secret }) : null;
+    const userIdRaw = (token as any)?.id ?? (token as any)?.sub;
+    const sessionUserId =
+      typeof userIdRaw === "string" && userIdRaw.trim()
+        ? userIdRaw.trim()
+        : null;
+    const sanityOrder = {
+      _type: "order" as const,
+      orderId: orderId.trim(),
+      status: ORDER_STATE_PENDING.status,
+      isPaid: ORDER_STATE_PENDING.isPaid,
+      paymentStatus: ORDER_STATE_PENDING.paymentStatus,
+      inventoryDecremented: true,
+      ...(sessionUserId
+        ? {
+            user: {
+              _type: "reference" as const,
+              _ref: sessionUserId,
+            },
+          }
+        : {}),
+      customerName: customerName.trim(),
+      customerEmail:
+        typeof customerEmail === "string" ? customerEmail.trim() : "",
+      customerPhone: customerPhone.trim(),
+      shippingAddress:
+        typeof shippingAddress === "string" ? shippingAddress : "",
+      totalAmount: fromCents(validation.totalCents),
+      items: validation.lines.map((line) => ({
+        _key: randomUUID(),
+        productId: line.productId,
+        title: line.title,
+        quantity: line.quantity,
+        price: fromCents(line.unitPriceCents),
+      })),
+    };
+
+    for (const row of sanityOrder.items) {
+      if (!row || typeof row.productId !== "string" || !row.productId.trim()) {
+        throw new Error("Один із товарів має некоректний ID. Оновіть кошик.");
+      }
+    }
+
+    let createdDocument: { _id: string };
+    try {
+      const createdOrder = await writeClient.create(sanityOrder as any);
+      const createdId =
+        typeof (createdOrder as any)?._id === "string"
+          ? String((createdOrder as any)._id)
+          : "";
+      if (!createdId) {
+        return errorResponse(
+          "Sanity Error: Empty result from create()",
+          400,
+          "SANITY_CREATE_EMPTY_RESULT",
+          correlationId,
+        );
+      }
+      createdDocument = { _id: createdId };
+    } catch (error: any) {
+      const errorMessage =
+        error?.details?.description ||
+        error?.message ||
+        (() => {
+          try {
+            return JSON.stringify(error);
+          } catch {
+            return String(error);
+          }
+        })();
+      console.error("[RAW_SANITY_ERROR]:", errorMessage);
+      return errorResponse(
+        `Sanity Error: ${errorMessage}`,
+        400,
+        "SANITY_CREATE_FAILED",
+        correlationId,
+      );
+    }
+
+    try {
+      await Promise.all(
+        sanityOrder.items.map(async (item: any) => {
+          const productId =
+            typeof item?.productId === "string" ? item.productId.trim() : "";
+          const quantity =
+            typeof item?.quantity === "number" && Number.isFinite(item.quantity)
+              ? Math.max(0, Math.trunc(item.quantity))
+              : 0;
+          if (!productId || quantity <= 0) return;
+          const tracked = stockById.get(productId);
+          if (!tracked || typeof tracked.stock !== "number") return;
+          try {
+            await writeClient
+              .patch(productId)
+              .dec({ stock: quantity })
+              .commit();
+          } catch (stockError: any) {
+            const stockErrorMessage =
+              stockError?.details?.description ||
+              stockError?.message ||
+              (() => {
+                try {
+                  return JSON.stringify(stockError);
+                } catch {
+                  return String(stockError);
+                }
+              })();
+            console.error("[RAW_SANITY_STOCK_ERROR_NON_BLOCKING]:", {
+              correlationId,
+              productId,
+              stockErrorMessage,
+            });
+          }
+        }),
+      );
+    } catch (error: any) {
+      const errorMessage =
+        error?.details?.description ||
+        error?.message ||
+        (() => {
+          try {
+            return JSON.stringify(error);
+          } catch {
+            return String(error);
+          }
+        })();
+      console.error("[RAW_SANITY_ERROR_NON_BLOCKING_BATCH]:", {
+        correlationId,
+        errorMessage,
+      });
+      // Do not block checkout if inventory math fails
+    }
+
+    const dateFormatted = new Date().toLocaleDateString("uk-UA", {
+      dateStyle: "long",
+    });
+    const emailItems = sanityOrder.items.map((item) => ({
+      id: String(item.productId),
+      title: typeof item.title === "string" ? item.title : "",
+      price:
+        typeof item.price === "number" && Number.isFinite(item.price)
+          ? item.price
+          : 0,
+      quantity:
+        typeof item.quantity === "number" && Number.isFinite(item.quantity)
+          ? Math.max(0, Math.trunc(item.quantity))
+          : 0,
+    }));
+    const totalFormatted = `${fromCents(validation.totalCents).toLocaleString(
+      "uk-UA",
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      },
+    )} ₴`;
+    void (async () => {
+      try {
+        await sendOrderEmails({
+          orderId: sanityOrder.orderId,
+          customerName: sanityOrder.customerName,
+          customerEmail: sanityOrder.customerEmail,
+          customerPhone: sanityOrder.customerPhone,
+          shippingAddress: sanityOrder.shippingAddress,
+          items: emailItems,
+          totalFormatted,
+          dateFormatted,
+        });
+      } catch (err) {
+        console.error("[ORDER_EMAIL]", err);
+      }
+    })();
+
+    if (sessionUserId) {
+      const incomingPhone = customerPhone.trim();
+      const incomingAddress =
+        typeof shippingAddress === "string" ? shippingAddress.trim() : "";
+      const incomingName = customerName.trim();
+      const existing = await writeClient.fetch<{
+        _id: string;
+        name: string | null;
+        phone: string | null;
+        address: string | null;
+        firstName?: string | null;
+        lastName?: string | null;
+      } | null>(
+        '*[_type == "user" && _id == $id][0]{ _id, name, phone, address, firstName, lastName }',
+        { id: sessionUserId },
+      );
+
+      if (existing?._id) {
+        const patch: Record<string, unknown> = {};
+        if ((!existing.phone || !existing.phone.trim()) && incomingPhone)
+          patch.phone = incomingPhone;
+        if ((!existing.address || !existing.address.trim()) && incomingAddress)
+          patch.address = incomingAddress;
+        if ((!existing.name || !existing.name.trim()) && incomingName)
+          patch.name = incomingName;
+        const hasUpdates = Object.keys(patch).length > 0;
+        if (hasUpdates) {
+          await writeClient.patch(sessionUserId).set(patch).commit();
+        }
+      }
+    }
+
+    revalidateUserOrders(sessionUserId);
+    revalidatePath("/account/profile");
+    return NextResponse.json({
+      success: true,
+      sanityDocumentId: createdDocument._id,
+      correlationId,
+    });
+  } catch (error) {
+    const msg =
+      typeof (error as any)?.message === "string" ? (error as any).message : "";
+    console.error("[CHECKOUT_CREATE_ORDER_FAILED]", { correlationId, error });
+    return errorResponse(
+      msg || "Виникла помилка. Перевірте дані та спробуйте ще раз.",
+      400,
+      "CHECKOUT_CREATE_ORDER_FAILED",
+      correlationId,
+    );
+  }
 }
 
 function isNonEmptyString(v: unknown): v is string {
-    return typeof v === 'string' && v.trim().length > 0
+  return typeof v === "string" && v.trim().length > 0;
 }
 
 function mapSanityCreateErrorToMessage(error: unknown) {
-    const defaultMessage = 'Не вдалося створити замовлення. Спробуйте ще раз.'
-    if (!error || typeof error !== 'object') return defaultMessage
-    const e = error as any
-    const statusCode = typeof e.statusCode === 'number' ? e.statusCode : undefined
-    const message = typeof e.message === 'string' ? e.message : ''
+  const defaultMessage = "Не вдалося створити замовлення. Спробуйте ще раз.";
+  if (!error || typeof error !== "object") return defaultMessage;
+  const e = error as any;
+  const statusCode =
+    typeof e.statusCode === "number" ? e.statusCode : undefined;
+  const message = typeof e.message === "string" ? e.message : "";
 
-    if (statusCode === 401 || statusCode === 403 || /permission|unauthorized|forbidden/i.test(message)) {
-        return 'Проблема зі зʼєднанням з базою даних. Перевірте SANITY_API_TOKEN'
-    }
+  if (
+    statusCode === 401 ||
+    statusCode === 403 ||
+    /permission|unauthorized|forbidden/i.test(message)
+  ) {
+    return "Проблема зі зʼєднанням з базою даних. Перевірте SANITY_API_TOKEN";
+  }
 
-    const details = e.details
-    if (statusCode === 400 && details) {
-        const path = Array.isArray(details?.items) && details.items[0]?.path ? details.items[0].path : details?.path
-        const field = Array.isArray(path) ? String(path[0] ?? '') : ''
-        const labels: Record<string, string> = {
-            customerPhone: 'Телефон',
-            customerName: 'Імʼя',
-            customerEmail: 'Email',
-            shippingAddress: 'Адреса доставки',
-            totalAmount: 'Сума',
-            items: 'Товари',
-            orderId: 'Номер замовлення',
-            user: 'Користувач',
-            status: 'Статус',
-            paymentStatus: 'Статус оплати',
-            trackingNumber: 'ТТН',
-            adminNotes: 'Нотатки адміністратора',
-        }
-        if (field && labels[field]) return `Помилка в полі ${labels[field]}`
-        return 'Помилка в даних замовлення. Перевірте поля та спробуйте ще раз.'
-    }
+  const details = e.details;
+  if (statusCode === 400 && details) {
+    const path =
+      Array.isArray(details?.items) && details.items[0]?.path
+        ? details.items[0].path
+        : details?.path;
+    const field = Array.isArray(path) ? String(path[0] ?? "") : "";
+    const labels: Record<string, string> = {
+      customerPhone: "Телефон",
+      customerName: "Імʼя",
+      customerEmail: "Email",
+      shippingAddress: "Адреса доставки",
+      totalAmount: "Сума",
+      items: "Товари",
+      orderId: "Номер замовлення",
+      user: "Користувач",
+      status: "Статус",
+      paymentStatus: "Статус оплати",
+      trackingNumber: "ТТН",
+      adminNotes: "Нотатки адміністратора",
+    };
+    if (field && labels[field]) return `Помилка в полі ${labels[field]}`;
+    return "Помилка в даних замовлення. Перевірте поля та спробуйте ще раз.";
+  }
 
-    if (/fetch failed|network|ECONN|ENOTFOUND|ETIMEDOUT/i.test(message)) {
-        return 'Проблема зі зʼєднанням з базою даних. Перевірте SANITY_API_TOKEN'
-    }
+  if (/fetch failed|network|ECONN|ENOTFOUND|ETIMEDOUT/i.test(message)) {
+    return "Проблема зі зʼєднанням з базою даних. Перевірте SANITY_API_TOKEN";
+  }
 
-    return defaultMessage
+  return defaultMessage;
 }

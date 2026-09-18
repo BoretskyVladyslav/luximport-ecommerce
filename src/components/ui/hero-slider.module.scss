@@ -1,0 +1,19 @@
+.progressFill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform: scaleX(0);
+  transform-origin: left center;
+  will-change: transform;
+  animation: heroTabFill 5s linear forwards;
+  background: var(--color-gold, #c5a059);
+}
+
+@keyframes heroTabFill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}

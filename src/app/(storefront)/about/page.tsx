@@ -1,161 +1,83 @@
-'use client'
+import Image from "next/image";
+import { pageMetadata } from "@/lib/seo";
+import styles from "./page.module.scss";
 
-import { motion } from 'framer-motion'
-import styles from './page.module.scss'
-
-const premiumEase = [0.25, 0.1, 0.25, 1];
+export const metadata = pageMetadata({
+  title: "Про нас",
+  description:
+    "LuxImport — ексклюзивна селекція європейських продуктів оптом. Прямі поставки та контроль якості.",
+  path: "/about",
+  image: "/images/about/hero.png",
+});
 
 export default function AboutPage() {
-    return (
-        <>
-            <div className={styles.container}>
-                <div className={styles.imageWrapper} style={{ overflow: 'hidden' }}>
-                    <motion.div
-                        className={styles.imagePlaceholder}
-                        initial={{ scale: 1.05, opacity: 0 }}
-                        whileInView={{ scale: 1, opacity: 1 }}
-                        viewport={{ once: true, margin: "-50px" }}
-                        transition={{ duration: 1.5, ease: premiumEase }}
-                    >
-                        FOUNDER PORTRAIT
-                    </motion.div>
-                </div>
+  return (
+    <>
+      <section className={styles.heroSection}>
+        <Image
+          src="/images/about/hero.png"
+          alt="LuxImport — смак Європи для вашого столу"
+          width={1920}
+          height={886}
+          sizes="100vw"
+          className={styles.heroImage}
+          priority
+        />
+      </section>
 
-                <motion.div
-                    className={styles.contentWrapper}
-                    variants={{
-                        hidden: { opacity: 0 },
-                        show: { opacity: 1, transition: { staggerChildren: 0.15 } }
-                    }}
-                    initial="hidden"
-                    whileInView="show"
-                    viewport={{ once: true, margin: "-50px" }}
-                >
-                    <motion.div
-                        className={styles.meta}
-                        variants={{
-                            hidden: { opacity: 0, y: 15 },
-                            show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: premiumEase } }
-                        }}
-                    >
-                        ПРО КОМПАНІЮ
-                    </motion.div>
-                    <motion.h1
-                        className={styles.title}
-                        variants={{
-                            hidden: { opacity: 0, y: 15 },
-                            show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: premiumEase } }
-                        }}
-                    >
-                        Ексклюзивна селекція для вашого столу
-                    </motion.h1>
-                    <motion.p
-                        className={styles.description}
-                        variants={{
-                            hidden: { opacity: 0, y: 15 },
-                            show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: premiumEase } }
-                        }}
-                    >
-                        Ми відбираємо найкращі продукти з усієї Європи, щоб ви могли насолоджуватися преміальною якістю кожного дня. Кожен товар у нашому каталозі проходить особистий контроль.
-                    </motion.p>
-                    <motion.div
-                        className={styles.signature}
-                        variants={{
-                            hidden: { opacity: 0, y: 15 },
-                            show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: premiumEase } }
-                        }}
-                    >
-                        Founder
-                    </motion.div>
-                </motion.div>
-            </div>
+      <div className={styles.introSection}>
+        <div className={styles.contentWrapper}>
+          <div className={styles.meta}>ПРО КОМПАНІЮ</div>
+          <h1 className={styles.title}>
+            Ексклюзивна селекція для вашого столу
+          </h1>
+          <p className={styles.description}>
+            Ми відбираємо найкращі продукти з усієї Європи, щоб ви могли
+            насолоджуватися преміальною якістю кожного дня. Кожен товар у нашому
+            каталозі проходить особистий контроль.
+          </p>
+          <div className={styles.signature}>Founder</div>
+        </div>
+      </div>
 
-            <motion.section
-                className={styles.valuesSection}
-                variants={{
-                    hidden: { opacity: 0 },
-                    show: { opacity: 1, transition: { staggerChildren: 0.2 } }
-                }}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, margin: "-50px" }}
-            >
-                <motion.div
-                    className={styles.valueCard}
-                    variants={{
-                        hidden: { opacity: 0, y: 20 },
-                        show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: premiumEase } }
-                    }}
-                >
-                    <div className={styles.valueNumber}>01</div>
-                    <div className={styles.valueTitle}>Безкомпромісна якість</div>
-                    <p className={styles.valueText}>Співпрацюємо лише з перевіреними виробниками.</p>
-                </motion.div>
-                <motion.div
-                    className={styles.valueCard}
-                    variants={{
-                        hidden: { opacity: 0, y: 20 },
-                        show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: premiumEase } }
-                    }}
-                >
-                    <div className={styles.valueNumber}>02</div>
-                    <div className={styles.valueTitle}>Прямі поставки</div>
-                    <p className={styles.valueText}>Контролюємо кожен етап від складу в Європі до вашого столу.</p>
-                </motion.div>
-                <motion.div
-                    className={styles.valueCard}
-                    variants={{
-                        hidden: { opacity: 0, y: 20 },
-                        show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: premiumEase } }
-                    }}
-                >
-                    <div className={styles.valueNumber}>03</div>
-                    <div className={styles.valueTitle}>Ексклюзивність</div>
-                    <p className={styles.valueText}>Знаходимо унікальні бренди, які важко знайти у звичайних магазинах.</p>
-                </motion.div>
-            </motion.section>
+      <section className={styles.valuesSection}>
+        <div className={styles.valueCard}>
+          <div className={styles.valueNumber}>01</div>
+          <h2 className={styles.valueTitle}>Безкомпромісна якість</h2>
+          <p className={styles.valueText}>
+            Співпрацюємо лише з перевіреними виробниками.
+          </p>
+        </div>
+        <div className={styles.valueCard}>
+          <div className={styles.valueNumber}>02</div>
+          <h2 className={styles.valueTitle}>Прямі поставки</h2>
+          <p className={styles.valueText}>
+            Контролюємо кожен етап від складу в Європі до вашого столу.
+          </p>
+        </div>
+        <div className={styles.valueCard}>
+          <div className={styles.valueNumber}>03</div>
+          <h2 className={styles.valueTitle}>Ексклюзивність</h2>
+          <p className={styles.valueText}>
+            Знаходимо унікальні бренди, які важко знайти у звичайних магазинах.
+          </p>
+        </div>
+      </section>
 
-            <motion.section
-                className={styles.statsSection}
-                variants={{
-                    hidden: { opacity: 0 },
-                    show: { opacity: 1, transition: { staggerChildren: 0.2 } }
-                }}
-                initial="hidden"
-                whileInView="show"
-                viewport={{ once: true, margin: "-50px" }}
-            >
-                <motion.div
-                    className={styles.statItem}
-                    variants={{
-                        hidden: { opacity: 0, y: 15 },
-                        show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: premiumEase } }
-                    }}
-                >
-                    <span className={styles.statNumber}>5+</span>
-                    <span className={styles.statLabel}>Років на ринку</span>
-                </motion.div>
-                <motion.div
-                    className={styles.statItem}
-                    variants={{
-                        hidden: { opacity: 0, y: 15 },
-                        show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: premiumEase } }
-                    }}
-                >
-                    <span className={styles.statNumber}>300+</span>
-                    <span className={styles.statLabel}>Преміальних товарів</span>
-                </motion.div>
-                <motion.div
-                    className={styles.statItem}
-                    variants={{
-                        hidden: { opacity: 0, y: 15 },
-                        show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: premiumEase } }
-                    }}
-                >
-                    <span className={styles.statNumber}>10k</span>
-                    <span className={styles.statLabel}>Задоволених клієнтів</span>
-                </motion.div>
-            </motion.section>
-        </>
-    )
+      <section className={styles.statsSection}>
+        <div className={styles.statItem}>
+          <span className={styles.statNumber}>5+</span>
+          <span className={styles.statLabel}>Років на ринку</span>
+        </div>
+        <div className={styles.statItem}>
+          <span className={styles.statNumber}>300+</span>
+          <span className={styles.statLabel}>Преміальних товарів</span>
+        </div>
+        <div className={styles.statItem}>
+          <span className={styles.statNumber}>10k</span>
+          <span className={styles.statLabel}>Задоволених клієнтів</span>
+        </div>
+      </section>
+    </>
+  );
 }

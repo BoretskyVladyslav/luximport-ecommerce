@@ -1,0 +1,242 @@
+.root {
+  position: relative;
+  flex-shrink: 0;
+}
+
+@media (min-width: 1024px) {
+  .trigger {
+    display: none;
+  }
+}
+
+.bar {
+  display: none;
+}
+@media (min-width: 1024px) {
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 240px;
+    height: 40px;
+    padding: 0 0.85rem;
+    background: #f4f4f5;
+    border: 1px solid #e5e5e5;
+    border-radius: 999px;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+  }
+  .bar:focus-within {
+    background: #ffffff;
+    border-color: #d4d4d8;
+  }
+}
+
+.barIcon {
+  flex-shrink: 0;
+  color: #888;
+}
+
+.barInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  color: #111;
+  outline: none;
+  padding: 0;
+}
+.barInput::-moz-placeholder {
+  color: #888;
+}
+.barInput::placeholder {
+  color: #888;
+}
+
+.panel {
+  position: fixed;
+  top: 80px;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e5e5;
+  padding: 1rem 1.25rem 0.75rem;
+}
+@media (min-width: 1024px) {
+  .panel {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: auto;
+    width: 360px;
+    border: 1px solid #e5e5e5;
+    border-bottom: 1px solid #e5e5e5;
+    padding: 0.5rem 1.1rem 0.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .panelIdle {
+    display: none;
+  }
+}
+
+.overlayField {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-bottom: 1px solid #e5e5e5;
+  padding-bottom: 0.5rem;
+}
+@media (min-width: 1024px) {
+  .overlayField {
+    display: none;
+  }
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-family: "Inter", sans-serif;
+  font-size: 0.8125rem;
+  letter-spacing: 0.04em;
+  color: #111;
+  outline: none;
+  padding: 0.25rem 0;
+}
+.input::-moz-placeholder {
+  color: #888;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+.input::placeholder {
+  color: #888;
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.clear {
+  flex-shrink: 0;
+  padding: 0.15rem;
+  color: #111;
+  transition: color 0.3s ease;
+}
+.clear:hover {
+  color: #888;
+}
+
+.list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  max-height: min(60vh, 22rem);
+  overflow-y: auto;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+  text-decoration: none;
+  color: inherit;
+  border-bottom: 1px solid #e5e5e5;
+  transition: color 0.3s ease;
+}
+.row:last-child {
+  border-bottom: none;
+}
+.row:hover {
+  color: #888;
+}
+
+.thumb,
+.thumbPlaceholder {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  background-color: #f4f4f4;
+  position: relative;
+  overflow: hidden;
+}
+
+.meta {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.title {
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #111;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subtitle {
+  font-family: "Inter", sans-serif;
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #888;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.price {
+  flex-shrink: 0;
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #111;
+  font-variant-numeric: lining-nums tabular-nums;
+  font-feature-settings: "lnum" 1, "tnum" 1;
+}
+
+.status {
+  font-family: "Inter", sans-serif;
+  font-size: 0.75rem;
+  color: #888;
+  padding: 1rem 0 0.5rem;
+}
+
+.statusError {
+  color: #dc2626;
+}
+
+.footer {
+  display: block;
+  margin-top: 0.5rem;
+  padding: 0.75rem 0 0.25rem;
+  font-family: "Inter", sans-serif;
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #111;
+  text-decoration: none;
+  border-top: 1px solid #e5e5e5;
+  transition: color 0.3s ease;
+}
+.footer:hover {
+  color: #888;
+}
+
+.skeletonRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0;
+}

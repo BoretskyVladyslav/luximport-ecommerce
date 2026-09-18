@@ -16,7 +16,7 @@ Reuse existing sliders. Do not invent a Sanity `banner` schema (desk lists the t
 ## Workflow
 
 1. Add/edit slide **data** (id, title, href, desktop/mobile image paths).
-2. Put assets in `public/images/` as desktop + mobile variants. Use `next/image`.
+2. Put campaign assets in `public/images/hero/{campaign}/` as `desktop.jpg` and `mobile.jpg`. Use `next/image`. Campaigns: `default`, `dr-gerard`, `juices`. Juice: folder only until real creative exists.
 3. Keep `framer-motion` easing/interval already on the component.
 4. Restyle by editing the colocated module or existing Tailwind on the hero — **do not paste styling boilerplate into chat**.
 
