@@ -11,11 +11,13 @@ const playfair = Playfair_Display({
   subsets: ["latin", "cyrillic"],
   variable: "--font-heading",
   display: "swap",
+  preload: false,
 });
 const inter = Inter({
   subsets: ["latin", "cyrillic"],
   variable: "--font-body",
   display: "swap",
+  preload: true,
 });
 
 export default function StorefrontLayout({

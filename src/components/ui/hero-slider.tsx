@@ -11,74 +11,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { withHeroRev } from "@/lib/hero-assets";
+import { heroSlides } from "./hero.data";
 import styles from "./hero-slider.module.scss";
 
 const AUTOPLAY_MS = 5000;
 const SWIPE_THRESHOLD = 50;
-const DESKTOP_HERO_MQ = "(min-width: 1024px), (orientation: landscape)";
-
-type HeroSlide = {
-  id: string;
-  tab: string;
-  eyebrow: string;
-  title: string;
-  description: string;
-  buttonText: string;
-  href: string;
-  highlight: string;
-  bg: string;
-  bgMobile: string;
-  tone: "light" | "dark";
-  objectPositionMobile: string;
-};
-
-const slides: HeroSlide[] = [
-  {
-    id: "premium",
-    tab: "Європейський імпорт",
-    eyebrow: "ПРЕМІАЛЬНА СЕЛЕКЦІЯ",
-    title: "Елітні продукти з самого серця Європи",
-    description:
-      "Тільки оригінальна якість та перевірені бренди. Кава, оливкова олія, солодощі та бакалія за прямими цінами імпортера.",
-    buttonText: "Перейти до каталогу",
-    href: "/catalog",
-    highlight: "Оригінал з ЄС • Гуртові ціни від 1 ящика",
-    bg: "/images/hero/default/desktop.jpg",
-    bgMobile: "/images/hero/default/mobile.webp",
-    tone: "dark",
-    objectPositionMobile: "center bottom",
-  },
-  {
-    id: "gerard",
-    tab: "Dr. Gerard",
-    eyebrow: "ОРИГІНАЛЬНА ЄВРОПЕЙСЬКА ЯКІСТЬ",
-    title: "Легендарне польське печиво Dr. Gerard",
-    description:
-      "Справжні солодощі для гуртових та роздрібних замовлень. Хіти смаку: Pasja, Mafijne та ChocoBears за прямими цінами імпортера.",
-    buttonText: "Переглянути асортимент",
-    href: "/catalog?category=dr-gerard",
-    highlight: "Опт від 1 ящика • Швидка доставка по всій Україні",
-    bg: "/images/hero/dr-gerard/desktop.jpg",
-    bgMobile: "/images/hero/dr-gerard/mobile.jpg",
-    tone: "light",
-    objectPositionMobile: "center 58%",
-  },
-  {
-    id: "juices",
-    tab: "Соки Juss",
-    eyebrow: "НАТУРАЛЬНА СВІЖІСТЬ ТА ЕКЗОТИКА",
-    title: "Преміальні соки та напої Juss",
-    description:
-      "Справжні європейські смаки для освіжаючого дня. Гранатовий нектар, екзотична лохина з насінням базиліку та ніжний абрикос за прямими цінами імпортера.",
-    buttonText: "Переглянути всі напої",
-    href: "/catalog?category=soky-ta-napoi",
-    highlight: "Прямий імпорт • Гуртові поставки від 1 ящика",
-    bg: "/images/hero/juices/desktop.jpg",
-    bgMobile: "/images/hero/juices/mobile.jpg",
-    tone: "light",
-    objectPositionMobile: "center 60%",
-  },
-];
+const slides = heroSlides;
 
 function padIndex(n: number) {
   return String(n).padStart(2, "0");
@@ -88,7 +26,6 @@ export function HeroSlider() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cycle, setCycle] = useState(0);
   const [paused, setPaused] = useState(false);
-  const [desktopHero, setDesktopHero] = useState(false);
   const remainingRef = useRef(AUTOPLAY_MS);
   const timerGen = useRef(0);
   const pointerStartX = useRef<number | null>(null);
@@ -115,14 +52,6 @@ export function HeroSlider() {
     },
     [bump],
   );
-
-  useEffect(() => {
-    const mq = window.matchMedia(DESKTOP_HERO_MQ);
-    const sync = () => setDesktopHero(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
 
   useEffect(() => {
     if (paused) return;
@@ -197,8 +126,8 @@ export function HeroSlider() {
           const isLcp = index === 0;
           const showImage = mountedSlides.has(index);
           const visible = currentIndex === index;
-          const desktopAlt = desktopHero ? item.title : "";
-          const mobileAlt = desktopHero ? "" : item.title;
+          const desktopAlt = visible ? item.title : "";
+          const mobileAlt = visible ? item.title : "";
           const frame = showImage ? (
             <div className="absolute inset-0 overflow-hidden">
               <div className="relative hidden h-full w-full landscape:block lg:block">
@@ -208,9 +137,9 @@ export function HeroSlider() {
                   fill
                   quality={75}
                   unoptimized={isLcp}
-                  priority={isLcp && desktopHero}
-                  fetchPriority={isLcp && desktopHero ? "high" : "low"}
-                  loading={isLcp && desktopHero ? "eager" : "lazy"}
+                  priority={isLcp}
+                  fetchPriority={isLcp ? "high" : "low"}
+                  loading={isLcp ? "eager" : "lazy"}
                   className="object-cover object-[70%_center]"
                   sizes="(min-width: 1024px) 100vw, (orientation: landscape) 100vw, 0px"
                 />
@@ -221,8 +150,8 @@ export function HeroSlider() {
                   <img
                     src={withHeroRev(item.bgMobile)}
                     alt={mobileAlt}
-                    fetchPriority={desktopHero ? "low" : "high"}
-                    loading={desktopHero ? "lazy" : "eager"}
+                    fetchPriority={isLcp ? "high" : "low"}
+                    loading={isLcp ? "eager" : "lazy"}
                     decoding="async"
                     sizes="(max-width: 480px) 100vw, (max-width: 768px) 100vw, 50vw"
                     className="absolute inset-0 h-full w-full object-cover"
@@ -404,54 +333,81 @@ export function HeroSlider() {
         <ChevronRight size={18} strokeWidth={1.5} />
       </button>
 
-      <div className="absolute bottom-4 left-4 right-4 z-20 flex justify-center">
-        <div
-          role="tablist"
-          aria-label="Кампанії"
-          className="flex h-14 w-full max-w-sm items-end gap-2 rounded-2xl border border-white/20 bg-white/50 p-1.5 shadow-lg backdrop-blur-md dark:bg-black/40 lg:h-auto lg:max-w-[900px] lg:px-4 lg:py-2"
-        >
-          {slides.map((item, index) => {
-            const active = index === currentIndex;
-            const n = padIndex(index + 1);
-            return (
-              <button
-                key={item.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                aria-label={`${n} • ${item.tab}`}
-                onClick={() => goTo(index)}
-                className="flex min-w-0 flex-1 flex-col gap-2 text-left"
+      <div
+        role="tablist"
+        aria-label="Кампанії"
+        className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center rounded-full border border-white/20 bg-white/40 px-5 py-2.5 shadow-xl backdrop-blur-md dark:bg-black/40 lg:hidden"
+      >
+        {slides.map((item, index) => {
+          const active = index === currentIndex;
+          const n = String(index + 1);
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              aria-label={`${n} • ${item.titleShort}`}
+              onClick={() => goTo(index)}
+              className={
+                active
+                  ? "mx-1 flex h-10 items-center justify-center gap-1.5 rounded-full bg-[#C5A059] px-3 text-sm font-bold text-slate-900"
+                  : "mx-1 flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-slate-900 dark:text-slate-100"
+              }
+            >
+              <span className="tabular-nums lining-nums">{n}</span>
+              {active ? (
+                <span className="whitespace-nowrap">{item.titleShort}</span>
+              ) : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        role="tablist"
+        aria-label="Кампанії"
+        className="absolute bottom-7 left-1/2 z-20 hidden h-auto w-[min(100%-2rem,900px)] -translate-x-1/2 items-end gap-2 rounded-2xl bg-white/90 px-4 py-2 lg:flex"
+      >
+        {slides.map((item, index) => {
+          const active = index === currentIndex;
+          const n = padIndex(index + 1);
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              aria-label={`${n} • ${item.tab}`}
+              onClick={() => goTo(index)}
+              className="flex min-w-0 flex-1 flex-col gap-2 text-left"
+            >
+              <span
+                className={`truncate font-heading text-[11px] uppercase tracking-[0.2em] ${
+                  active
+                    ? "font-bold text-slate-900"
+                    : "font-medium text-slate-800"
+                }`}
               >
-                <span
-                  className={`truncate font-heading text-[10px] uppercase tracking-[0.14em] lg:text-[11px] lg:tracking-[0.2em] ${
-                    active
-                      ? "font-bold text-slate-900"
-                      : "font-medium text-slate-800 dark:text-slate-200"
-                  }`}
-                >
-                  <span className="tabular-nums lining-nums">{n}</span>
-                  <span className={active ? "inline" : "hidden sm:inline"}>
-                    {" • "}
-                    {item.tab}
-                  </span>
-                </span>
-                <span className="block h-[2px] w-full overflow-hidden bg-slate-800/20">
-                  {active ? (
-                    <span
-                      key={`${item.id}-${cycle}`}
-                      className={styles.progressFill}
-                      style={{
-                        animationDuration: `${AUTOPLAY_MS}ms`,
-                        animationPlayState: paused ? "paused" : "running",
-                      }}
-                    />
-                  ) : null}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+                <span className="tabular-nums lining-nums">{n}</span>
+                {" • "}
+                {item.tab}
+              </span>
+              <span className="block h-[2px] w-full overflow-hidden bg-slate-800/20">
+                {active ? (
+                  <span
+                    key={`${item.id}-${cycle}`}
+                    className={styles.progressFill}
+                    style={{
+                      animationDuration: `${AUTOPLAY_MS}ms`,
+                      animationPlayState: paused ? "paused" : "running",
+                    }}
+                  />
+                ) : null}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </section>
   );
