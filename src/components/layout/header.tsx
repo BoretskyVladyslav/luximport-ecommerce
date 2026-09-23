@@ -4,7 +4,15 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useSession } from "next-auth/react";
-import { ShoppingBag, Menu, X, Heart, User, LogOut } from "lucide-react";
+import {
+  ShoppingBag,
+  Menu,
+  X,
+  Heart,
+  User,
+  LogOut,
+  Search,
+} from "lucide-react";
 import { useStore } from "@/store/cart";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useHydration } from "@/hooks/useHydration";
@@ -23,6 +31,7 @@ const HeaderSearch = dynamic(
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [searchReady, setSearchReady] = useState(false);
   const { data: session, status } = useSession();
   const items = useStore((state) => state.items);
   const openCart = useStore((state) => state.openCart);
@@ -84,7 +93,18 @@ export function Header() {
         </Link>
 
         <div className={styles.iconGroup}>
-          <HeaderSearch triggerClassName={styles.cartButton} />
+          {searchReady ? (
+            <HeaderSearch triggerClassName={styles.cartButton} autoOpen />
+          ) : (
+            <button
+              type="button"
+              className={styles.cartButton}
+              onClick={() => setSearchReady(true)}
+              aria-label="Пошук"
+            >
+              <Search size={20} />
+            </button>
+          )}
           <button
             type="button"
             className={styles.cartButton}

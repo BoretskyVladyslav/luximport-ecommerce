@@ -1,6 +1,6 @@
 import dynamic from "next/dynamic";
 import { HeroSlider } from "@/components/ui/hero-slider";
-import { ProductCard } from "@/components/ui/product-card";
+import { ProductCardSkeleton } from "@/components/ui/skeletons";
 import type { HomeTeaserProduct } from "@/lib/sanity-queries";
 import styles from "./page.module.scss";
 
@@ -14,6 +14,14 @@ const BrandSlider = dynamic(
       />
     ),
   },
+);
+
+const ProductCard = dynamic(
+  () =>
+    import("@/components/ui/product-card").then((m) => ({
+      default: m.ProductCard,
+    })),
+  { loading: () => <ProductCardSkeleton /> },
 );
 
 export function HomePageFrame({ children }: { children: React.ReactNode }) {

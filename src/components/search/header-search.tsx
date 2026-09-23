@@ -44,8 +44,10 @@ function isDesktopViewport(): boolean {
 
 export function HeaderSearch({
   triggerClassName,
+  autoOpen = false,
 }: {
   triggerClassName: string;
+  autoOpen?: boolean;
 }) {
   const router = useRouter();
   const closeCart = useCartStore((state) => state.closeCart);
@@ -55,7 +57,7 @@ export function HeaderSearch({
   const barInputRef = useRef<HTMLInputElement>(null);
   const overlayInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen);
   const [query, setQuery] = useState("");
   const [debounced, setDebounced] = useState("");
   const [loading, setLoading] = useState(false);

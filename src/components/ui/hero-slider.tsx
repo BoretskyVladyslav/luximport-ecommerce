@@ -200,7 +200,7 @@ export function HeroSlider() {
           const desktopAlt = desktopHero ? item.title : "";
           const mobileAlt = desktopHero ? "" : item.title;
           const frame = showImage ? (
-            <div className="absolute inset-0 bottom-[calc(8.25rem+env(safe-area-inset-bottom))] overflow-hidden lg:inset-0">
+            <div className="absolute inset-0 bottom-[4.75rem] overflow-hidden lg:inset-0">
               <div className="relative hidden h-full w-full landscape:block lg:block">
                 <Image
                   src={withHeroRev(item.bg)}
@@ -259,7 +259,7 @@ export function HeroSlider() {
       </div>
 
       <div
-        className="absolute inset-0 z-[2] touch-pan-y md:pointer-events-none"
+        className="absolute inset-x-0 bottom-0 top-1/2 z-[2] touch-pan-y md:pointer-events-none lg:inset-0"
         onPointerDown={onPointerDown}
         onPointerUp={onPointerUp}
         onPointerCancel={onPointerCancel}
@@ -277,14 +277,18 @@ export function HeroSlider() {
             <div className="flex flex-col items-center gap-1 sm:gap-1.5 lg:items-start lg:gap-4">
               <span
                 className={`text-[9px] font-bold uppercase tracking-[0.18em] sm:text-[10px] lg:mb-2 lg:text-[11px] lg:tracking-[0.28em] ${
-                  isLight ? "text-[#111]/70" : "text-white/80"
+                  isLight
+                    ? "text-stone-800 [text-shadow:0_1px_6px_rgba(255,255,255,0.7)]"
+                    : "text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.45)]"
                 }`}
               >
                 {slide.eyebrow}
               </span>
               <p
                 className={`line-clamp-1 max-w-[34ch] text-[9px] font-semibold uppercase tracking-[0.08em] md:hidden ${
-                  isLight ? "text-[#111]/65" : "text-white/75"
+                  isLight
+                    ? "text-stone-800 [text-shadow:0_1px_6px_rgba(255,255,255,0.7)]"
+                    : "text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.45)]"
                 }`}
               >
                 {slide.highlight}
@@ -303,7 +307,7 @@ export function HeroSlider() {
             <p
               className={`mt-2 hidden w-full max-w-[45ch] text-[12px] font-semibold leading-snug tracking-wide md:mt-3 md:block md:text-sm lg:mt-6 lg:text-base lg:leading-relaxed xl:text-lg ${
                 isLight
-                  ? "text-[#111]/80 [text-shadow:0_1px_6px_rgba(255,255,255,0.45)]"
+                  ? "text-stone-800 [text-shadow:0_1px_6px_rgba(255,255,255,0.55)]"
                   : "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
               }`}
             >
@@ -312,7 +316,9 @@ export function HeroSlider() {
 
             <p
               className={`mt-2 hidden text-[10px] font-semibold uppercase tracking-[0.1em] md:mt-3 md:block lg:mt-4 lg:text-xs lg:tracking-[0.16em] ${
-                isLight ? "text-[#111]/65" : "text-white/75"
+                isLight
+                  ? "text-stone-800 [text-shadow:0_1px_6px_rgba(255,255,255,0.7)]"
+                  : "text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.45)]"
               }`}
             >
               {slide.highlight}
@@ -331,34 +337,46 @@ export function HeroSlider() {
         </div>
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-[28%] max-h-40 flex-col items-center justify-start px-4 pt-4 text-center lg:hidden">
-        <span
-          className={`text-[10px] font-bold uppercase tracking-[0.18em] ${
-            isLight
-              ? "text-[#111]/75 [text-shadow:0_1px_6px_rgba(255,255,255,0.65)]"
-              : "text-white/85 [text-shadow:0_1px_8px_rgba(0,0,0,0.45)]"
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-30 h-1/2 lg:hidden">
+        <div
+          className={`mx-4 mt-4 rounded-2xl border border-white/20 p-5 shadow-lg backdrop-blur-md ${
+            isLight ? "bg-white/40" : "bg-black/40"
           }`}
         >
-          {slide.eyebrow}
-        </span>
-        <h2
-          className={`mt-2 line-clamp-3 w-full max-w-[18ch] text-balance font-heading text-xl font-bold leading-[1.12] sm:text-2xl ${
-            isLight
-              ? "text-[#1c1917] [text-shadow:0_1px_8px_rgba(255,255,255,0.7)]"
-              : "text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.45)]"
-          }`}
-        >
-          {slide.title}
-        </h2>
-      </div>
-
-      <div className="pointer-events-none absolute inset-x-0 z-30 flex h-12 items-center justify-center lg:hidden bottom-[calc(5.25rem+env(safe-area-inset-bottom))]">
-        <Link
-          href={slide.href}
-          className="pointer-events-auto mx-auto flex h-12 w-[calc(100%-2rem)] max-w-sm items-center justify-center rounded-xl bg-[#C5A059] px-4 text-sm font-medium text-[#111] shadow-md"
-        >
-          {slide.buttonText}
-        </Link>
+          <span
+            className={`text-[10px] font-bold uppercase tracking-[0.18em] ${
+              isLight
+                ? "text-stone-800 [text-shadow:0_1px_6px_rgba(255,255,255,0.7)]"
+                : "text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.45)]"
+            }`}
+          >
+            {slide.eyebrow}
+          </span>
+          <h2
+            className={`mt-2 line-clamp-3 w-full text-balance font-heading text-xl font-bold leading-[1.12] sm:text-2xl ${
+              isLight
+                ? "text-[#1c1917] [text-shadow:0_1px_8px_rgba(255,255,255,0.7)]"
+                : "text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.45)]"
+            }`}
+          >
+            {slide.title}
+          </h2>
+          <p
+            className={`mt-2 line-clamp-2 text-sm font-medium leading-snug ${
+              isLight
+                ? "text-stone-800 [text-shadow:0_1px_6px_rgba(255,255,255,0.65)]"
+                : "text-white [text-shadow:0_1px_8px_rgba(0,0,0,0.4)]"
+            }`}
+          >
+            {slide.description}
+          </p>
+          <Link
+            href={slide.href}
+            className="pointer-events-auto mt-4 flex h-12 w-full items-center justify-center rounded-xl bg-[#C5A059] px-4 text-sm font-medium text-[#111] shadow-md"
+          >
+            {slide.buttonText}
+          </Link>
+        </div>
       </div>
 
       <div
@@ -389,7 +407,7 @@ export function HeroSlider() {
       <div
         role="tablist"
         aria-label="Кампанії"
-        className="absolute bottom-[max(1.25rem,calc(1.25rem+env(safe-area-inset-bottom)))] left-1/2 z-20 flex h-14 w-[min(100%-2rem,900px)] -translate-x-1/2 items-end gap-2 rounded-2xl bg-white/70 px-3 py-2 lg:bottom-7 lg:h-auto lg:bg-white/25 lg:px-4 lg:backdrop-blur-[2px]"
+        className="absolute bottom-[max(1.25rem,calc(1.25rem+env(safe-area-inset-bottom)))] left-1/2 z-20 flex h-14 w-[min(100%-2rem,900px)] -translate-x-1/2 items-end gap-2 rounded-2xl bg-white/90 px-3 py-2 lg:bottom-7 lg:h-auto lg:bg-white/90 lg:px-4 lg:backdrop-blur-[2px]"
       >
         {slides.map((item, index) => {
           const active = index === currentIndex;
@@ -402,15 +420,13 @@ export function HeroSlider() {
               aria-selected={active}
               aria-label={`${n} • ${item.tab}`}
               onClick={() => goTo(index)}
-              className={`flex min-w-0 flex-1 flex-col gap-2 text-left transition-opacity duration-300 ${
-                active ? "opacity-100" : "opacity-70 hover:opacity-100"
-              }`}
+              className="flex min-w-0 flex-1 flex-col gap-2 text-left"
             >
               <span
                 className={`truncate font-heading text-[10px] uppercase tracking-[0.14em] lg:text-[11px] lg:tracking-[0.2em] ${
                   active
-                    ? "font-bold text-[#1c1917]"
-                    : "font-medium text-[#111]/55"
+                    ? "font-bold text-slate-900"
+                    : "font-medium text-slate-700"
                 }`}
               >
                 <span className="tabular-nums lining-nums">{n}</span>
