@@ -257,16 +257,16 @@ export function HeroSlider() {
         onPointerCancel={onPointerCancel}
       />
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-[55%] w-full flex-col items-center justify-start px-4 pt-6 text-center sm:px-8 sm:pt-8 lg:inset-0 lg:h-full lg:items-start lg:justify-center lg:px-16 lg:pb-28 lg:pt-0 lg:text-left xl:px-20">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-[38%] max-h-[38%] w-full flex-col items-center justify-start overflow-hidden px-4 pt-3 text-center sm:px-6 sm:pt-4 md:h-[55%] md:max-h-none md:overflow-visible md:px-8 md:pt-8 lg:inset-0 lg:h-full lg:max-h-none lg:items-start lg:justify-center lg:overflow-visible lg:px-16 lg:pb-28 lg:pt-0 lg:text-left xl:px-20">
         <div className="flex w-full max-w-[36rem] flex-col items-center lg:w-[46%] lg:max-w-[500px] lg:items-start">
           <div
             className={`flex w-full flex-col items-center lg:items-start ${
               isLight
-                ? "rounded-2xl bg-white/70 p-4 sm:p-6 lg:bg-transparent lg:p-0"
-                : "rounded-2xl bg-black/40 p-4 sm:p-6 lg:bg-transparent lg:p-0"
+                ? "rounded-2xl bg-white/70 px-3 py-2.5 sm:px-4 sm:py-3 md:p-6 lg:bg-transparent lg:p-0"
+                : "rounded-2xl bg-black/40 px-3 py-2.5 sm:px-4 sm:py-3 md:p-6 lg:bg-transparent lg:p-0"
             }`}
           >
-            <div className="flex flex-col items-center gap-2 lg:items-start lg:gap-4">
+            <div className="flex flex-col items-center gap-1 sm:gap-1.5 lg:items-start lg:gap-4">
               <span
                 className={`text-[9px] font-bold uppercase tracking-[0.18em] sm:text-[10px] lg:mb-2 lg:text-[11px] lg:tracking-[0.28em] ${
                   isLight ? "text-[#111]/70" : "text-white/80"
@@ -274,8 +274,15 @@ export function HeroSlider() {
               >
                 {slide.eyebrow}
               </span>
+              <p
+                className={`line-clamp-1 max-w-[34ch] text-[9px] font-semibold uppercase tracking-[0.08em] md:hidden ${
+                  isLight ? "text-[#111]/65" : "text-white/75"
+                }`}
+              >
+                {slide.highlight}
+              </p>
               <h2
-                className={`w-full max-w-[18ch] text-balance font-heading text-[1.35rem] font-bold leading-[1.12] sm:text-[1.75rem] md:max-w-none md:text-3xl lg:text-[2.5rem] xl:text-5xl ${
+                className={`w-full max-w-[18ch] text-balance font-heading text-xl font-bold leading-[1.12] sm:text-2xl md:max-w-none md:text-3xl lg:text-[2.5rem] xl:text-5xl ${
                   isLight
                     ? "text-[#1c1917] [text-shadow:0_1px_8px_rgba(255,255,255,0.55)]"
                     : "text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
@@ -286,7 +293,7 @@ export function HeroSlider() {
             </div>
 
             <p
-              className={`mt-2 line-clamp-3 w-full max-w-[45ch] text-[12px] font-semibold leading-snug tracking-wide sm:text-sm lg:mt-6 lg:line-clamp-none lg:text-base lg:leading-relaxed xl:text-lg ${
+              className={`mt-2 hidden w-full max-w-[45ch] text-[12px] font-semibold leading-snug tracking-wide md:mt-3 md:block md:text-sm lg:mt-6 lg:text-base lg:leading-relaxed xl:text-lg ${
                 isLight
                   ? "text-[#111]/80 [text-shadow:0_1px_6px_rgba(255,255,255,0.45)]"
                   : "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
@@ -296,7 +303,7 @@ export function HeroSlider() {
             </p>
 
             <p
-              className={`mt-2 text-[10px] font-semibold uppercase tracking-[0.1em] lg:mt-4 lg:text-xs lg:tracking-[0.16em] ${
+              className={`mt-2 hidden text-[10px] font-semibold uppercase tracking-[0.1em] md:mt-3 md:block lg:mt-4 lg:text-xs lg:tracking-[0.16em] ${
                 isLight ? "text-[#111]/65" : "text-white/75"
               }`}
             >
@@ -305,9 +312,9 @@ export function HeroSlider() {
 
             <Link
               href={slide.href}
-              className="pointer-events-auto group/cta relative mt-3 inline-flex items-center justify-center overflow-hidden rounded-md bg-[#C5A059] px-6 py-3 shadow-[0_10px_30px_rgba(197,160,89,0.3)] transition-shadow duration-300 ease-in-out hover:shadow-[0_15px_40px_rgba(197,160,89,0.4)] lg:mt-10 lg:px-12 lg:py-5"
+              className="pointer-events-auto group/cta relative mt-2 inline-flex items-center justify-center overflow-hidden rounded-md bg-[#C5A059] px-6 py-2.5 shadow-[0_10px_30px_rgba(197,160,89,0.3)] transition-shadow duration-300 ease-in-out hover:shadow-[0_15px_40px_rgba(197,160,89,0.4)] md:mt-4 lg:mt-10 lg:px-12 lg:py-5"
             >
-              <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.2em] text-[#111] lg:text-xs lg:tracking-[0.28em]">
+              <span className="relative z-10 text-xs font-black uppercase tracking-[0.2em] text-[#111] sm:text-sm lg:text-xs lg:tracking-[0.28em]">
                 {slide.buttonText}
               </span>
               <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover/cta:translate-x-full" />
