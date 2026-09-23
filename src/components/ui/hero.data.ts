@@ -18,7 +18,7 @@ export const heroSlides: HeroSlide[] = [
   {
     id: "premium",
     tab: "Європейський імпорт",
-    titleShort: "Преміум",
+    titleShort: "Імпорт",
     eyebrow: "ПРЕМІАЛЬНА СЕЛЕКЦІЯ",
     title: "Елітні продукти з самого серця Європи",
     description:
@@ -50,7 +50,7 @@ export const heroSlides: HeroSlide[] = [
   {
     id: "juices",
     tab: "Соки Juss",
-    titleShort: "Каталог",
+    titleShort: "Соки Juss",
     eyebrow: "НАТУРАЛЬНА СВІЖІСТЬ ТА ЕКЗОТИКА",
     title: "Преміальні соки та напої Juss",
     description:

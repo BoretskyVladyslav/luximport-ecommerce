@@ -336,11 +336,11 @@ export function HeroSlider() {
       <div
         role="tablist"
         aria-label="Кампанії"
-        className="absolute bottom-6 left-1/2 z-20 flex -translate-x-1/2 items-center rounded-full border border-white/20 bg-white/40 px-5 py-2.5 shadow-xl backdrop-blur-md dark:bg-black/40 lg:hidden"
+        className="absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-white/30 bg-white/45 p-1.5 shadow-lg backdrop-blur-md lg:hidden"
       >
         {slides.map((item, index) => {
           const active = index === currentIndex;
-          const n = String(index + 1);
+          const n = padIndex(index + 1);
           return (
             <button
               key={item.id}
@@ -351,13 +351,25 @@ export function HeroSlider() {
               onClick={() => goTo(index)}
               className={
                 active
-                  ? "mx-1 flex h-10 items-center justify-center gap-1.5 rounded-full bg-[#C5A059] px-3 text-sm font-bold text-slate-900"
-                  : "mx-1 flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-slate-900 dark:text-slate-100"
+                  ? "relative flex h-8 items-center gap-1.5 overflow-hidden rounded-full bg-[#C5A059] px-3.5 text-xs font-medium text-slate-900 shadow-sm transition-all duration-300"
+                  : "flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold text-slate-800 transition-all"
               }
             >
               <span className="tabular-nums lining-nums">{n}</span>
               {active ? (
-                <span className="whitespace-nowrap">{item.titleShort}</span>
+                <span className="whitespace-nowrap">• {item.titleShort}</span>
+              ) : null}
+              {active ? (
+                <span className="pointer-events-none absolute inset-x-2.5 bottom-0.5 h-0.5 overflow-hidden rounded-full bg-slate-900/20">
+                  <span
+                    key={`${item.id}-${cycle}`}
+                    className={styles.progressFillDock}
+                    style={{
+                      animationDuration: `${AUTOPLAY_MS}ms`,
+                      animationPlayState: paused ? "paused" : "running",
+                    }}
+                  />
+                </span>
               ) : null}
             </button>
           );
