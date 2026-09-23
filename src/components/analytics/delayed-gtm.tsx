@@ -11,8 +11,7 @@ export function DelayedGtm({ gtmId }: { gtmId: string }) {
     if (!GTM_ID_RE.test(gtmId)) return;
 
     let loaded = false;
-    let idleId: number | undefined;
-    let ricId: number | undefined;
+    let timeoutId: number | undefined;
 
     const load = () => {
       if (loaded) return;
@@ -29,18 +28,14 @@ export function DelayedGtm({ gtmId }: { gtmId: string }) {
       document.head.appendChild(script);
     };
 
-    const events = ["pointerdown", "keydown", "touchstart"] as const;
+    const events = ["touchstart", "click", "scroll"] as const;
     const listenerOpts: AddEventListenerOptions = { once: true, passive: true };
 
     function cleanup() {
       events.forEach((event) => window.removeEventListener(event, load));
-      if (idleId !== undefined) {
-        window.clearTimeout(idleId);
-        idleId = undefined;
-      }
-      if (ricId !== undefined && "cancelIdleCallback" in window) {
-        window.cancelIdleCallback(ricId);
-        ricId = undefined;
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+        timeoutId = undefined;
       }
     }
 
@@ -48,10 +43,7 @@ export function DelayedGtm({ gtmId }: { gtmId: string }) {
       window.addEventListener(event, load, listenerOpts),
     );
 
-    if ("requestIdleCallback" in window) {
-      ricId = window.requestIdleCallback(() => load(), { timeout: 4000 });
-    }
-    idleId = window.setTimeout(load, 20000);
+    timeoutId = window.setTimeout(load, 7000);
 
     return cleanup;
   }, [gtmId]);

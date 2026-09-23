@@ -44,7 +44,7 @@ const slides: HeroSlide[] = [
     href: "/catalog",
     highlight: "Оригінал з ЄС • Гуртові ціни від 1 ящика",
     bg: "/images/hero/default/desktop.jpg",
-    bgMobile: "/images/hero/default/mobile.jpg",
+    bgMobile: "/images/hero/default/mobile.webp",
     tone: "dark",
     objectPositionMobile: "center bottom",
   },
@@ -200,7 +200,7 @@ export function HeroSlider() {
           const desktopAlt = desktopHero ? item.title : "";
           const mobileAlt = desktopHero ? "" : item.title;
           const frame = showImage ? (
-            <div className="absolute inset-0 bottom-[4.75rem] overflow-hidden lg:inset-0">
+            <div className="absolute inset-0 bottom-[calc(8.25rem+env(safe-area-inset-bottom))] overflow-hidden lg:inset-0">
               <div className="relative hidden h-full w-full landscape:block lg:block">
                 <Image
                   src={withHeroRev(item.bg)}
@@ -208,31 +208,39 @@ export function HeroSlider() {
                   fill
                   quality={75}
                   unoptimized={isLcp}
-                  priority={isLcp}
-                  fetchPriority={isLcp ? "high" : "low"}
-                  loading={isLcp ? "eager" : "lazy"}
+                  priority={isLcp && desktopHero}
+                  fetchPriority={isLcp && desktopHero ? "high" : "low"}
+                  loading={isLcp && desktopHero ? "eager" : "lazy"}
                   className="object-cover object-[70%_center]"
                   sizes="(min-width: 1024px) 100vw, (orientation: landscape) 100vw, 0px"
                 />
               </div>
               <div className="relative block h-full w-full landscape:hidden lg:hidden">
-                <Image
-                  src={withHeroRev(item.bgMobile)}
-                  alt={mobileAlt}
-                  fill
-                  quality={75}
-                  unoptimized={isLcp}
-                  priority={isLcp}
-                  fetchPriority={isLcp ? "high" : "low"}
-                  loading={isLcp ? "eager" : "lazy"}
-                  className="object-cover"
-                  style={{ objectPosition: item.objectPositionMobile }}
-                  sizes={
-                    isLcp
-                      ? "100vw"
-                      : "(max-width: 1023px) and (orientation: portrait) 100vw, 0px"
-                  }
-                />
+                {isLcp ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={withHeroRev(item.bgMobile)}
+                    alt={mobileAlt}
+                    fetchPriority={desktopHero ? "low" : "high"}
+                    loading={desktopHero ? "lazy" : "eager"}
+                    decoding="async"
+                    sizes="(max-width: 768px) 100vw, 50vw"
+                    className="absolute inset-0 h-full w-full object-cover"
+                    style={{ objectPosition: item.objectPositionMobile }}
+                  />
+                ) : (
+                  <Image
+                    src={withHeroRev(item.bgMobile)}
+                    alt={mobileAlt}
+                    fill
+                    quality={75}
+                    fetchPriority="low"
+                    loading="lazy"
+                    className="object-cover"
+                    style={{ objectPosition: item.objectPositionMobile }}
+                    sizes="(max-width: 1023px) and (orientation: portrait) 100vw, 0px"
+                  />
+                )}
               </div>
             </div>
           ) : null;
@@ -257,7 +265,7 @@ export function HeroSlider() {
         onPointerCancel={onPointerCancel}
       />
 
-      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-[38%] max-h-[38%] w-full flex-col items-center justify-start overflow-hidden px-4 pt-3 text-center sm:px-6 sm:pt-4 md:h-[55%] md:max-h-none md:overflow-visible md:px-8 md:pt-8 lg:inset-0 lg:h-full lg:max-h-none lg:items-start lg:justify-center lg:overflow-visible lg:px-16 lg:pb-28 lg:pt-0 lg:text-left xl:px-20">
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 hidden h-[38%] max-h-[38%] w-full flex-col items-center justify-start overflow-hidden px-4 pt-3 text-center sm:px-6 sm:pt-4 md:h-[55%] md:max-h-none md:overflow-visible md:px-8 md:pt-8 lg:inset-0 lg:flex lg:h-full lg:max-h-none lg:items-start lg:justify-center lg:overflow-visible lg:px-16 lg:pb-28 lg:pt-0 lg:text-left xl:px-20">
         <div className="flex w-full max-w-[36rem] flex-col items-center lg:w-[46%] lg:max-w-[500px] lg:items-start">
           <div
             className={`flex w-full flex-col items-center lg:items-start ${
@@ -323,11 +331,41 @@ export function HeroSlider() {
         </div>
       </div>
 
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-[28%] max-h-40 flex-col items-center justify-start px-4 pt-4 text-center lg:hidden">
+        <span
+          className={`text-[10px] font-bold uppercase tracking-[0.18em] ${
+            isLight
+              ? "text-[#111]/75 [text-shadow:0_1px_6px_rgba(255,255,255,0.65)]"
+              : "text-white/85 [text-shadow:0_1px_8px_rgba(0,0,0,0.45)]"
+          }`}
+        >
+          {slide.eyebrow}
+        </span>
+        <h2
+          className={`mt-2 line-clamp-3 w-full max-w-[18ch] text-balance font-heading text-xl font-bold leading-[1.12] sm:text-2xl ${
+            isLight
+              ? "text-[#1c1917] [text-shadow:0_1px_8px_rgba(255,255,255,0.7)]"
+              : "text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.45)]"
+          }`}
+        >
+          {slide.title}
+        </h2>
+      </div>
+
+      <div className="pointer-events-none absolute inset-x-0 z-30 flex h-12 items-center justify-center lg:hidden bottom-[calc(5.25rem+env(safe-area-inset-bottom))]">
+        <Link
+          href={slide.href}
+          className="pointer-events-auto mx-auto flex h-12 w-[calc(100%-2rem)] max-w-sm items-center justify-center rounded-xl bg-[#C5A059] px-4 text-sm font-medium text-[#111] shadow-md"
+        >
+          {slide.buttonText}
+        </Link>
+      </div>
+
       <div
-        className={`pointer-events-none absolute inset-0 z-[1] ${
+        className={`pointer-events-none absolute inset-x-0 top-0 z-[1] h-[30%] lg:inset-0 lg:h-full ${
           isLight
-            ? "bg-gradient-to-b from-white/50 via-white/10 to-transparent lg:bg-gradient-to-r lg:from-white/35 lg:via-white/5 lg:to-transparent"
-            : "bg-gradient-to-b from-black/30 via-transparent to-black/10 lg:bg-gradient-to-r lg:from-black/40 lg:via-transparent lg:to-transparent"
+            ? "bg-gradient-to-b from-white/50 to-transparent lg:bg-gradient-to-r lg:from-white/35 lg:via-white/5 lg:to-transparent"
+            : "bg-gradient-to-b from-black/35 to-transparent lg:bg-gradient-to-r lg:from-black/40 lg:via-transparent lg:to-transparent"
         }`}
       />
 
@@ -351,7 +389,7 @@ export function HeroSlider() {
       <div
         role="tablist"
         aria-label="Кампанії"
-        className="absolute bottom-[max(1.25rem,calc(1.25rem+env(safe-area-inset-bottom)))] left-1/2 z-20 flex w-[min(100%-2rem,900px)] -translate-x-1/2 items-end gap-2 rounded-2xl bg-white/70 px-3 py-2 lg:bottom-7 lg:bg-white/25 lg:px-4 lg:backdrop-blur-[2px]"
+        className="absolute bottom-[max(1.25rem,calc(1.25rem+env(safe-area-inset-bottom)))] left-1/2 z-20 flex h-14 w-[min(100%-2rem,900px)] -translate-x-1/2 items-end gap-2 rounded-2xl bg-white/70 px-3 py-2 lg:bottom-7 lg:h-auto lg:bg-white/25 lg:px-4 lg:backdrop-blur-[2px]"
       >
         {slides.map((item, index) => {
           const active = index === currentIndex;

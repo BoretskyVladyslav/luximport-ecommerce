@@ -45,7 +45,7 @@ export function Header() {
       if (event.persisted) syncScrolled();
     };
     syncScrolled();
-    window.addEventListener("scroll", syncScrolled);
+    window.addEventListener("scroll", syncScrolled, { passive: true });
     window.addEventListener("pageshow", onPageShow);
     return () => {
       window.removeEventListener("scroll", syncScrolled);

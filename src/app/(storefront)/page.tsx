@@ -41,8 +41,8 @@ export default function Home() {
       <link
         rel="preload"
         as="image"
-        href={withHeroRev("/images/hero/default/mobile.jpg")}
-        media="(max-width: 1023px) and (orientation: portrait)"
+        href={withHeroRev("/images/hero/default/mobile.webp")}
+        media="(max-width: 767px)"
         fetchPriority="high"
       />
       <link

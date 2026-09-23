@@ -1,8 +1,20 @@
+import dynamic from "next/dynamic";
 import { HeroSlider } from "@/components/ui/hero-slider";
-import { BrandSlider } from "@/components/ui/BrandSlider";
 import { ProductCard } from "@/components/ui/product-card";
 import type { HomeTeaserProduct } from "@/lib/sanity-queries";
 import styles from "./page.module.scss";
+
+const BrandSlider = dynamic(
+  () => import("@/components/ui/BrandSlider").then((m) => m.BrandSlider),
+  {
+    loading: () => (
+      <section
+        className="h-[220px] border-t border-neutral-100 bg-white md:h-[260px]"
+        aria-hidden
+      />
+    ),
+  },
+);
 
 export function HomePageFrame({ children }: { children: React.ReactNode }) {
   return (
