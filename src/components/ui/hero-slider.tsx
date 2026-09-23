@@ -200,7 +200,7 @@ export function HeroSlider() {
           const desktopAlt = desktopHero ? item.title : "";
           const mobileAlt = desktopHero ? "" : item.title;
           const frame = showImage ? (
-            <div className="absolute inset-0 bottom-[4.75rem] overflow-hidden lg:inset-0">
+            <div className="absolute inset-0 overflow-hidden">
               <div className="relative hidden h-full w-full landscape:block lg:block">
                 <Image
                   src={withHeroRev(item.bg)}
@@ -224,7 +224,7 @@ export function HeroSlider() {
                     fetchPriority={desktopHero ? "low" : "high"}
                     loading={desktopHero ? "lazy" : "eager"}
                     decoding="async"
-                    sizes="(max-width: 768px) 100vw, 50vw"
+                    sizes="(max-width: 480px) 100vw, (max-width: 768px) 100vw, 50vw"
                     className="absolute inset-0 h-full w-full object-cover"
                     style={{ objectPosition: item.objectPositionMobile }}
                   />
@@ -238,7 +238,7 @@ export function HeroSlider() {
                     loading="lazy"
                     className="object-cover"
                     style={{ objectPosition: item.objectPositionMobile }}
-                    sizes="(max-width: 1023px) and (orientation: portrait) 100vw, 0px"
+                    sizes="(max-width: 480px) 100vw, (max-width: 768px) 100vw, 50vw"
                   />
                 )}
               </div>
@@ -404,52 +404,54 @@ export function HeroSlider() {
         <ChevronRight size={18} strokeWidth={1.5} />
       </button>
 
-      <div
-        role="tablist"
-        aria-label="Кампанії"
-        className="absolute bottom-[max(1.25rem,calc(1.25rem+env(safe-area-inset-bottom)))] left-1/2 z-20 flex h-14 w-[min(100%-2rem,900px)] -translate-x-1/2 items-end gap-2 rounded-2xl bg-white/90 px-3 py-2 lg:bottom-7 lg:h-auto lg:bg-white/90 lg:px-4 lg:backdrop-blur-[2px]"
-      >
-        {slides.map((item, index) => {
-          const active = index === currentIndex;
-          const n = padIndex(index + 1);
-          return (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              aria-label={`${n} • ${item.tab}`}
-              onClick={() => goTo(index)}
-              className="flex min-w-0 flex-1 flex-col gap-2 text-left"
-            >
-              <span
-                className={`truncate font-heading text-[10px] uppercase tracking-[0.14em] lg:text-[11px] lg:tracking-[0.2em] ${
-                  active
-                    ? "font-bold text-slate-900"
-                    : "font-medium text-slate-700"
-                }`}
+      <div className="absolute bottom-4 left-4 right-4 z-20 flex justify-center">
+        <div
+          role="tablist"
+          aria-label="Кампанії"
+          className="flex h-14 w-full max-w-sm items-end gap-2 rounded-2xl border border-white/20 bg-white/50 p-1.5 shadow-lg backdrop-blur-md dark:bg-black/40 lg:h-auto lg:max-w-[900px] lg:px-4 lg:py-2"
+        >
+          {slides.map((item, index) => {
+            const active = index === currentIndex;
+            const n = padIndex(index + 1);
+            return (
+              <button
+                key={item.id}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                aria-label={`${n} • ${item.tab}`}
+                onClick={() => goTo(index)}
+                className="flex min-w-0 flex-1 flex-col gap-2 text-left"
               >
-                <span className="tabular-nums lining-nums">{n}</span>
-                <span className={active ? "inline" : "hidden sm:inline"}>
-                  {" • "}
-                  {item.tab}
+                <span
+                  className={`truncate font-heading text-[10px] uppercase tracking-[0.14em] lg:text-[11px] lg:tracking-[0.2em] ${
+                    active
+                      ? "font-bold text-slate-900"
+                      : "font-medium text-slate-800 dark:text-slate-200"
+                  }`}
+                >
+                  <span className="tabular-nums lining-nums">{n}</span>
+                  <span className={active ? "inline" : "hidden sm:inline"}>
+                    {" • "}
+                    {item.tab}
+                  </span>
                 </span>
-              </span>
-              <span className="block h-[2px] w-full overflow-hidden bg-[#111]/15">
-                {active ? (
-                  <span
-                    key={`${item.id}-${cycle}`}
-                    className={styles.progressFill}
-                    style={{
-                      animationDuration: `${AUTOPLAY_MS}ms`,
-                      animationPlayState: paused ? "paused" : "running",
-                    }}
-                  />
-                ) : null}
-              </span>
-            </button>
-          );
-        })}
+                <span className="block h-[2px] w-full overflow-hidden bg-slate-800/20">
+                  {active ? (
+                    <span
+                      key={`${item.id}-${cycle}`}
+                      className={styles.progressFill}
+                      style={{
+                        animationDuration: `${AUTOPLAY_MS}ms`,
+                        animationPlayState: paused ? "paused" : "running",
+                      }}
+                    />
+                  ) : null}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </section>
   );

@@ -42,8 +42,10 @@ export default function Home() {
         rel="preload"
         as="image"
         href={withHeroRev("/images/hero/default/mobile.webp")}
+        type="image/webp"
         media="(max-width: 767px)"
         fetchPriority="high"
+        imageSizes="(max-width: 480px) 100vw, (max-width: 768px) 100vw, 50vw"
       />
       <link
         rel="preload"

@@ -4,7 +4,13 @@ const path = require("path");
 const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ["xlsx"],
-    optimizePackageImports: ["lucide-react", "framer-motion"],
+    optimizeCss: true,
+    optimizePackageImports: [
+      "lucide-react",
+      "framer-motion",
+      "clsx",
+      "tailwind-merge",
+    ],
   },
   sassOptions: {
     includePaths: [path.join(__dirname, "src/styles")],
