@@ -10,6 +10,7 @@ import { CatalogPageSkeleton } from "@/components/ui/skeletons";
 import { ClientCatalog } from "./ClientCatalog";
 import { STOREFRONT_REVALIDATE, storefrontFetch } from "@/lib/cache";
 import { pageMetadata } from "@/lib/seo";
+import type { CatalogCategory } from "@/lib/catalog-tree";
 
 export const revalidate = STOREFRONT_REVALIDATE;
 
@@ -67,8 +68,10 @@ export default async function CatalogPage() {
     console.error("CatalogPage: failed to fetch products", e);
   }
 
-  const categories = await client.fetch(
-    `*[_type == "category"] | order(${GROQ_ORDER_MANUAL_SORT_THEN_NEWEST}) {
+  let categories: CatalogCategory[] = [];
+  try {
+    categories = await client.fetch<CatalogCategory[]>(
+      `*[_type == "category"] | order(${GROQ_ORDER_MANUAL_SORT_THEN_NEWEST}) {
             _id,
             title,
             sortOrder,
@@ -76,12 +79,17 @@ export default async function CatalogPage() {
             "slug": slug.current,
             "parent": { "_id": parent._ref }
         }`,
-    {},
-    storefrontFetch,
-  );
+      {},
+      storefrontFetch,
+    );
+  } catch (e) {
+    console.error("CatalogPage: failed to fetch categories", e);
+  }
 
-  const subcategories = await client.fetch(
-    `*[_type == "subcategory"] | order(${GROQ_ORDER_MANUAL_SORT_THEN_NEWEST}) {
+  let subcategories: CatalogCategory[] = [];
+  try {
+    subcategories = await client.fetch<CatalogCategory[]>(
+      `*[_type == "subcategory"] | order(${GROQ_ORDER_MANUAL_SORT_THEN_NEWEST}) {
             _id,
             title,
             sortOrder,
@@ -89,9 +97,12 @@ export default async function CatalogPage() {
             "slug": slug.current,
             "parent": { "_id": parent._ref }
         }`,
-    {},
-    storefrontFetch,
-  );
+      {},
+      storefrontFetch,
+    );
+  } catch (e) {
+    console.error("CatalogPage: failed to fetch subcategories", e);
+  }
 
   return (
     <Suspense fallback={<CatalogPageSkeleton />}>

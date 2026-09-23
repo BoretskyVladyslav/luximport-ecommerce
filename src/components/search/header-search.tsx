@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Search, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeletons";
-import { urlFor } from "@/lib/sanity";
+import { SafeFillImage } from "@/components/ui/product-image-fallback";
+import { hasSanityImageAsset } from "@/lib/product-image";
 import type { SanityImageField } from "@/lib/sanity-queries";
 import {
   SEARCH_MAX_QUERY_LENGTH,
@@ -239,29 +239,17 @@ export function HeaderSearch({
               return (
                 <li key={hit._id}>
                   <Link href={href} className={styles.row} onClick={close}>
-                    {hit.image ? (
-                      <div className={styles.thumb}>
-                        <Image
-                          src={urlFor(hit.image)
-                            .width(96)
-                            .height(96)
-                            .fit("fillmax")
-                            .bg("ffffff")
-                            .format("webp")
-                            .quality(80)
-                            .url()}
-                          alt={hit.title ?? ""}
-                          fill
-                          sizes="48px"
-                          style={{
-                            objectFit: "contain",
-                            objectPosition: "center",
-                          }}
-                        />
-                      </div>
-                    ) : (
-                      <div className={styles.thumbPlaceholder} />
-                    )}
+                    <div className={styles.thumb}>
+                      <SafeFillImage
+                        source={
+                          hasSanityImageAsset(hit.image) ? hit.image : null
+                        }
+                        alt={hit.title?.trim() || "Товар"}
+                        sizes="48px"
+                        className={styles.thumbImage}
+                        variant="thumb"
+                      />
+                    </div>
                     <span className={styles.meta}>
                       <span className={styles.title}>{hit.title ?? ""}</span>
                       {subtitle ? (

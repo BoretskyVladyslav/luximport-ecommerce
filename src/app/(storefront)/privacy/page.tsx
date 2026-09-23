@@ -1,10 +1,12 @@
 import React from "react";
 import styles from "../legal.module.scss";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "Політика конфіденційності",
   description: "Політика конфіденційності інтернет-магазину LuxImport.",
-};
+  path: "/privacy",
+});
 
 export default function PrivacyPage() {
   return (

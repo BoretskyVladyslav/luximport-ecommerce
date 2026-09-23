@@ -8,6 +8,7 @@ import { HomeBestSellersSkeleton } from "@/components/ui/skeletons";
 import { HomePageFrame, HomeBestSellers } from "./HomeClient";
 import { STOREFRONT_REVALIDATE, storefrontFetch } from "@/lib/cache";
 import { pageMetadata } from "@/lib/seo";
+import { withHeroRev } from "@/lib/hero-assets";
 import styles from "./page.module.scss";
 
 export const revalidate = STOREFRONT_REVALIDATE;
@@ -40,15 +41,15 @@ export default function Home() {
       <link
         rel="preload"
         as="image"
-        href="/images/hero/dr-gerard/mobile.webp"
-        media="(max-width: 767px)"
+        href={withHeroRev("/images/hero/default/mobile.jpg")}
+        media="(max-width: 1023px) and (orientation: portrait)"
         fetchPriority="high"
       />
       <link
         rel="preload"
         as="image"
-        href="/images/hero/dr-gerard/desktop.jpg"
-        media="(min-width: 768px)"
+        href={withHeroRev("/images/hero/default/desktop.jpg")}
+        media="(min-width: 1024px), (orientation: landscape)"
         fetchPriority="high"
       />
       <HomePageFrame>

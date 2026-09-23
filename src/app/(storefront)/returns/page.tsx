@@ -1,11 +1,13 @@
 import React from "react";
 import styles from "../legal.module.scss";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "Умови повернення та обміну",
   description:
     "Умови повернення та обміну товарів в інтернет-магазині LuxImport.",
-};
+  path: "/returns",
+});
 
 export default function ReturnsPage() {
   return (

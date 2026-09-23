@@ -1,5 +1,10 @@
-import { defineType, defineField, defineArrayMember } from "sanity";
-import { BasketIcon } from "@sanity/icons";
+import {
+  defineType,
+  defineField,
+  defineArrayMember,
+  type PreviewValue,
+} from "sanity";
+import { BasketIcon, WarningOutlineIcon } from "@sanity/icons";
 import { slugifyTitleForSlug } from "./slugify-title";
 
 const PRODUCT_SLUG_HELP =
@@ -162,21 +167,35 @@ export const product = defineType({
       options: { search: { weight: 9 } },
     }),
     defineField({
+      name: "image",
+      type: "image",
+      title: "Головне фото товару",
+      description:
+        "Перетягніть JPG, PNG або WebP. Це фото показується в каталозі, картці товару та в кошику.",
+      fieldset: "media",
+      options: {
+        hotspot: true,
+        accept: "image/jpeg,image/png,image/webp,image/jpg",
+      },
+    }),
+    defineField({
       name: "images",
       type: "array",
-      title: "Фотографії товару",
+      title: "Додаткові фото",
       description:
-        "Додайте щонайменше одне фото. Перше фото використовується як основне в каталозі та в превʼю.",
+        "Галерея на сторінці товару. Якщо головне фото порожнє, перше з цього списку використовується як основне.",
       fieldset: "media",
       options: { sortable: true },
       of: [
         defineArrayMember({
           type: "image",
-          options: { hotspot: true },
+          title: "Фото",
+          options: {
+            hotspot: true,
+            accept: "image/jpeg,image/png,image/webp,image/jpg",
+          },
         }),
       ],
-      validation: (Rule) =>
-        Rule.required().min(1).error("Додайте хоча б одне фото"),
     }),
     defineField({
       name: "price",
@@ -342,15 +361,28 @@ export const product = defineType({
         }),
     }),
   ],
+  orderings: [
+    {
+      title: "Назва",
+      name: "titleAsc",
+      by: [{ field: "title", direction: "asc" }],
+    },
+    {
+      title: "Артикул (SKU)",
+      name: "skuAsc",
+      by: [{ field: "sku", direction: "asc" }],
+    },
+  ],
   preview: {
     select: {
       title: "title",
-      media: "images.0",
+      sku: "sku",
+      media: "image",
+      gallery: "images.0",
       price: "price",
-      stock: "stock",
     },
     prepare(selection) {
-      const { title, media, price, stock } = selection;
+      const { title, sku, media, gallery, price } = selection;
       const priceNum =
         typeof price === "number"
           ? price
@@ -360,30 +392,24 @@ export const product = defineType({
       const priceStr = Number.isFinite(priceNum)
         ? `₴${priceNum.toLocaleString("uk-UA")}`
         : "—";
-      const stockNum =
-        typeof stock === "number"
-          ? stock
-          : typeof stock === "string"
-            ? Number.parseInt(stock, 10)
-            : Number.NaN;
-      const stockLabel = Number.isFinite(stockNum)
-        ? `В наявності: ${stockNum}`
-        : "В наявності: —";
-      const subtitle = `${priceStr} | ${stockLabel}`;
-      const safeMedia =
-        media &&
-        typeof media === "object" &&
-        "asset" in media &&
-        (media as { asset?: { _ref?: string } }).asset?._ref
-          ? media
-          : undefined;
+      const skuLabel =
+        typeof sku === "string" && sku.trim() ? sku.trim() : "без SKU";
+      const pickMedia = (value: unknown): PreviewValue["media"] => {
+        if (!value || typeof value !== "object") return undefined;
+        const ref = (value as { asset?: { _ref?: string } }).asset?._ref;
+        return ref ? (value as PreviewValue["media"]) : undefined;
+      };
+      const safeMedia = pickMedia(media) ?? pickMedia(gallery);
+      const missingPhoto = !safeMedia;
       return {
         title:
           typeof title === "string" && title.trim()
             ? title.trim()
             : "Без назви",
-        subtitle,
-        media: safeMedia,
+        subtitle: missingPhoto
+          ? `${skuLabel} · немає фото`
+          : `${skuLabel} · ${priceStr}`,
+        media: missingPhoto ? WarningOutlineIcon : safeMedia,
       };
     },
   },

@@ -1,43 +1,82 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { motion, AnimatePresence, type PanInfo } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { withHeroRev } from "@/lib/hero-assets";
 import styles from "./hero-slider.module.scss";
 
 const AUTOPLAY_MS = 5000;
-const FIRST_SLIDE_MS = 15000;
 const SWIPE_THRESHOLD = 50;
-const PREMIUM_EASE = [0.25, 0.1, 0.25, 1] as const;
+const DESKTOP_HERO_MQ = "(min-width: 1024px), (orientation: landscape)";
 
-const slides = [
+type HeroSlide = {
+  id: string;
+  tab: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  buttonText: string;
+  href: string;
+  highlight: string;
+  bg: string;
+  bgMobile: string;
+  tone: "light" | "dark";
+  objectPositionMobile: string;
+};
+
+const slides: HeroSlide[] = [
+  {
+    id: "premium",
+    tab: "Європейський імпорт",
+    eyebrow: "ПРЕМІАЛЬНА СЕЛЕКЦІЯ",
+    title: "Елітні продукти з самого серця Європи",
+    description:
+      "Тільки оригінальна якість та перевірені бренди. Кава, оливкова олія, солодощі та бакалія за прямими цінами імпортера.",
+    buttonText: "Перейти до каталогу",
+    href: "/catalog",
+    highlight: "Оригінал з ЄС • Гуртові ціни від 1 ящика",
+    bg: "/images/hero/default/desktop.jpg",
+    bgMobile: "/images/hero/default/mobile.jpg",
+    tone: "dark",
+    objectPositionMobile: "center bottom",
+  },
   {
     id: "gerard",
     tab: "Dr. Gerard",
+    eyebrow: "ОРИГІНАЛЬНА ЄВРОПЕЙСЬКА ЯКІСТЬ",
     title: "Легендарне польське печиво Dr. Gerard",
     description:
       "Справжні солодощі для гуртових та роздрібних замовлень. Хіти смаку: Pasja, Mafijne та ChocoBears за прямими цінами імпортера.",
     buttonText: "Переглянути асортимент",
     href: "/catalog?category=dr-gerard",
-    label: "Оригінальна європейська якість",
     highlight: "Опт від 1 ящика • Швидка доставка по всій Україні",
     bg: "/images/hero/dr-gerard/desktop.jpg",
-    bgMobile: "/images/hero/dr-gerard/mobile.webp",
-    tone: "light" as const,
+    bgMobile: "/images/hero/dr-gerard/mobile.jpg",
+    tone: "light",
+    objectPositionMobile: "center 58%",
   },
   {
-    id: "premium",
-    tab: "Європейський імпорт",
-    title: "Елітні продукти з самого серця Європи",
-    description: "Тільки оригінальна якість та перевірені бренди.",
-    buttonText: "Перейти до каталогу",
-    href: "/catalog",
-    label: "Premium Selection",
-    bg: "/images/hero/default/desktop.jpg",
-    bgMobile: "/images/hero/default/mobile.jpg",
-    tone: "dark" as const,
+    id: "juices",
+    tab: "Соки Juss",
+    eyebrow: "НАТУРАЛЬНА СВІЖІСТЬ ТА ЕКЗОТИКА",
+    title: "Преміальні соки та напої Juss",
+    description:
+      "Справжні європейські смаки для освіжаючого дня. Гранатовий нектар, екзотична лохина з насінням базиліку та ніжний абрикос за прямими цінами імпортера.",
+    buttonText: "Переглянути всі напої",
+    href: "/catalog?category=soky-ta-napoi",
+    highlight: "Прямий імпорт • Гуртові поставки від 1 ящика",
+    bg: "/images/hero/juices/desktop.jpg",
+    bgMobile: "/images/hero/juices/mobile.jpg",
+    tone: "light",
+    objectPositionMobile: "center 60%",
   },
 ];
 
@@ -49,8 +88,10 @@ export function HeroSlider() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cycle, setCycle] = useState(0);
   const [paused, setPaused] = useState(false);
-  const remainingRef = useRef(FIRST_SLIDE_MS);
+  const [desktopHero, setDesktopHero] = useState(false);
+  const remainingRef = useRef(AUTOPLAY_MS);
   const timerGen = useRef(0);
+  const pointerStartX = useRef<number | null>(null);
   const slide = slides[currentIndex];
   const isLight = slide.tone === "light";
 
@@ -76,6 +117,14 @@ export function HeroSlider() {
   );
 
   useEffect(() => {
+    const mq = window.matchMedia(DESKTOP_HERO_MQ);
+    const sync = () => setDesktopHero(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
     if (paused) return;
     const gen = timerGen.current;
     const started = Date.now();
@@ -92,17 +141,22 @@ export function HeroSlider() {
     };
   }, [currentIndex, cycle, paused, goDelta]);
 
-  const handleDragEnd = useCallback(
-    (_: unknown, info: PanInfo) => {
-      if (
-        Math.abs(info.offset.x) > SWIPE_THRESHOLD ||
-        Math.abs(info.velocity.x) > 500
-      ) {
-        goDelta(info.offset.x < 0 ? 1 : -1);
-      }
-    },
-    [goDelta],
-  );
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    pointerStartX.current = event.clientX;
+  };
+
+  const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (pointerStartX.current == null) return;
+    const dx = event.clientX - pointerStartX.current;
+    pointerStartX.current = null;
+    if (Math.abs(dx) > SWIPE_THRESHOLD) {
+      goDelta(dx < 0 ? 1 : -1);
+    }
+  };
+
+  const onPointerCancel = () => {
+    pointerStartX.current = null;
+  };
 
   const onHoverPause = (next: boolean) => {
     if (
@@ -125,9 +179,6 @@ export function HeroSlider() {
     });
   }, [currentIndex]);
 
-  const ink = isLight ? "text-[#1c1917]" : "text-white";
-  const inkMuted = isLight ? "text-[#111]/55" : "text-white/55";
-  const track = isLight ? "bg-[#111]/15" : "bg-white/25";
   const arrowClass = isLight
     ? "border-[#111]/15 bg-white/45 text-[#111] hover:bg-white/70"
     : "border-white/20 bg-black/30 text-white hover:bg-black/45";
@@ -137,160 +188,139 @@ export function HeroSlider() {
       className="group relative flex w-full flex-col overflow-hidden bg-[#011B44]"
       onMouseEnter={() => onHoverPause(true)}
       onMouseLeave={() => onHoverPause(false)}
+      onTouchStart={() => setPaused(true)}
+      onTouchEnd={() => setPaused(false)}
+      onTouchCancel={() => setPaused(false)}
     >
-      <div className="pointer-events-none relative h-[88vh] min-h-[640px] w-full select-none md:h-[85vh] md:min-h-0">
+      <div className="pointer-events-none relative h-[calc(100svh-5rem)] min-h-[520px] w-full select-none lg:min-h-[640px]">
         {slides.map((item, index) => {
           const isLcp = index === 0;
           const showImage = mountedSlides.has(index);
           const visible = currentIndex === index;
+          const desktopAlt = desktopHero ? item.title : "";
+          const mobileAlt = desktopHero ? "" : item.title;
           const frame = showImage ? (
-            <>
-              <div className="relative hidden h-full w-full md:block">
+            <div className="absolute inset-0 bottom-[4.75rem] overflow-hidden lg:inset-0">
+              <div className="relative hidden h-full w-full landscape:block lg:block">
                 <Image
-                  src={item.bg}
-                  alt={item.title}
-                  fill
-                  quality={75}
-                  fetchPriority={isLcp ? "high" : "low"}
-                  loading={isLcp ? "eager" : "lazy"}
-                  className="object-cover"
-                  sizes="(min-width: 768px) 100vw, 0px"
-                />
-              </div>
-              <div className="relative block h-full w-full md:hidden">
-                <Image
-                  src={item.bgMobile}
-                  alt={item.title}
+                  src={withHeroRev(item.bg)}
+                  alt={desktopAlt}
                   fill
                   quality={75}
                   unoptimized={isLcp}
                   priority={isLcp}
                   fetchPriority={isLcp ? "high" : "low"}
                   loading={isLcp ? "eager" : "lazy"}
-                  className="object-cover object-center"
-                  sizes={isLcp ? "100vw" : "(max-width: 767px) 100vw, 0px"}
+                  className="object-cover object-[70%_center]"
+                  sizes="(min-width: 1024px) 100vw, (orientation: landscape) 100vw, 0px"
                 />
               </div>
-            </>
+              <div className="relative block h-full w-full landscape:hidden lg:hidden">
+                <Image
+                  src={withHeroRev(item.bgMobile)}
+                  alt={mobileAlt}
+                  fill
+                  quality={75}
+                  unoptimized={isLcp}
+                  priority={isLcp}
+                  fetchPriority={isLcp ? "high" : "low"}
+                  loading={isLcp ? "eager" : "lazy"}
+                  className="object-cover"
+                  style={{ objectPosition: item.objectPositionMobile }}
+                  sizes={
+                    isLcp
+                      ? "100vw"
+                      : "(max-width: 1023px) and (orientation: portrait) 100vw, 0px"
+                  }
+                />
+              </div>
+            </div>
           ) : null;
 
-          if (isLcp) {
-            return (
-              <div
-                key={item.id}
-                className="absolute inset-0 h-full w-full"
-                style={{ opacity: visible ? 1 : 0 }}
-              >
-                {frame}
-              </div>
-            );
-          }
-
           return (
-            <motion.div
+            <div
               key={item.id}
-              initial={false}
-              animate={{ opacity: visible ? 1 : 0 }}
-              transition={{ duration: 1.2, ease: PREMIUM_EASE }}
-              className="absolute inset-0 h-full w-full"
+              className={`absolute inset-0 h-full w-full transition-opacity duration-[1200ms] ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
+                visible ? "opacity-100" : "opacity-0"
+              }`}
             >
               {frame}
-            </motion.div>
+            </div>
           );
         })}
       </div>
 
-      <motion.div
-        className="absolute inset-0 z-[2] md:pointer-events-none"
-        drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.12}
-        dragMomentum={false}
-        onDragEnd={handleDragEnd}
-        style={{ touchAction: "pan-y" }}
+      <div
+        className="absolute inset-0 z-[2] touch-pan-y md:pointer-events-none"
+        onPointerDown={onPointerDown}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
       />
 
-      <div
-        className={`pointer-events-none absolute inset-0 z-10 flex h-full w-full flex-col items-center px-4 text-center md:items-start md:justify-center md:px-16 md:pb-28 md:pt-0 md:text-left lg:px-20 ${
-          isLight ? "justify-start pb-[52%] pt-5" : "justify-start pb-24 pt-12"
-        }`}
-      >
-        <div className="flex w-full flex-col items-center gap-3 md:w-[60%] md:items-start md:gap-8 lg:w-[45%]">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentIndex}
-              initial={cycle === 0 ? false : { opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={cycle === 0 ? undefined : { opacity: 0, y: -20 }}
-              transition={{
-                duration: cycle === 0 ? 0 : 0.8,
-                ease: PREMIUM_EASE,
-                delay: 0,
-              }}
-              className={`flex w-full flex-col items-center md:items-start ${
-                isLight
-                  ? "rounded-sm bg-white/70 px-3 py-3 md:bg-transparent md:px-0 md:py-0"
-                  : ""
-              }`}
-            >
-              <div className="flex flex-col items-center gap-2 md:items-start md:gap-4">
-                <span
-                  className={`text-[9px] font-bold uppercase tracking-[0.18em] md:mb-2 md:text-[11px] md:tracking-[0.28em] ${
-                    isLight ? "text-[#111]/70" : "text-white/80"
-                  }`}
-                >
-                  {slide.label}
-                </span>
-                <p
-                  className={`max-w-[18ch] font-heading text-[1.45rem] font-bold leading-[1.12] sm:text-4xl md:max-w-[15ch] md:text-5xl lg:text-6xl ${
-                    isLight
-                      ? "text-[#1c1917]"
-                      : "text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
-                  }`}
-                >
-                  {slide.title}
-                </p>
-              </div>
-
-              <p
-                className={`mt-2 max-w-[45ch] text-[13px] font-semibold leading-snug tracking-wide sm:text-base md:mt-8 md:text-lg md:leading-relaxed lg:text-xl ${
-                  isLight
-                    ? "text-[#111]/80"
-                    : "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-10 flex h-[55%] w-full flex-col items-center justify-start px-4 pt-6 text-center sm:px-8 sm:pt-8 lg:inset-0 lg:h-full lg:items-start lg:justify-center lg:px-16 lg:pb-28 lg:pt-0 lg:text-left xl:px-20">
+        <div className="flex w-full max-w-[36rem] flex-col items-center lg:w-[46%] lg:max-w-[500px] lg:items-start">
+          <div
+            className={`flex w-full flex-col items-center lg:items-start ${
+              isLight
+                ? "rounded-2xl bg-white/70 p-4 sm:p-6 lg:bg-transparent lg:p-0"
+                : "rounded-2xl bg-black/40 p-4 sm:p-6 lg:bg-transparent lg:p-0"
+            }`}
+          >
+            <div className="flex flex-col items-center gap-2 lg:items-start lg:gap-4">
+              <span
+                className={`text-[9px] font-bold uppercase tracking-[0.18em] sm:text-[10px] lg:mb-2 lg:text-[11px] lg:tracking-[0.28em] ${
+                  isLight ? "text-[#111]/70" : "text-white/80"
                 }`}
               >
-                {slide.description}
-              </p>
-
-              {slide.highlight ? (
-                <p
-                  className={`mt-2 text-[10px] font-semibold uppercase tracking-[0.1em] md:mt-4 md:text-xs md:tracking-[0.16em] ${
-                    isLight ? "text-[#111]/65" : "text-white/75"
-                  }`}
-                >
-                  {slide.highlight}
-                </p>
-              ) : null}
-
-              <Link
-                href={slide.href}
-                className="pointer-events-auto group/cta relative mt-3 inline-flex items-center justify-center overflow-hidden rounded-md bg-[#C5A059] px-6 py-3 shadow-[0_10px_30px_rgba(197,160,89,0.3)] transition-shadow duration-300 ease-in-out hover:shadow-[0_15px_40px_rgba(197,160,89,0.4)] md:mt-10 md:px-12 md:py-5"
+                {slide.eyebrow}
+              </span>
+              <h2
+                className={`w-full max-w-[18ch] text-balance font-heading text-[1.35rem] font-bold leading-[1.12] sm:text-[1.75rem] md:max-w-none md:text-3xl lg:text-[2.5rem] xl:text-5xl ${
+                  isLight
+                    ? "text-[#1c1917] [text-shadow:0_1px_8px_rgba(255,255,255,0.55)]"
+                    : "text-white drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
+                }`}
               >
-                <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.2em] text-[#111] md:text-xs md:tracking-[0.28em]">
-                  {slide.buttonText}
-                </span>
-                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover/cta:translate-x-full" />
-              </Link>
-            </motion.div>
-          </AnimatePresence>
+                {slide.title}
+              </h2>
+            </div>
+
+            <p
+              className={`mt-2 line-clamp-3 w-full max-w-[45ch] text-[12px] font-semibold leading-snug tracking-wide sm:text-sm lg:mt-6 lg:line-clamp-none lg:text-base lg:leading-relaxed xl:text-lg ${
+                isLight
+                  ? "text-[#111]/80 [text-shadow:0_1px_6px_rgba(255,255,255,0.45)]"
+                  : "text-white drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
+              }`}
+            >
+              {slide.description}
+            </p>
+
+            <p
+              className={`mt-2 text-[10px] font-semibold uppercase tracking-[0.1em] lg:mt-4 lg:text-xs lg:tracking-[0.16em] ${
+                isLight ? "text-[#111]/65" : "text-white/75"
+              }`}
+            >
+              {slide.highlight}
+            </p>
+
+            <Link
+              href={slide.href}
+              className="pointer-events-auto group/cta relative mt-3 inline-flex items-center justify-center overflow-hidden rounded-md bg-[#C5A059] px-6 py-3 shadow-[0_10px_30px_rgba(197,160,89,0.3)] transition-shadow duration-300 ease-in-out hover:shadow-[0_15px_40px_rgba(197,160,89,0.4)] lg:mt-10 lg:px-12 lg:py-5"
+            >
+              <span className="relative z-10 text-[10px] font-black uppercase tracking-[0.2em] text-[#111] lg:text-xs lg:tracking-[0.28em]">
+                {slide.buttonText}
+              </span>
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover/cta:translate-x-full" />
+            </Link>
+          </div>
         </div>
       </div>
 
       <div
         className={`pointer-events-none absolute inset-0 z-[1] ${
           isLight
-            ? "bg-gradient-to-b from-white/50 via-white/10 to-transparent md:bg-gradient-to-r md:from-white/35 md:via-white/5 md:to-transparent"
-            : "bg-gradient-to-b from-black/30 via-transparent to-black/10 md:bg-gradient-to-r md:from-black/40 md:via-transparent md:to-transparent"
+            ? "bg-gradient-to-b from-white/50 via-white/10 to-transparent lg:bg-gradient-to-r lg:from-white/35 lg:via-white/5 lg:to-transparent"
+            : "bg-gradient-to-b from-black/30 via-transparent to-black/10 lg:bg-gradient-to-r lg:from-black/40 lg:via-transparent lg:to-transparent"
         }`}
       />
 
@@ -298,7 +328,7 @@ export function HeroSlider() {
         type="button"
         aria-label="Попередній слайд"
         onClick={() => goDelta(-1)}
-        className={`absolute left-5 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border backdrop-blur-sm transition-opacity duration-300 md:flex ${arrowClass} pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100`}
+        className={`absolute left-5 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border backdrop-blur-sm transition-opacity duration-300 lg:flex ${arrowClass} pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100`}
       >
         <ChevronLeft size={18} strokeWidth={1.5} />
       </button>
@@ -306,7 +336,7 @@ export function HeroSlider() {
         type="button"
         aria-label="Наступний слайд"
         onClick={() => goDelta(1)}
-        className={`absolute right-5 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border backdrop-blur-sm transition-opacity duration-300 md:flex ${arrowClass} pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100`}
+        className={`absolute right-5 top-1/2 z-20 hidden h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border backdrop-blur-sm transition-opacity duration-300 lg:flex ${arrowClass} pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100`}
       >
         <ChevronRight size={18} strokeWidth={1.5} />
       </button>
@@ -314,7 +344,7 @@ export function HeroSlider() {
       <div
         role="tablist"
         aria-label="Кампанії"
-        className="absolute bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-1/2 z-20 flex w-[min(100%-2rem,720px)] -translate-x-1/2 items-end gap-2 pb-3 md:bottom-7 md:pb-0 md:gap-6"
+        className="absolute bottom-[max(1.25rem,calc(1.25rem+env(safe-area-inset-bottom)))] left-1/2 z-20 flex w-[min(100%-2rem,900px)] -translate-x-1/2 items-end gap-2 rounded-2xl bg-white/70 px-3 py-2 lg:bottom-7 lg:bg-white/25 lg:px-4 lg:backdrop-blur-[2px]"
       >
         {slides.map((item, index) => {
           const active = index === currentIndex;
@@ -327,28 +357,30 @@ export function HeroSlider() {
               aria-selected={active}
               aria-label={`${n} • ${item.tab}`}
               onClick={() => goTo(index)}
-              className={`flex min-w-0 flex-col gap-2 text-left transition-opacity duration-300 ${
-                active ? "flex-[1.4]" : "flex-1 md:flex-[1.4]"
-              } ${active ? "opacity-100" : "opacity-70 hover:opacity-100"}`}
+              className={`flex min-w-0 flex-1 flex-col gap-2 text-left transition-opacity duration-300 ${
+                active ? "opacity-100" : "opacity-70 hover:opacity-100"
+              }`}
             >
               <span
-                className={`truncate font-heading text-[10px] uppercase tracking-[0.14em] md:text-[11px] md:tracking-[0.2em] ${
-                  active ? `font-bold ${ink}` : `font-medium ${inkMuted}`
+                className={`truncate font-heading text-[10px] uppercase tracking-[0.14em] lg:text-[11px] lg:tracking-[0.2em] ${
+                  active
+                    ? "font-bold text-[#1c1917]"
+                    : "font-medium text-[#111]/55"
                 }`}
               >
                 <span className="tabular-nums lining-nums">{n}</span>
-                <span className={active ? "inline" : "hidden md:inline"}>
+                <span className={active ? "inline" : "hidden sm:inline"}>
                   {" • "}
                   {item.tab}
                 </span>
               </span>
-              <span className={`block h-[2px] w-full overflow-hidden ${track}`}>
+              <span className="block h-[2px] w-full overflow-hidden bg-[#111]/15">
                 {active ? (
                   <span
                     key={`${item.id}-${cycle}`}
                     className={styles.progressFill}
                     style={{
-                      animationDuration: `${cycle === 0 ? FIRST_SLIDE_MS : AUTOPLAY_MS}ms`,
+                      animationDuration: `${AUTOPLAY_MS}ms`,
                       animationPlayState: paused ? "paused" : "running",
                     }}
                   />

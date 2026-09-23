@@ -1,10 +1,12 @@
 import React from "react";
 import styles from "../legal.module.scss";
+import { pageMetadata } from "@/lib/seo";
 
-export const metadata = {
+export const metadata = pageMetadata({
   title: "Договір публічної оферти",
   description: "Договір публічної оферти інтернет-магазину LuxImport.",
-};
+  path: "/terms",
+});
 
 export default function TermsPage() {
   return (

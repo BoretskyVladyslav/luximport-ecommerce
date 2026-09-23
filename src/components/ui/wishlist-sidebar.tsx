@@ -6,8 +6,8 @@ import { X } from "lucide-react";
 import { useWishlistStore, type WishlistItem } from "@/store/wishlistStore";
 import { useStore } from "@/store/cart";
 import { useHydration } from "@/hooks/useHydration";
-import Image from "next/image";
 import { isHttpUrl, toCartProduct } from "@/lib/cart/product-to-cart";
+import { SafeFillImage } from "@/components/ui/product-image-fallback";
 import styles from "./wishlist-sidebar.module.scss";
 
 export function WishlistSidebar() {
@@ -72,27 +72,19 @@ export function WishlistSidebar() {
               items.map((item) => (
                 <div key={item.id} className={styles.item}>
                   <div className={styles.itemImage}>
-                    {item.images &&
-                    item.images.length > 0 &&
-                    isHttpUrl(item.images[0]) ? (
-                      <div
-                        style={{
-                          position: "relative",
-                          width: "100%",
-                          height: "100%",
-                        }}
-                      >
-                        <Image
-                          src={item.images[0]}
-                          alt={item.title}
-                          fill
-                          style={{ objectFit: "cover" }}
-                          sizes="80px"
-                        />
-                      </div>
-                    ) : (
-                      "IMG"
-                    )}
+                    <SafeFillImage
+                      src={
+                        item.images &&
+                        item.images.length > 0 &&
+                        isHttpUrl(item.images[0])
+                          ? item.images[0]
+                          : null
+                      }
+                      alt={item.title}
+                      sizes="80px"
+                      className={styles.itemPhoto}
+                      variant="thumb"
+                    />
                   </div>
                   <div className={styles.itemDetails}>
                     <span className={styles.itemTitle}>{item.title}</span>

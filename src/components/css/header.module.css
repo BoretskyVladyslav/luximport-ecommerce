@@ -131,6 +131,13 @@
   border-radius: 50%;
 }
 
+.mobileMenuInner {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  align-items: center;
+}
+
 .mobileMenu {
   position: absolute;
   top: 80px;

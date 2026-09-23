@@ -389,10 +389,12 @@ export default function CheckoutPage() {
       const slowTimer = setTimeout(() => {
         toast("З'єднання повільне, але ми працюємо. Будь ласка, зачекайте.");
       }, 10000);
-      console.info("[CHECKOUT_FLOW]", {
-        correlationId,
-        phase: "creatingOrder",
-      });
+      if (process.env.NODE_ENV === "development") {
+        console.info("[CHECKOUT_FLOW]", {
+          correlationId,
+          phase: "creatingOrder",
+        });
+      }
 
       const checkoutSessionRes = await fetch("/api/checkout/session", {
         method: "POST",
@@ -511,7 +513,12 @@ export default function CheckoutPage() {
       } catch {
         void 0;
       }
-      console.info("[CHECKOUT_FLOW]", { correlationId, phase: "redirecting" });
+      if (process.env.NODE_ENV === "development") {
+        console.info("[CHECKOUT_FLOW]", {
+          correlationId,
+          phase: "redirecting",
+        });
+      }
       form.submit();
     } catch (error) {
       console.error("Checkout error:", error);

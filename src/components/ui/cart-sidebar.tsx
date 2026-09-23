@@ -7,7 +7,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useShallow } from "zustand/react/shallow";
 import { useStore } from "@/store/cart";
 import { useHydration } from "@/hooks/useHydration";
-import Image from "next/image";
 import {
   isWholesaleActive,
   remainingToWholesale,
@@ -20,31 +19,19 @@ import {
   resolveCartImageUrl,
   toCartProduct,
 } from "@/lib/cart/product-to-cart";
+import { SafeFillImage } from "@/components/ui/product-image-fallback";
 import styles from "./cart-sidebar.module.scss";
 
 const FREE_SHIPPING_THRESHOLD_UAH = 15000;
 
 function CartLineImage({ src, alt }: { src?: string; alt: string }) {
-  const [failed, setFailed] = useState(false);
-  const url = isHttpUrl(src) ? src.trim() : null;
-  useEffect(() => {
-    setFailed(false);
-  }, [src]);
-  if (!url || failed) {
-    return (
-      <span className="flex h-full items-center justify-center font-body text-[0.5rem] uppercase tracking-widest text-stone-300">
-        IMG
-      </span>
-    );
-  }
   return (
-    <Image
-      src={url}
+    <SafeFillImage
+      src={isHttpUrl(src) ? src.trim() : null}
       alt={alt}
-      fill
-      className="object-contain object-center p-1.5"
       sizes="128px"
-      onError={() => setFailed(true)}
+      className="object-contain object-center p-1.5"
+      variant="thumb"
     />
   );
 }
@@ -319,7 +306,7 @@ export function CartSidebar() {
                                 ease: [0.16, 1, 0.3, 1],
                               }}
                             >
-                              <div className="relative h-28 w-32 shrink-0 overflow-hidden bg-stone-100 ring-1 ring-stone-200/80">
+                              <div className="relative h-28 w-32 shrink-0 overflow-hidden bg-[#f5f5f4] ring-1 ring-stone-200/80">
                                 <CartLineImage
                                   src={item.images?.[0]}
                                   alt={item.title}
@@ -421,16 +408,14 @@ export function CartSidebar() {
                               key={p._id}
                               className="flex min-w-0 gap-2 border border-[#e5e5e5] bg-white p-2 transition-colors duration-300 hover:bg-[#fafafa]"
                             >
-                              <div className="relative h-10 w-10 shrink-0 overflow-hidden bg-[#f9fafb]">
-                                {recSrc ? (
-                                  <Image
-                                    src={recSrc}
-                                    alt={p.title ?? ""}
-                                    fill
-                                    className="object-contain object-center p-1"
-                                    sizes="40px"
-                                  />
-                                ) : null}
+                              <div className="relative h-10 w-10 shrink-0 overflow-hidden bg-[#f5f5f4]">
+                                <SafeFillImage
+                                  src={recSrc}
+                                  alt={p.title?.trim() || "Товар"}
+                                  sizes="40px"
+                                  className="object-contain object-center p-1"
+                                  variant="thumb"
+                                />
                               </div>
                               <div className="min-w-0 flex-1">
                                 <p className="line-clamp-2 font-body text-[0.7rem] font-medium leading-snug text-[#111]">

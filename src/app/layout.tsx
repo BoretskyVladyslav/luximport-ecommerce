@@ -1,5 +1,5 @@
 import "@/styles/globals.scss";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DelayedGtm } from "@/components/analytics/delayed-gtm";
 import { getMetadataBase } from "@/lib/site-url";
 import { ToastProvider } from "@/components/providers/toast-provider";
@@ -11,6 +11,10 @@ import {
   SITE_NAME,
 } from "@/lib/seo";
 import styles from "./layout.module.scss";
+
+export const viewport: Viewport = {
+  viewportFit: "cover",
+};
 
 export const metadata: Metadata = {
   metadataBase: getMetadataBase(),

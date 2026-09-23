@@ -18,6 +18,14 @@ import styles from "./page.module.scss";
 
 export const revalidate = STOREFRONT_REVALIDATE;
 
+function productDescriptionPlain(value: unknown): string | null {
+  if (typeof value === "string") {
+    const text = value.replace(/\s+/g, " ").trim();
+    return text.length ? text : null;
+  }
+  return portableTextToPlainText(value);
+}
+
 function portableTextToPlainText(value: unknown): string | null {
   if (!Array.isArray(value)) return null;
   const text = value
@@ -83,10 +91,7 @@ export async function generateMetadata({
     return { robots: { index: false, follow: false } };
   }
   const title = product.title ?? "Товар";
-  const plainDescription =
-    typeof product.description === "string"
-      ? product.description
-      : portableTextToPlainText(product.description);
+  const plainDescription = productDescriptionPlain(product.description);
   const description = plainDescription ?? `Купити ${title} оптом в LuxImport.`;
   const image = hasImageAsset(product.image)
     ? imageUrl(product.image, 1200)
@@ -138,7 +143,7 @@ export default async function ProductPage({
         <JsonLd
           data={productJsonLd({
             name: displayTitle,
-            description: portableTextToPlainText(product.description),
+            description: productDescriptionPlain(product.description),
             sku: product.sku,
             brand: product.brand,
             images: galleryUrls,

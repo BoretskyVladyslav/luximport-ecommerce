@@ -6,6 +6,7 @@ export const DEFAULT_TITLE = "LuxImport | Оптовий магазин";
 export const DEFAULT_DESCRIPTION =
   "Ексклюзивні товари оптом з доставкою по Україні";
 export const DEFAULT_OG_IMAGE = "/images/hero/default/desktop.jpg";
+export const ORGANIZATION_LOGO = "/images/brand/logo.png";
 
 export const ORGANIZATION = {
   name: SITE_NAME,
@@ -34,7 +35,7 @@ export function organizationJsonLd() {
     name: ORGANIZATION.name,
     legalName: ORGANIZATION.legalName,
     url: absUrl("/"),
-    logo: absUrl(DEFAULT_OG_IMAGE),
+    logo: absUrl(ORGANIZATION_LOGO),
     email: ORGANIZATION.email,
     telephone: ORGANIZATION.telephone,
     address: {
@@ -88,6 +89,8 @@ export function productJsonLd(input: {
   path: string;
 }) {
   const images = input.images.filter(Boolean);
+  const price =
+    Number.isFinite(input.price) && input.price > 0 ? input.price : null;
   return {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -96,13 +99,21 @@ export function productJsonLd(input: {
     sku: input.sku || undefined,
     image: images.length ? images : undefined,
     brand: input.brand ? { "@type": "Brand", name: input.brand } : undefined,
-    offers: {
-      "@type": "Offer",
-      url: absUrl(input.path),
-      priceCurrency: "UAH",
-      price: Number.isFinite(input.price) ? input.price : 0,
-      availability: `https://schema.org/${input.availability}`,
-    },
+    offers:
+      price != null
+        ? {
+            "@type": "Offer",
+            url: absUrl(input.path),
+            priceCurrency: "UAH",
+            price,
+            availability: `https://schema.org/${input.availability}`,
+            seller: {
+              "@type": "Organization",
+              name: ORGANIZATION.name,
+              url: absUrl("/"),
+            },
+          }
+        : undefined,
   };
 }
 

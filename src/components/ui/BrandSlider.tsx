@@ -17,7 +17,7 @@ export function BrandSlider() {
         <div className="mx-auto mt-2 h-[1px] w-12 bg-[#C5A059] md:h-[1.5px] md:w-16" />
       </div>
       <div className="relative overflow-hidden">
-        <div className="flex w-max animate-marquee">
+        <div className="flex w-max animate-marquee" aria-hidden="true">
           {loop.map((brand, index) => (
             <div
               key={`${brand.id}-${index}`}

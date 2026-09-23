@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
+import { SafeFillImage } from "@/components/ui/product-image-fallback";
 import styles from "./page.module.scss";
 
 export function ProductGallery({
@@ -14,23 +14,19 @@ export function ProductGallery({
   isOutOfStock: boolean;
 }) {
   const [active, setActive] = useState(0);
-  const current = images[active] ?? images[0];
+  const current = images[active] ?? images[0] ?? null;
 
   return (
     <div className={styles.gallery}>
       <div className={styles.stage}>
-        {current ? (
-          <Image
-            src={current}
-            alt={title}
-            fill
-            className={`${styles.stageImage} ${isOutOfStock ? styles.stageImageSold : ""}`}
-            sizes="(max-width: 1024px) 100vw, 50vw"
-            priority
-          />
-        ) : (
-          <div className={styles.placeholder}>Немає фото</div>
-        )}
+        <SafeFillImage
+          src={current}
+          alt={title}
+          sizes="(max-width: 1024px) 100vw, 50vw"
+          className={`${styles.stageImage} ${isOutOfStock ? styles.stageImageSold : ""}`}
+          priority
+          variant="gallery"
+        />
         {isOutOfStock && (
           <div className={styles.soldOverlay}>
             <div className={styles.soldBadge}>Розпродано</div>
@@ -48,12 +44,12 @@ export function ProductGallery({
               aria-label={`Фото ${index + 1}`}
               aria-current={index === active ? "true" : undefined}
             >
-              <Image
+              <SafeFillImage
                 src={src}
                 alt=""
-                fill
-                className={styles.thumbImage}
                 sizes="68px"
+                className={styles.thumbImage}
+                variant="thumb"
               />
             </button>
           ))}

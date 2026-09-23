@@ -411,7 +411,7 @@ export function ClientCatalog({
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>КАТАЛОГ</h1>
+        <h1 className={styles.title}>{activeNode?.title ?? "Каталог"}</h1>
         <span className={styles.meta}>PREMIUM SELECTION</span>
       </div>
 
@@ -464,7 +464,7 @@ export function ClientCatalog({
 
       <div className={styles.layout}>
         <aside className={styles.sidebar}>
-          <p className={styles.sidebarHeading}>Категорії</p>
+          <h2 className={styles.sidebarHeading}>Категорії</h2>
           <CategoryTree {...treeProps} />
         </aside>
 
@@ -535,7 +535,7 @@ export function ClientCatalog({
             aria-label="Категорії"
           >
             <div className={styles.drawerHeader}>
-              <p className={styles.sidebarHeading}>Категорії</p>
+              <h2 className={styles.sidebarHeading}>Категорії</h2>
               <button
                 type="button"
                 className={styles.drawerClose}

@@ -2,14 +2,13 @@
 
 import { Heart } from "lucide-react";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useStore } from "@/store/cart";
 import { useWishlistStore } from "@/store/wishlistStore";
 import { useHydration } from "@/hooks/useHydration";
-import { urlFor } from "@/lib/sanity";
 import { toCartProduct, resolveCartImageUrl } from "@/lib/cart/product-to-cart";
 import { wholesaleThreshold } from "@/lib/cart/pricing";
+import { SafeFillImage } from "@/components/ui/product-image-fallback";
 import styles from "./product-card.module.scss";
 
 interface ProductCardProps {
@@ -121,30 +120,17 @@ export function ProductCard({
     });
   };
 
-  const media = image ? (
-    <div className={styles.imageContainer}>
-      <Image
-        src={urlFor(image)
-          .width(600)
-          .height(600)
-          .fit("fillmax")
-          .bg("ffffff")
-          .format("webp")
-          .quality(90)
-          .url()}
-        alt={productTitle}
-        fill
-        style={{ objectFit: "contain", objectPosition: "center" }}
-        className={isOutOfStock ? "grayscale blur-sm" : undefined}
-        sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 25vw"
-        loading="lazy"
-      />
-    </div>
-  ) : (
+  const media = (
     <div
-      className={`${styles.imagePlaceholder} ${isOutOfStock ? "grayscale blur-[1px]" : ""}`}
+      className={`${styles.imageContainer} ${isOutOfStock ? styles.imageSold : ""}`}
     >
-      Немає фото
+      <SafeFillImage
+        source={image}
+        alt={productTitle}
+        sizes="(max-width: 767px) 50vw, (max-width: 1023px) 33vw, 25vw"
+        className={styles.productImage}
+        variant="card"
+      />
     </div>
   );
 
